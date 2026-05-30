@@ -14,7 +14,15 @@ public class GachaManager : MonoBehaviour
 
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         Instance = this;
+
+        DontDestroyOnLoad(gameObject);
 
         initializeCharacterPool();
         //// 캐릭터 풀 초기화
@@ -25,7 +33,8 @@ public class GachaManager : MonoBehaviour
         //ssrCharacterPool.Add(new CharacterData("SSR_Character1", "SSR"));
         //ssrCharacterPool.Add(new CharacterData("SSR_Character2", "SSR"));
     }
-
+    
+    // 캐릭터 풀
     private void initializeCharacterPool()
     {
         // 실제 게임에서는 이 데이터를 외부에서 불러올 수 있도록 구현
@@ -65,7 +74,8 @@ public class GachaManager : MonoBehaviour
 
     private CharacterData GetRandomRoll(List<CharacterData> list)
     {
-        int index = Random.Range(1, list.Count);
+        // r, sr, ssr ( r 몇개, sr 몇개, ssr 몇개 ... )
+        int index = Random.Range(0, list.Count);
 
         return list[index];
     }

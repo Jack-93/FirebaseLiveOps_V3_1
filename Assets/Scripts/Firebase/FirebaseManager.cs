@@ -1,4 +1,3 @@
-
 using Firebase;
 using UnityEngine;
 
