@@ -1,43 +1,131 @@
-using UnityEngine;
+using Firebase.Analytics;
+using System.Collections.Generic;
+using System.Text;
 using TMPro;
+using UnityEngine;
 
 public class GachaUIManager : MonoBehaviour
 {
     public TMP_Text gachaResultText;
 
-    public void RollGacha()
+    public Transform content;
+    public GameObject resultSlotPrefab;
+
+    public void SingleRoll()
     {
+        ClearSlots();
+
         CharacterData result = GachaManager.Instance
-            .RollCharacter();
+            .RollCharacterWithPity();
 
-        string rewardName = result.characterName;
+        // string rewardName = result.characterName;
 
-        //저장
-        InventoryManager.Instance
-            .AddItem(rewardName, 1);
-
-        AnalyticsManager.Instance
-            .LogGachaRoll(result.characterName, result.rarity);
         if (result.rarity == "SSR")
         {
             AnalyticsManager.Instance
                 .LogSSR(result.characterName);
         }
 
+        //저장
+        InventoryManager.Instance
+            .AddItem(result.characterName, 1);
+        AnalyticsManager.Instance
+            .LogGachaRoll(result.characterName, result.rarity);
+
         //결과UI
-        gachaResultText.text = $"[{result.rarity}]: {rewardName}";
+        gachaResultText.text = $"[{result.rarity}]: {result.characterName}";
 
         Debug.Log(
-           $"[Gacha Result] {result.rarity} {rewardName}");
+           $"[Gacha Result] {result.rarity} {result.characterName}");
 
-        SendAnalytics(result);
+        if (result.rarity == "SSR")
+        {
+            AnalyticsManager.Instance
+                .LogSSR(
+                    result.characterName);
+        }
+
+        // SendAnalytics(result);
     }
 
+    public void TenRoll()
+    {
+        ClearSlots();
+
+        List<CharacterData> results =
+            GachaManager.Instance
+            .RollTen();
+
+        //StringBuilder sb =
+        //    new StringBuilder();
+
+        //sb.AppendLine("===== 10 Roll =====");
+
+        foreach (CharacterData result in results)
+        {
+            // 저장
+            InventoryManager.Instance
+                .AddItem(result.characterName, 1);
+            AnalyticsManager.Instance
+                .LogGachaRoll(
+                    result.rarity,
+                    result.characterName);
+
+
+            if (result.rarity == "SSR")
+            {
+                AnalyticsManager.Instance
+                    .LogSSR(
+                        result.characterName);
+            }
+        }
+
+        foreach (CharacterData result in results)
+        {
+            CreateSlot(result);
+        }
+
+        //StringBuilder sb =
+        //    new StringBuilder();
+
+        //sb.AppendLine("===== 10 Roll =====");
+        //sb.AppendLine(
+        //    $"[{result.rarity}] {result.characterName}");
+        //gachaResultText.text = sb.ToString();
+    }
+
+    private void CreateSlot(CharacterData result)
+    {
+        GameObject slot = Instantiate(
+            resultSlotPrefab,
+            content);
+
+        slot.GetComponent<ResultSlotUI>().Setup(
+            result.rarity,
+            result.characterName);
+    }
+
+    private void ClearSlots()
+    {
+        foreach (Transform child in content)
+        {
+            Destroy(child.gameObject);
+        }
+    }
+    /*
     private void SendAnalytics(CharacterData result)
     {
+        
         Debug.Log(
             $"[Analytics] Gacha: " +
             $"{result.characterName} / " +
             $"{result.rarity}");
+        
+
+        FirebaseAnalytics.LogEvent(
+            $"[Analytics] gacha_roll: ",
+            result.characterName,
+            result.rarity);
     }
+    */
 }

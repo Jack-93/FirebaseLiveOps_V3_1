@@ -12,7 +12,15 @@ public class FirestoreManager : MonoBehaviour
 
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         Instance = this;
+
+        DontDestroyOnLoad(gameObject);
 
         db = FirebaseFirestore.DefaultInstance;
     }
@@ -30,7 +38,7 @@ public class FirestoreManager : MonoBehaviour
         // User Id 데이터 저장
         DocumentReference docRef =
             db.Collection("users")
-            .Document(user.UserId); 
+            .Document(user.UserId);
 
         Dictionary<string, object> playerData =
             new Dictionary<string, object>()
@@ -40,7 +48,8 @@ public class FirestoreManager : MonoBehaviour
             { "gold", data.gold },
             { "tutorialCompleted", data.tutorialCompleted },
             { "inventory", data.inventory.items },
-            { "lastLoginDate", data.lastLoginDate }
+            { "lastLoginDate", data.lastLoginDate },
+            { "pityCount", data.pityCount   }
         };
 
         await docRef.SetAsync(playerData);

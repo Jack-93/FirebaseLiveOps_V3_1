@@ -10,8 +10,10 @@ public class PlayerData
 
     public string lastLoginDate;
 
+    public int pityCount;
+
     // 서버, 클라이언트 둘 다 사용 (디폴트값 설정소)
-    public PlayerData() 
+    public PlayerData()
     {
         nickname = "NewPlayer";
         level = 1;
@@ -21,5 +23,7 @@ public class PlayerData
         inventory = new InventoryData();
 
         lastLoginDate = "";
+
+        pityCount = 0;
     }
 }

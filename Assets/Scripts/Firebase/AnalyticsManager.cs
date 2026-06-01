@@ -1,6 +1,7 @@
 using UnityEngine;
 using Firebase.Analytics;
 
+/* Analytics로 전달됐는지 확인하기 위한 Manager 클래스*/
 public class AnalyticsManager : MonoBehaviour
 {
     public static AnalyticsManager Instance;
@@ -34,6 +35,7 @@ public class AnalyticsManager : MonoBehaviour
         FirebaseAnalytics.LogEvent("gacha_roll", "rarity", rarity);
         Debug.Log($"[Analytics] Logged Gacha Roll Event with Rarity: {rarity}");
     }
+
     public void LogSSR(string characterName)
     {
         FirebaseAnalytics.LogEvent(
@@ -42,7 +44,7 @@ public class AnalyticsManager : MonoBehaviour
             characterName);
 
         Debug.Log(
-            $"[Analytics] SSR {characterName}");
+            $"[Analytics] SSR!!! {characterName}");
     }
 
 }
