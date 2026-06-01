@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "74044493321",
+    "project_id": "gameliveops-1449b",
+    "storage_bucket": "gameliveops-1449b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:74044493321:android:89a536deb4f2e72e7672d8",
+        "android_client_info": {
+          "package_name": "com.DoOurGame.gameliveops"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDVVyJ5d-fx7CAXBHOJw79_F-82DPojBEs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:74044493321:android:a330d8fe2b3240717672d8",
+        "android_client_info": {
+          "package_name": "com.sparrow.gameliveops"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDVVyJ5d-fx7CAXBHOJw79_F-82DPojBEs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

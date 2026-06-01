@@ -15,8 +15,6 @@ public class FirestoreManager : MonoBehaviour
         Instance = this;
 
         db = FirebaseFirestore.DefaultInstance;
-
-        DontDestroyOnLoad(gameObject);
     }
 
     public async void SavePlayerData(PlayerData data)

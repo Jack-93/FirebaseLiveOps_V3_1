@@ -7,15 +7,7 @@ public class DailyRewardManager : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
         Instance = this;
-
-        DontDestroyOnLoad(gameObject);
     }
 
     public void CheckDailyReward()
@@ -37,8 +29,6 @@ public class DailyRewardManager : MonoBehaviour
 
             FirestoreManager.Instance
                 .SavePlayerData(data);
-            AnalyticsManager.Instance
-                 .LogDailyReward();
 
             Debug.Log(
                 "[DailyReward] Reward Claimed"
@@ -60,8 +50,6 @@ public class DailyRewardManager : MonoBehaviour
         Debug.Log(
             "[DailyReward] Gem +500"
         );
-
-
 
         // InventoryUImanager.instance.RefreshInventoryUI();
     }

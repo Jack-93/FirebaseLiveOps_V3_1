@@ -8,15 +8,7 @@ public class InventoryManager : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
         Instance = this;
-
-        DontDestroyOnLoad(gameObject);
     }
 
     public void AddItem(string itemName, int amount)
