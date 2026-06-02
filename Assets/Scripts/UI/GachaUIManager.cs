@@ -23,14 +23,14 @@ public class GachaUIManager : MonoBehaviour
         if (result.rarity == "SSR")
         {
             AnalyticsManager.Instance
-                .LogSSR(result.characterName);
+                .LogSSR(result);
         }
 
         //저장
         InventoryManager.Instance
             .AddItem(result.characterName, 1);
         AnalyticsManager.Instance
-            .LogGachaRoll(result.characterName, result.rarity);
+            .LogGachaRoll(result);
 
         ////결과UI
         //gachaResultText.text = $"[{result.rarity}]: {result.characterName}";
@@ -42,7 +42,7 @@ public class GachaUIManager : MonoBehaviour
         {
             AnalyticsManager.Instance
                 .LogSSR(
-                    result.characterName);
+                    result);
         }
 
         CreateSlot(result);
@@ -70,15 +70,14 @@ public class GachaUIManager : MonoBehaviour
                 .AddItem(result.characterName, 1);
             AnalyticsManager.Instance
                 .LogGachaRoll(
-                    result.rarity,
-                    result.characterName);
+                    result);
 
 
             if (result.rarity == "SSR")
             {
                 AnalyticsManager.Instance
                     .LogSSR(
-                        result.characterName);
+                        result);
             }
         }
 

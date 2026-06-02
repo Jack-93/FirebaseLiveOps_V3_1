@@ -30,21 +30,21 @@ public class AnalyticsManager : MonoBehaviour
         Debug.Log("[Analytics] Logged Daily Reward Collected Event");
     }
 
-    public void LogGachaRoll(string characterName, string rarity)
+    public void LogGachaRoll(CharacterData character)
     {
-        FirebaseAnalytics.LogEvent("gacha_roll", "rarity", rarity);
-        Debug.Log($"[Analytics] Logged Gacha Roll Event with Rarity: {rarity}");
+        FirebaseAnalytics.LogEvent("gacha_roll", "rarity", character.rarity);
+        Debug.Log($"[Analytics] Logged Gacha Roll Event with Rarity: {character.rarity}");
     }
 
-    public void LogSSR(string characterName)
+    public void LogSSR(CharacterData character)
     {
         FirebaseAnalytics.LogEvent(
             "gacha_ssr",
             "character",
-            characterName);
+            character.characterName);
 
         Debug.Log(
-            $"[Analytics] SSR!!! {characterName}");
+            $"[Analytics] SSR!!! {character.characterName}");
     }
 
 }
