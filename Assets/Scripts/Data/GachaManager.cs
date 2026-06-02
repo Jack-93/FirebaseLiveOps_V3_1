@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class GachaManager : MonoBehaviour
 {
+    public CharacterDatabase database;
+
     public static GachaManager Instance;
 
     // 각 등급별 캐릭터 풀
@@ -22,7 +24,9 @@ public class GachaManager : MonoBehaviour
 
         DontDestroyOnLoad(gameObject);
 
-        initializeCharacterPool();
+        InitializeCharacterPoolFromDatabase();
+
+        //initializeCharacterPool();
         //// 캐릭터 풀 초기화
         //rCharacterPool.Add(new CharacterData("R_Character1", "R"));
         //rCharacterPool.Add(new CharacterData("R_Character2", "R"));
@@ -31,20 +35,22 @@ public class GachaManager : MonoBehaviour
         //ssrCharacterPool.Add(new CharacterData("SSR_Character1", "SSR"));
         //ssrCharacterPool.Add(new CharacterData("SSR_Character2", "SSR"));
     }
-
+    /*
     private void initializeCharacterPool()
     {
         // 실제 게임에서는 이 데이터를 외부에서 불러올 수 있도록 제작
+        // 캐릭터 데이터 에셋 추가 ScriptableObject
+         
         rCharacters.Add(new CharacterData("R_Character1", "R"));
         rCharacters.Add(new CharacterData("R_Character2", "R"));
 
         srCharacters.Add(new CharacterData("SR_Character1", "SR"));
         srCharacters.Add(new CharacterData("SR_Character2", "SR"));
 
-        ssrCharacters.Add(new CharacterData("SSR_Character1", "SSR"));
-        ssrCharacters.Add(new CharacterData("SSR_Character2", "SSR"));
+        ssrCharacters.Add(new CharacterData("Scarlet", "SSR"));
+        ssrCharacters.Add(new CharacterData("Modernia", "SSR"));
     }
-
+    */
     // 확률 -> RemoteConfig에서 수치 관리
     public CharacterData RollCharacter()
     {
@@ -103,7 +109,7 @@ public class GachaManager : MonoBehaviour
 
     private CharacterData GetRandomCharacter(List<CharacterData> list)
     {
-        int index = Random.Range(1, list.Count);
+        int index = Random.Range(0, list.Count);
 
         return list[index];
     }
@@ -136,4 +142,43 @@ public class GachaManager : MonoBehaviour
         return result;
     }
 
+    private void InitializeCharacterPoolFromDatabase()
+    {
+        Debug.Log(database);
+
+        if (database == null)
+        {
+            Debug.LogError("Database is NULL");
+            return;
+        }
+
+        Debug.Log(database.characters);
+
+        rCharacters.Clear();
+        srCharacters.Clear();
+        ssrCharacters.Clear();
+
+        foreach (CharacterData character in database.characters)
+        {
+            switch (character.rarity)
+            {
+                case "SSR":
+                    ssrCharacters.Add(character);
+                    break;
+
+                case "SR":
+                    srCharacters.Add(character);
+                    break;
+
+                default:
+                    rCharacters.Add(character);
+                    break;
+            }
+        }
+
+        Debug.Log(
+            $"R:{rCharacters.Count} " +
+            $"SR:{srCharacters.Count} " +
+            $"SSR:{ssrCharacters.Count}");
+    }
 }

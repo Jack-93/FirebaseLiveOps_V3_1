@@ -1,12 +1,15 @@
-[System.Serializable]
-public class CharacterData
+using UnityEngine;
+
+[CreateAssetMenu(
+    fileName = "CharacterData",
+    menuName = "Game/Character")]
+public class CharacterData : ScriptableObject
 {
     public string characterName;
     public string rarity;
 
-    public CharacterData(string name, string rarityType)
-    {
-        characterName = name;
-        rarity = rarityType;
-    }
+    public Sprite icon;
+
+    [TextArea]
+    public string description;
 }

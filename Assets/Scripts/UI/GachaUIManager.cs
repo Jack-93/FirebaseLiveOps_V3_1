@@ -32,11 +32,11 @@ public class GachaUIManager : MonoBehaviour
         AnalyticsManager.Instance
             .LogGachaRoll(result.characterName, result.rarity);
 
-        //결과UI
-        gachaResultText.text = $"[{result.rarity}]: {result.characterName}";
+        ////결과UI
+        //gachaResultText.text = $"[{result.rarity}]: {result.characterName}";
 
-        Debug.Log(
-           $"[Gacha Result] {result.rarity} {result.characterName}");
+        //Debug.Log(
+        //   $"[Gacha Result] {result.rarity} {result.characterName}");
 
         if (result.rarity == "SSR")
         {
@@ -44,6 +44,8 @@ public class GachaUIManager : MonoBehaviour
                 .LogSSR(
                     result.characterName);
         }
+
+        CreateSlot(result);
 
         // SendAnalytics(result);
     }
@@ -98,11 +100,11 @@ public class GachaUIManager : MonoBehaviour
     {
         GameObject slot = Instantiate(
             resultSlotPrefab,
-            content);
+            content,
+            false);
 
-        slot.GetComponent<ResultSlotUI>().Setup(
-            result.rarity,
-            result.characterName);
+        slot.GetComponent<ResultSlotUIManager>().Setup(
+            result);
     }
 
     private void ClearSlots()
