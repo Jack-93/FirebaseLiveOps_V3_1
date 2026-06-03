@@ -29,8 +29,17 @@ https://firebase.google.com/download/unity
 - Red Dot 알림 시스템
 
 ## 프로젝트 흐름
-1. Firebase 연결 --> 프로젝트 설정 및 초기화
-2. Analytics 이벤트 확인 --> Console에서 이벤트 로그 확인
-3. Remote Config 값 수정
-4. 이벤트 배너 ON/OFF 테스트 
-5. A/B Test 분석
+### 유저 데이터 생성 저장
+Firebase Auth
+↓
+Firestore
+↓
+Inventory
+↓
+Analytics
+↓
+Remote Config
+↓
+Gacha
+↓
+Daily Reward

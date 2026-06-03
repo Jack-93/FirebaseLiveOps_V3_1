@@ -1,5 +1,10 @@
+using System.Collections.Generic;
 
-
+/*
+ * 플레이어 데이터 클래스
+ * 닉네임, 레벨, 골드, 튜토리얼 완료 여부, 인벤토리, 일일 보상 관련 데이터, 우편함 등
+ *  Player Data -> Firestore -> JSON
+ */
 [System.Serializable]
 public class PlayerData
 {
@@ -13,6 +18,8 @@ public class PlayerData
     public int pityCount;
 
     public string uid;
+
+    public List<MailData> mailbox;
 
     // Daily Reward 관련 데이터
     public string lastLoginDate;
@@ -32,5 +39,7 @@ public class PlayerData
         lastLoginDate = "";
 
         pityCount = 0;
+
+        mailbox = new List<MailData>();
     }
 }
