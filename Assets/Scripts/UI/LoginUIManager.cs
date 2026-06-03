@@ -33,8 +33,8 @@ public class LoginUIManager : MonoBehaviour
             // 자동 로그인 후 Analytics 이벤트 로그, 유저 데이터 로드, 일일 보상 체크
             FirestoreManager.Instance
                 .LoadPlayerData();
-            DailyRewardManager.Instance
-                .CheckDailyReward();
+            //DailyRewardManager.Instance
+            //    .ClaimReward();
             AnalyticsManager.Instance
                 .LogLogin();
 
@@ -71,8 +71,8 @@ public class LoginUIManager : MonoBehaviour
                 .LogLogin();
             FirestoreManager.Instance
                 .LoadPlayerData();
-            DailyRewardManager.Instance
-                .CheckDailyReward();
+            //DailyRewardManager.Instance
+            //    .ClaimReward();
 
             CheckNewUser();
         }
