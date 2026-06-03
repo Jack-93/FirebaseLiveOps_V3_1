@@ -51,6 +51,49 @@ public class GachaManager : MonoBehaviour
         ssrCharacters.Add(new CharacterData("Modernia", "SSR"));
     }
     */
+
+    // 캐릭터 데이터 에셋 추가 ScriptableObject
+    private void InitializeCharacterPoolFromDatabase()
+    {
+        Debug.Log(database);
+
+        if (database == null)
+        {
+            Debug.LogError("Database is NULL");
+            return;
+        }
+
+        Debug.Log(database.characters);
+
+        rCharacters.Clear();
+        srCharacters.Clear();
+        ssrCharacters.Clear();
+
+        foreach (CharacterData character in database.characters)
+        {
+            switch (character.rarity)
+            {
+                case "SSR":
+                    ssrCharacters.Add(character);
+                    break;
+
+                case "SR":
+                    srCharacters.Add(character);
+                    break;
+
+                default:
+                    rCharacters.Add(character);
+                    break;
+            }
+        }
+
+        Debug.Log(
+            $"R:{rCharacters.Count} " +
+            $"SR:{srCharacters.Count} " +
+            $"SSR:{ssrCharacters.Count}");
+    }
+
+
     // 확률 -> RemoteConfig에서 수치 관리
     public CharacterData RollCharacter()
     {
@@ -142,43 +185,4 @@ public class GachaManager : MonoBehaviour
         return result;
     }
 
-    private void InitializeCharacterPoolFromDatabase()
-    {
-        Debug.Log(database);
-
-        if (database == null)
-        {
-            Debug.LogError("Database is NULL");
-            return;
-        }
-
-        Debug.Log(database.characters);
-
-        rCharacters.Clear();
-        srCharacters.Clear();
-        ssrCharacters.Clear();
-
-        foreach (CharacterData character in database.characters)
-        {
-            switch (character.rarity)
-            {
-                case "SSR":
-                    ssrCharacters.Add(character);
-                    break;
-
-                case "SR":
-                    srCharacters.Add(character);
-                    break;
-
-                default:
-                    rCharacters.Add(character);
-                    break;
-            }
-        }
-
-        Debug.Log(
-            $"R:{rCharacters.Count} " +
-            $"SR:{srCharacters.Count} " +
-            $"SSR:{ssrCharacters.Count}");
-    }
 }

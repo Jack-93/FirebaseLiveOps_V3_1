@@ -173,12 +173,14 @@ Library/PackageManager/
 # Ignore common plugin binaries in these folders so they are not accidentally committed.
 # If you want to store them in git, use Git LFS and .gitattributes instead.
 #--------------------------------------
+Assets/Firebase/**
 Assets/Firebase/Plugins/*.dll
 Assets/Firebase/Plugins/*.so
 Assets/Firebase/Plugins/*.bundle
-Assets/Firebase/Plugins/**/*.dll
+Assets/Firebase/Plugins/*
 Assets/Firebase/Plugins/**/*.so
 Assets/Firebase/Plugins/**/*.bundle
+Assets/Plugins/**
 Assets/Plugins/*.dll
 Assets/Plugins/*.so
 Assets/Plugins/*.bundle

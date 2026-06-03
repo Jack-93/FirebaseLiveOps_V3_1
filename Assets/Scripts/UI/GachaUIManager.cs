@@ -69,8 +69,7 @@ public class GachaUIManager : MonoBehaviour
             InventoryManager.Instance
                 .AddItem(result.characterName, 1);
             AnalyticsManager.Instance
-                .LogGachaRoll(
-                    result);
+                .LogGachaRoll(result);
 
 
             if (result.rarity == "SSR")
