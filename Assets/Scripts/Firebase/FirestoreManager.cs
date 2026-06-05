@@ -72,26 +72,6 @@ public class FirestoreManager : MonoBehaviour
         Debug.Log("[Firestore] Nickname Updated");
     }
 
-    // 유저 골드 저장
-    public async void AddGold(int amount)
-    {
-        FirebaseUser user =
-            FirebaseAuth.DefaultInstance.CurrentUser;
-
-        PlayerDataManager.Instance.playerData.gold += amount;
-
-        int newGold =
-            PlayerDataManager.Instance.playerData.gold;
-
-        DocumentReference docRef =
-            db.Collection("users")
-            .Document(user.UserId);
-
-        await docRef.UpdateAsync("gold", newGold);
-
-        Debug.Log($"[Firestore] Gold Updated: {newGold}");
-    }
-
     public async void LoadPlayerData()
     {
         FirebaseUser user =
@@ -127,8 +107,85 @@ public class FirestoreManager : MonoBehaviour
         }
     }
 
+    // 유저 골드 저장
+    public async void AddGold(int amount)
+    {
+        FirebaseUser user =
+            FirebaseAuth.DefaultInstance.CurrentUser;
+
+        PlayerDataManager.Instance.playerData.gold += amount;
+
+        int newGold =
+            PlayerDataManager.Instance.playerData.gold;
+
+        DocumentReference docRef =
+            db.Collection("users")
+            .Document(user.UserId);
+
+        await docRef.UpdateAsync("gold", newGold);
+
+        Debug.Log($"[Firestore] Gold Updated: {newGold}");
+    }
+
     internal void CheckDailyReward()
     {
         throw new NotImplementedException();
+    }
+
+    public async void LoadGlobalMails()
+    {
+
+        QuerySnapshot snapshot =
+            await db.Collection("global_mails")
+            .GetSnapshotAsync();
+
+        foreach (DocumentSnapshot doc in snapshot.Documents)
+        {
+            if (HasMail(doc.Id))
+                continue;
+
+            Dictionary<string, object> data =
+                doc.ToDictionary();
+
+            bool isActive =
+                data.ContainsKey("isActive") &&
+                (bool)data["isActive"];
+
+            if (!isActive)
+                continue;
+
+            MailData mail = new MailData();
+
+            mail.mailId = doc.Id;
+            mail.title = data["title"].ToString();
+            mail.itemName = data["itemName"].ToString();
+            mail.amount = int.Parse(data["amount"].ToString());
+            mail.isClaimed = false;
+
+            PlayerDataManager.Instance
+                .playerData
+                .mailbox
+                .Add(mail);
+        }
+
+        SavePlayerData(
+            PlayerDataManager.Instance.playerData);
+
+        Debug.Log("[Mailbox] Global mails loaded");
+    }
+    private bool HasMail(string mailId)
+    {
+        var mailbox =
+            PlayerDataManager.Instance
+            .playerData
+            .mailbox;
+
+        foreach (MailData mail in mailbox)
+        {
+            if (mail.mailId == mailId)
+                return true;
+        }
+
+        return false;
     }
 }

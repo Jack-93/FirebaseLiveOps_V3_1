@@ -37,6 +37,8 @@ public class LoginUIManager : MonoBehaviour
             //    .ClaimReward();
             AnalyticsManager.Instance
                 .LogLogin();
+            FirestoreManager.Instance
+                .LoadGlobalMails();
 
             CheckNewUser();
         }
@@ -71,6 +73,8 @@ public class LoginUIManager : MonoBehaviour
                 .LogLogin();
             FirestoreManager.Instance
                 .LoadPlayerData();
+            FirestoreManager.Instance
+                .LoadGlobalMails();
             //DailyRewardManager.Instance
             //    .ClaimReward();
 

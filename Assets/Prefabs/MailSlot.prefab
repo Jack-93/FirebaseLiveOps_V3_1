@@ -285,6 +285,8 @@ GameObject:
   - component: {fileID: 9051169345060050162}
   - component: {fileID: 2892902037747135324}
   - component: {fileID: 7340693977530628106}
+  - component: {fileID: 3982921172519162979}
+  - component: {fileID: 4349821276824448571}
   m_Layer: 5
   m_Name: MailSlot
   m_TagString: Untagged
@@ -352,6 +354,41 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &3982921172519162979
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4778478426303493653}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1ef4f4ace34a7c4ab8546045f373877, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MailSlotUI
+  titleText: {fileID: 8922851306647168497}
+  rewardText: {fileID: 3482142446407517243}
+  claimButton: {fileID: 4059609045218587152}
+--- !u!114 &4349821276824448571
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4778478426303493653}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 306cc8c2b49d7114eaa3623786fc2126, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.LayoutElement
+  m_IgnoreLayout: 0
+  m_MinWidth: -1
+  m_MinHeight: -1
+  m_PreferredWidth: 450
+  m_PreferredHeight: 150
+  m_FlexibleWidth: -1
+  m_FlexibleHeight: -1
+  m_LayoutPriority: 1
 --- !u!1 &5230280425953780758
 GameObject:
   m_ObjectHideFlags: 0

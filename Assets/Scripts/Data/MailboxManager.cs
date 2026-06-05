@@ -1,5 +1,5 @@
-using UnityEngine;
 using System;
+using UnityEngine;
 
 public class MailboxManager : MonoBehaviour
 {
@@ -21,35 +21,24 @@ public class MailboxManager : MonoBehaviour
 
     public void AddTestMail()
     {
-        MailData mail =
-            new MailData();
+        MailData mail = new MailData();
 
-        mail.mailId =
-            Guid.NewGuid().ToString();
-
-        mail.title =
-            "Maintenance Reward";
-
-        mail.itemName =
-            "Gem";
-
-        mail.amount =
-            500;
-
-        mail.isClaimed =
-            false;
+        mail.mailId = Guid.NewGuid().ToString();
+        mail.title = "Maintenance Reward";
+        mail.itemName = "Gem";
+        mail.amount = 500;
+        mail.isClaimed = false;
 
         PlayerDataManager.Instance
-            .playerData.mailbox
+            .playerData
+            .mailbox
             .Add(mail);
 
         FirestoreManager.Instance
             .SavePlayerData(
-                PlayerDataManager.Instance
-                .playerData);
+                PlayerDataManager.Instance.playerData);
 
-        Debug.Log(
-            "[Mailbox] Test Mail Added");
+        Debug.Log("[Mailbox] Test Mail Added");
     }
 
     public void ClaimMail(MailData mail)
@@ -61,22 +50,54 @@ public class MailboxManager : MonoBehaviour
             return;
 
         InventoryManager.Instance
-            .AddItem(
-                mail.itemName,
-                mail.amount);
+            .AddItem(mail.itemName, mail.amount);
 
         mail.isClaimed = true;
 
         PlayerDataManager.Instance
-            .playerData.mailbox
+            .playerData
+            .mailbox
             .Remove(mail);
 
         FirestoreManager.Instance
             .SavePlayerData(
-                PlayerDataManager.Instance
-                .playerData);
+                PlayerDataManager.Instance.playerData);
 
-        Debug.Log(
-            $"[Mailbox] Claimed : {mail.title}");
+        Debug.Log($"[Mailbox] Claimed : {mail.title}");
+    }
+
+    public void ClaimAllMails()
+    {
+        var mailbox =
+            PlayerDataManager.Instance
+            .playerData
+            .mailbox;
+
+        if (mailbox.Count <= 0)
+        {
+            Debug.Log("[Mailbox] No mails to claim");
+            return;
+        }
+
+        for (int i = mailbox.Count - 1; i >= 0; i--)
+        {
+            MailData mail = mailbox[i];
+
+            if (mail.isClaimed)
+                continue;
+
+            InventoryManager.Instance
+                .AddItem(mail.itemName, mail.amount);
+
+            mail.isClaimed = true;
+
+            mailbox.RemoveAt(i);
+        }
+
+        FirestoreManager.Instance
+            .SavePlayerData(
+                PlayerDataManager.Instance.playerData);
+
+        Debug.Log("[Mailbox] Claim All Complete");
     }
 }

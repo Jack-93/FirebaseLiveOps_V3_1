@@ -43,3 +43,6 @@ Remote Config
 Gacha
 бщ
 Daily Reward
+
+### Live Ops
+Mail Box (Reward)
