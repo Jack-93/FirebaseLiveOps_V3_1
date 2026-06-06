@@ -12,6 +12,7 @@ public class MainGameBootstrap : MonoBehaviour
     private GrowthManager growthManager;
     private TutorialManager tutorialManager;
     private MainGameUI mainGameUI;
+    private CompanionManager companionManager;
     private bool isInitializing;
     private float autosaveTimer;
 
@@ -28,6 +29,13 @@ public class MainGameBootstrap : MonoBehaviour
         EnsurePersistentManager<MailboxManager>("MailboxManager");
         EnsurePersistentManager<DailyRewardManager>("DailyRewardManager");
         EnsurePersistentManager<AnalyticsManager>("AnalyticsManager");
+        EnsurePersistentManager<EquipmentManager>("EquipmentManager");
+        EnsurePersistentManager<QuestManager>("QuestManager");
+        EnsurePersistentManager<ShopManager>("ShopManager");
+        EnsurePersistentManager<EventMissionManager>(
+            "EventMissionManager");
+        companionManager =
+            EnsurePersistentManager<CompanionManager>("CompanionManager");
 
         battleManager = gameObject.AddComponent<BattleManager>();
         growthManager = gameObject.AddComponent<GrowthManager>();
@@ -38,7 +46,8 @@ public class MainGameBootstrap : MonoBehaviour
             this,
             battleManager,
             growthManager,
-            tutorialManager);
+            tutorialManager,
+            companionManager);
     }
 
     private async void Start()
@@ -88,8 +97,14 @@ public class MainGameBootstrap : MonoBehaviour
             data.lastOnlineUnixTime = now;
             data.gold += offlineGold;
             data.EnsureInitialized();
+            data.gold = Math.Max(data.gold, 100000);
+            data.inventory.items["Gem"] = Math.Max(
+                GachaEconomy.GetItemCount(data, "Gem"),
+                100000);
 
             PlayerDataManager.Instance.SetPlayerData(data);
+            EquipmentManager.Instance.InitializeStarterEquipment();
+            companionManager.Initialize();
 
             mainGameUI.SetLoading(true, "Checking rewards...");
             await FirestoreManager.Instance.LoadGlobalMailsAsync();
@@ -97,6 +112,11 @@ public class MainGameBootstrap : MonoBehaviour
             growthManager.Initialize(battleManager);
             battleManager.Initialize();
             tutorialManager.Initialize(battleManager, growthManager);
+            QuestManager.Instance.Initialize(
+                battleManager,
+                growthManager,
+                EquipmentManager.Instance);
+            EventMissionManager.Instance.Initialize(battleManager);
 
             await FirestoreManager.Instance.SavePlayerDataAsync(data);
 

@@ -34,7 +34,41 @@ public static class PlayerDataConverter
             { "attackSpeedLevel", data.attackSpeedLevel },
             { "tutorialStep", data.tutorialStep },
             { "totalMonstersDefeated", data.totalMonstersDefeated },
-            { "lastOnlineUnixTime", data.lastOnlineUnixTime }
+            { "lastOnlineUnixTime", data.lastOnlineUnixTime },
+            { "autoAdvance", data.autoAdvance },
+            { "equippedCompanion", data.equippedCompanion },
+            {
+                "equippedCompanionRarity",
+                data.equippedCompanionRarity
+            },
+            {
+                "equippedCompanions",
+                new List<string>(data.equippedCompanions)
+            },
+            {
+                "equippedCompanionRarities",
+                new List<string>(data.equippedCompanionRarities)
+            },
+            { "companionStars", ConvertIntDictionary(data.companionStars) },
+            { "equippedWeapon", data.equippedWeapon },
+            { "equippedArmor", data.equippedArmor },
+            { "weaponUpgradeLevel", data.weaponUpgradeLevel },
+            { "armorUpgradeLevel", data.armorUpgradeLevel },
+            { "dailyQuestDate", data.dailyQuestDate },
+            { "dailyQuestKills", data.dailyQuestKills },
+            { "dailyQuestClaimed", data.dailyQuestClaimed },
+            { "sequentialQuestIndex", data.sequentialQuestIndex },
+            { "sequentialQuestProgress", data.sequentialQuestProgress },
+            { "sequentialQuestCycles", data.sequentialQuestCycles },
+            { "eventMissionDate", data.eventMissionDate },
+            { "eventKillCount", data.eventKillCount },
+            { "eventGachaCount", data.eventGachaCount },
+            { "eventMissionPoints", data.eventMissionPoints },
+            { "eventRewardClaimed", data.eventRewardClaimed },
+            {
+                "claimedAchievementIds",
+                new List<string>(data.claimedAchievementIds)
+            }
         };
     }
 
@@ -61,7 +95,36 @@ public static class PlayerDataConverter
             totalMonstersDefeated =
                 GetInt(values, "totalMonstersDefeated", 0),
             lastOnlineUnixTime =
-                GetLong(values, "lastOnlineUnixTime", 0)
+                GetLong(values, "lastOnlineUnixTime", 0),
+            autoAdvance = GetBool(values, "autoAdvance", true),
+            equippedWeapon = GetString(values, "equippedWeapon", ""),
+            equippedArmor = GetString(values, "equippedArmor", ""),
+            weaponUpgradeLevel =
+                GetInt(values, "weaponUpgradeLevel", 0),
+            armorUpgradeLevel =
+                GetInt(values, "armorUpgradeLevel", 0),
+            dailyQuestDate = GetString(values, "dailyQuestDate", ""),
+            dailyQuestKills = GetInt(values, "dailyQuestKills", 0),
+            dailyQuestClaimed =
+                GetBool(values, "dailyQuestClaimed", false),
+            sequentialQuestIndex =
+                GetInt(values, "sequentialQuestIndex", 0),
+            sequentialQuestProgress =
+                GetInt(values, "sequentialQuestProgress", 0),
+            sequentialQuestCycles =
+                GetInt(values, "sequentialQuestCycles", 0),
+            eventMissionDate =
+                GetString(values, "eventMissionDate", ""),
+            eventKillCount = GetInt(values, "eventKillCount", 0),
+            eventGachaCount = GetInt(values, "eventGachaCount", 0),
+            eventMissionPoints =
+                GetInt(values, "eventMissionPoints", 0),
+            eventRewardClaimed =
+                GetBool(values, "eventRewardClaimed", false),
+            equippedCompanion =
+                GetString(values, "equippedCompanion", ""),
+            equippedCompanionRarity =
+                GetString(values, "equippedCompanionRarity", "")
         };
 
         /*
@@ -75,6 +138,37 @@ public static class PlayerDataConverter
 
         if (values.TryGetValue("claimedMailIds", out object claimedValue))
             data.claimedMailIds = ConvertStrings(claimedValue);
+
+        if (values.TryGetValue(
+                "claimedAchievementIds",
+                out object achievementsValue))
+        {
+            data.claimedAchievementIds =
+                ConvertStrings(achievementsValue);
+        }
+
+        if (values.TryGetValue(
+                "equippedCompanions",
+                out object companionsValue))
+        {
+            data.equippedCompanions =
+                ConvertStrings(companionsValue, true);
+        }
+
+        if (values.TryGetValue(
+                "equippedCompanionRarities",
+                out object raritiesValue))
+        {
+            data.equippedCompanionRarities =
+                ConvertStrings(raritiesValue, true);
+        }
+
+        if (values.TryGetValue(
+                "companionStars",
+                out object starsValue))
+        {
+            data.companionStars = ConvertIntDictionary(starsValue);
+        }
 
         data.EnsureInitialized();
         return data;
@@ -109,6 +203,36 @@ public static class PlayerDataConverter
         }
 
         return inventory;
+    }
+
+    private static Dictionary<string, object> ConvertIntDictionary(
+        Dictionary<string, int> values)
+    {
+        Dictionary<string, object> result =
+            new Dictionary<string, object>();
+
+        foreach (KeyValuePair<string, int> entry in values)
+            result[entry.Key] = entry.Value;
+
+        return result;
+    }
+
+    private static Dictionary<string, int> ConvertIntDictionary(object raw)
+    {
+        Dictionary<string, int> result =
+            new Dictionary<string, int>();
+
+        if (!(raw is IDictionary dictionary))
+            return result;
+
+        foreach (DictionaryEntry entry in dictionary)
+        {
+            string key = entry.Key?.ToString();
+            if (!string.IsNullOrEmpty(key))
+                result[key] = ConvertToInt(entry.Value, 1);
+        }
+
+        return result;
     }
 
     private static List<object> ConvertMailsToList(List<MailData> mails)
@@ -161,7 +285,9 @@ public static class PlayerDataConverter
         return mails;
     }
 
-    private static List<string> ConvertStrings(object raw)
+    private static List<string> ConvertStrings(
+        object raw,
+        bool keepEmpty = false)
     {
         List<string> result = new List<string>();
 
@@ -171,7 +297,7 @@ public static class PlayerDataConverter
         foreach (object item in list)
         {
             string value = item?.ToString();
-            if (!string.IsNullOrEmpty(value))
+            if (keepEmpty || !string.IsNullOrEmpty(value))
                 result.Add(value);
         }
 

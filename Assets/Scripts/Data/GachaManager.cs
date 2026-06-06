@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class GachaManager : MonoBehaviour
 {
+    public const int PityLimit = 100;
+
     public CharacterDatabase database;
 
     public static GachaManager Instance;
@@ -191,7 +193,7 @@ public class GachaManager : MonoBehaviour
                 "[Gacha] PlayerData is not ready.");
         }
 
-        if (data.pityCount >= 99)
+        if (data.pityCount >= PityLimit - 1)
         {
             data.pityCount = 0;
 
@@ -230,7 +232,7 @@ public class GachaManager : MonoBehaviour
 
         PlayerData data = PlayerDataManager.Instance?.playerData;
         if ((GachaConfig.SSRRate > 0 ||
-             data != null && data.pityCount >= 99) &&
+             data != null && data.pityCount >= PityLimit - 1) &&
             ssrCharacters.Count == 0)
         {
             throw new System.InvalidOperationException(

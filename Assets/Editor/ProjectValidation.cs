@@ -40,7 +40,31 @@ public static class ProjectValidation
             attackSpeedLevel = 6,
             tutorialStep = 2,
             totalMonstersDefeated = 123,
-            lastOnlineUnixTime = 1780786800L
+            lastOnlineUnixTime = 1780786800L,
+            autoAdvance = false,
+            equippedWeapon = "Iron Blade",
+            equippedArmor = "Iron Guard",
+            weaponUpgradeLevel = 3,
+            armorUpgradeLevel = 2,
+            dailyQuestDate = "2026-06-07",
+            dailyQuestKills = 7,
+            dailyQuestClaimed = false,
+            equippedCompanion = "Astra",
+            equippedCompanionRarity = "SSR",
+            equippedCompanions = new List<string>
+            {
+                "Astra",
+                "Rook"
+            },
+            equippedCompanionRarities = new List<string>
+            {
+                "SSR",
+                "SR"
+            },
+            companionStars = new Dictionary<string, int>
+            {
+                { "Astra", 3 }
+            }
         };
 
         source.inventory.items.Clear();
@@ -80,6 +104,21 @@ public static class ProjectValidation
             "Growth round trip failed.");
         Require(decoded.lastOnlineUnixTime == 1780786800L,
             "Offline timestamp round trip failed.");
+        Require(!decoded.autoAdvance,
+            "Auto advance round trip failed.");
+        Require(decoded.weaponUpgradeLevel == 3 &&
+            decoded.armorUpgradeLevel == 2,
+            "Equipment round trip failed.");
+        Require(decoded.dailyQuestKills == 7,
+            "Quest round trip failed.");
+        Require(decoded.equippedCompanion == "Astra",
+            "Equipped companion round trip failed.");
+        Require(decoded.equippedCompanionRarity == "SSR",
+            "Companion rarity round trip failed.");
+        Require(decoded.equippedCompanions.Count == 3,
+            "Companion party round trip failed.");
+        Require(decoded.companionStars["Astra"] == 3,
+            "Companion stars round trip failed.");
     }
 
     private static void ValidateLegacyMailCompatibility()
@@ -219,6 +258,8 @@ public static class ProjectValidation
             playerObject.AddComponent<PlayerDataManager>();
         PlayerDataManager.Instance = playerManager;
         playerManager.playerData = new PlayerData();
+        playerManager.playerData.inventory.items["Pip"] = 1;
+        playerManager.playerData.inventory.items["Astra"] = 1;
         playerManager.playerData.currentStage = 100;
         playerManager.playerData.highestStage = 100;
         playerManager.playerData.stageEnemyIndex =
@@ -232,15 +273,34 @@ public static class ProjectValidation
             runtimeObject.AddComponent<GrowthManager>();
         TutorialManager tutorial =
             runtimeObject.AddComponent<TutorialManager>();
+        CompanionManager companion =
+            runtimeObject.AddComponent<CompanionManager>();
         MainGameUI ui =
             runtimeObject.AddComponent<MainGameUI>();
 
         try
         {
+            int attackWithoutCompanion =
+                GameBalance.GetPlayerAttack(playerManager.playerData);
+            Require(companion.Initialize(),
+                "Best owned companion was not equipped.");
+            Require(
+                playerManager.playerData.equippedCompanion == "Astra",
+                "SSR companion should be equipped before R companion.");
+            Require(
+                GameBalance.GetPlayerAttack(playerManager.playerData) >
+                attackWithoutCompanion,
+                "Equipped companion did not increase attack.");
+
             growth.Initialize(battle);
             battle.Initialize();
             tutorial.Initialize(battle, growth);
-            ui.Configure(null, battle, growth, tutorial);
+            ui.Configure(
+                null,
+                battle,
+                growth,
+                tutorial,
+                companion);
 
             Require(
                 battle.PlayerHealth == battle.PlayerMaxHealth,
@@ -305,6 +365,7 @@ public static class ProjectValidation
             UnityEngine.Object.DestroyImmediate(runtimeObject);
             UnityEngine.Object.DestroyImmediate(playerObject);
             PlayerDataManager.Instance = null;
+            CompanionManager.Instance = null;
         }
     }
 
@@ -312,7 +373,7 @@ public static class ProjectValidation
     {
         CharacterDatabase database =
             AssetDatabase.LoadAssetAtPath<CharacterDatabase>(
-                "Assets/Characters/CharacterDatabase.asset");
+                "Assets/Resources/CharacterDatabase.asset");
 
         Require(database != null,
             "Character database is missing.");

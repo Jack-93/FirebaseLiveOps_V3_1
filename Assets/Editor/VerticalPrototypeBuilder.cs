@@ -57,7 +57,7 @@ public static class VerticalPrototypeBuilder
 
         CharacterDatabase database =
             AssetDatabase.LoadAssetAtPath<CharacterDatabase>(
-                "Assets/Characters/CharacterDatabase.asset");
+                "Assets/Resources/CharacterDatabase.asset");
 
         if (database == null)
         {

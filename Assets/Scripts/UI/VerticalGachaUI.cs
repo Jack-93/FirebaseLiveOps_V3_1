@@ -129,10 +129,12 @@ public class VerticalGachaUI : MonoBehaviour
             "BannerRates",
             banner,
             $"SSR {GachaConfig.SSRRate}%   " +
-            $"SR {GachaConfig.SRRate}%\n" +
-            "100th pull guarantees SSR",
-            29,
-            new Vector2(0.08f, 0.17f),
+            $"SR {GachaConfig.SRRate}%   " +
+            $"R {100 - GachaConfig.SSRRate - GachaConfig.SRRate}%\n" +
+            "10 recruits: SR+ guaranteed\n" +
+            "SSR guaranteed within 100 recruits",
+            27,
+            new Vector2(0.08f, 0.1f),
             new Vector2(0.92f, 0.6f),
             TextAlignmentOptions.Center,
             new Color32(189, 204, 228, 255));
@@ -239,6 +241,8 @@ public class VerticalGachaUI : MonoBehaviour
                 : GachaManager.Instance.RollTen();
 
             StringBuilder builder = new StringBuilder();
+            int ssrCount = 0;
+            int srCount = 0;
             foreach (CharacterData character in results)
             {
                 InventoryManager.Instance.AddItem(
@@ -246,19 +250,33 @@ public class VerticalGachaUI : MonoBehaviour
                     1,
                     false);
 
-                builder.AppendLine(
-                    $"[{character.rarity}] {character.characterName}");
+                builder.AppendLine(FormatResult(character));
                 AnalyticsManager.Instance?.LogGachaRoll(character);
 
                 if (character.rarity == "SSR")
+                {
+                    ssrCount++;
                     AnalyticsManager.Instance?.LogSSR(character);
+                }
+                else if (character.rarity == "SR")
+                {
+                    srCount++;
+                }
             }
 
-            resultText.text = builder.ToString().TrimEnd();
+            string summary = count == 10
+                ? $"\nSSR {ssrCount}   SR {srCount}   " +
+                  $"R {count - ssrCount - srCount}"
+                : "";
+            resultText.text =
+                builder.ToString().TrimEnd() + summary;
             statusText.text =
                 payment.UsedTickets
                     ? $"Used {payment.Amount} ticket(s)."
                     : $"Used {payment.Amount:N0} Gems.";
+
+            QuestManager.Instance?.ReportGacha(results.Count);
+            EventMissionManager.Instance?.ReportGacha(results.Count);
 
             if (FirestoreManager.Instance != null)
             {
@@ -314,7 +332,31 @@ public class VerticalGachaUI : MonoBehaviour
         currencyText.text =
             $"Gem {GachaEconomy.GetItemCount(data, "Gem"):N0}   " +
             $"Ticket {GachaEconomy.GetItemCount(data, "GachaTicket"):N0}";
-        pityText.text = $"Pity {data.pityCount}/100";
+        int remaining = Mathf.Max(
+            1,
+            GachaManager.PityLimit - data.pityCount);
+        pityText.text = $"SSR in {remaining}";
+    }
+
+    private static string FormatResult(CharacterData character)
+    {
+        string color;
+        switch (character.rarity)
+        {
+            case "SSR":
+                color = "#FFD34D";
+                break;
+            case "SR":
+                color = "#B68CFF";
+                break;
+            default:
+                color = "#B9CCE8";
+                break;
+        }
+
+        return
+            $"<color={color}>[{character.rarity}] " +
+            $"{character.characterName}</color>";
     }
 
     private void SetButtonsInteractable(bool interactable)

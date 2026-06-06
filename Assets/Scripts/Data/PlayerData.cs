@@ -36,6 +36,28 @@ public class PlayerData
     public int tutorialStep;
     public int totalMonstersDefeated;
     public long lastOnlineUnixTime;
+    public bool autoAdvance;
+    public string equippedCompanion;
+    public string equippedCompanionRarity;
+    public List<string> equippedCompanions;
+    public List<string> equippedCompanionRarities;
+    public Dictionary<string, int> companionStars;
+    public string equippedWeapon;
+    public string equippedArmor;
+    public int weaponUpgradeLevel;
+    public int armorUpgradeLevel;
+    public string dailyQuestDate;
+    public int dailyQuestKills;
+    public bool dailyQuestClaimed;
+    public int sequentialQuestIndex;
+    public int sequentialQuestProgress;
+    public int sequentialQuestCycles;
+    public string eventMissionDate;
+    public int eventKillCount;
+    public int eventGachaCount;
+    public int eventMissionPoints;
+    public bool eventRewardClaimed;
+    public List<string> claimedAchievementIds;
 
     // 서버, 클라이언트 둘 다 사용 (디폴트값 설정소)
     public PlayerData()
@@ -65,6 +87,28 @@ public class PlayerData
         tutorialStep = 0;
         totalMonstersDefeated = 0;
         lastOnlineUnixTime = 0;
+        autoAdvance = true;
+        equippedCompanion = "";
+        equippedCompanionRarity = "";
+        equippedCompanions = new List<string>();
+        equippedCompanionRarities = new List<string>();
+        companionStars = new Dictionary<string, int>();
+        equippedWeapon = "";
+        equippedArmor = "";
+        weaponUpgradeLevel = 0;
+        armorUpgradeLevel = 0;
+        dailyQuestDate = "";
+        dailyQuestKills = 0;
+        dailyQuestClaimed = false;
+        sequentialQuestIndex = 0;
+        sequentialQuestProgress = 0;
+        sequentialQuestCycles = 0;
+        eventMissionDate = "";
+        eventKillCount = 0;
+        eventGachaCount = 0;
+        eventMissionPoints = 0;
+        eventRewardClaimed = false;
+        claimedAchievementIds = new List<string>();
     }
 
     public void EnsureInitialized()
@@ -103,5 +147,71 @@ public class PlayerData
             System.Math.Max(0, totalMonstersDefeated);
         lastOnlineUnixTime =
             System.Math.Max(0, lastOnlineUnixTime);
+
+        if (equippedCompanion == null)
+            equippedCompanion = "";
+
+        if (equippedCompanionRarity == null)
+            equippedCompanionRarity = "";
+
+        if (equippedCompanions == null)
+            equippedCompanions = new List<string>();
+
+        if (equippedCompanionRarities == null)
+            equippedCompanionRarities = new List<string>();
+
+        if (companionStars == null)
+            companionStars = new Dictionary<string, int>();
+
+        if (equippedWeapon == null)
+            equippedWeapon = "";
+
+        if (equippedArmor == null)
+            equippedArmor = "";
+
+        weaponUpgradeLevel = System.Math.Max(0, weaponUpgradeLevel);
+        armorUpgradeLevel = System.Math.Max(0, armorUpgradeLevel);
+
+        if (dailyQuestDate == null)
+            dailyQuestDate = "";
+
+        dailyQuestKills = System.Math.Max(0, dailyQuestKills);
+        sequentialQuestIndex =
+            System.Math.Max(0, System.Math.Min(4, sequentialQuestIndex));
+        sequentialQuestProgress =
+            System.Math.Max(0, sequentialQuestProgress);
+        sequentialQuestCycles =
+            System.Math.Max(0, sequentialQuestCycles);
+        if (eventMissionDate == null)
+            eventMissionDate = "";
+        eventKillCount = System.Math.Max(0, eventKillCount);
+        eventGachaCount = System.Math.Max(0, eventGachaCount);
+        eventMissionPoints = System.Math.Max(0, eventMissionPoints);
+
+        if (claimedAchievementIds == null)
+            claimedAchievementIds = new List<string>();
+
+        if (equippedCompanions.Count == 0 &&
+            !string.IsNullOrEmpty(equippedCompanion))
+        {
+            equippedCompanions.Add(equippedCompanion);
+            equippedCompanionRarities.Add(equippedCompanionRarity);
+        }
+
+        while (equippedCompanions.Count < 3)
+            equippedCompanions.Add("");
+
+        while (equippedCompanionRarities.Count < 3)
+            equippedCompanionRarities.Add("");
+
+        if (equippedCompanions.Count > 3)
+            equippedCompanions.RemoveRange(
+                3,
+                equippedCompanions.Count - 3);
+
+        if (equippedCompanionRarities.Count > 3)
+            equippedCompanionRarities.RemoveRange(
+                3,
+                equippedCompanionRarities.Count - 3);
     }
 }

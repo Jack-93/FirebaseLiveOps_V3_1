@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
@@ -12,10 +13,16 @@ public class MainGameUI : MonoBehaviour
     private BattleManager battleManager;
     private GrowthManager growthManager;
     private TutorialManager tutorialManager;
+    private CompanionManager companionManager;
 
     private GameObject battlePanel;
     private GameObject growthPanel;
     private GameObject morePanel;
+    private GameObject collectionPanel;
+    private GameObject equipmentPanel;
+    private GameObject questPanel;
+    private GameObject shopPanel;
+    private GameObject eventPanel;
     private GameObject tutorialPanel;
     private GameObject loadingOverlay;
     private GameObject offlineOverlay;
@@ -28,10 +35,18 @@ public class MainGameUI : MonoBehaviour
     private TMP_Text enemyHealthText;
     private TMP_Text playerHealthText;
     private TMP_Text combatStatusText;
+    private TMP_Text skillStatusText;
+    private TMP_Text autoAdvanceText;
     private TMP_Text attackGrowthText;
     private TMP_Text healthGrowthText;
     private TMP_Text speedGrowthText;
     private TMP_Text inventoryText;
+    private TMP_Text companionText;
+    private TMP_Text characterDetailText;
+    private TMP_Text equipmentText;
+    private TMP_Text questText;
+    private TMP_Text shopText;
+    private TMP_Text eventText;
     private TMP_Text accountText;
     private TMP_Text dailyRewardText;
     private TMP_Text tutorialText;
@@ -42,9 +57,17 @@ public class MainGameUI : MonoBehaviour
 
     private RectTransform enemyHealthFill;
     private RectTransform playerHealthFill;
+    private RectTransform enemyVisual;
+    private RectTransform playerVisual;
+    private Image enemyVisualImage;
+    private Image playerVisualImage;
     private Button tutorialButton;
     private Button retryButton;
+    private CharacterData selectedCharacter;
     private float toastTimer;
+    private float enemyAnimationTimer;
+    private float playerAnimationTimer;
+    private float playerDefeatTimer;
 
     private static readonly Color Background =
         new Color32(20, 28, 45, 255);
@@ -65,12 +88,14 @@ public class MainGameUI : MonoBehaviour
         MainGameBootstrap sessionBootstrap,
         BattleManager battle,
         GrowthManager growth,
-        TutorialManager tutorial)
+        TutorialManager tutorial,
+        CompanionManager companion)
     {
         bootstrap = sessionBootstrap;
         battleManager = battle;
         growthManager = growth;
         tutorialManager = tutorial;
+        companionManager = companion;
 
         BuildInterface();
         BindEvents();
@@ -83,6 +108,11 @@ public class MainGameUI : MonoBehaviour
         RefreshBattle();
         RefreshGrowth();
         RefreshMore();
+        RefreshCollection();
+        RefreshEquipment();
+        RefreshQuests();
+        RefreshShop();
+        RefreshEvent();
         RefreshTutorial();
     }
 
@@ -124,12 +154,14 @@ public class MainGameUI : MonoBehaviour
 
     private void Update()
     {
-        if (toastTimer <= 0f)
-            return;
+        if (toastTimer > 0f)
+        {
+            toastTimer -= Time.unscaledDeltaTime;
+            if (toastTimer <= 0f && toastPanel != null)
+                toastPanel.SetActive(false);
+        }
 
-        toastTimer -= Time.unscaledDeltaTime;
-        if (toastTimer <= 0f && toastPanel != null)
-            toastPanel.SetActive(false);
+        UpdateBattleAnimations(Time.unscaledDeltaTime);
     }
 
     private void BuildInterface()
@@ -177,6 +209,11 @@ public class MainGameUI : MonoBehaviour
         BuildBattlePanel(portraitRoot);
         BuildGrowthPanel(portraitRoot);
         BuildMorePanel(portraitRoot);
+        BuildCollectionPanel(portraitRoot);
+        BuildEquipmentPanel(portraitRoot);
+        BuildQuestPanel(portraitRoot);
+        BuildShopPanel(portraitRoot);
+        BuildEventPanel(portraitRoot);
         BuildBottomNavigation(portraitRoot);
         BuildTutorial(portraitRoot);
         BuildOfflinePopup(portraitRoot);
@@ -201,6 +238,24 @@ public class MainGameUI : MonoBehaviour
             new Vector2(0.04f, 0.12f),
             new Vector2(0.34f, 0.88f),
             TextAlignmentOptions.Left);
+
+        CreateButton(
+            "PreviousStageButton",
+            top,
+            "<",
+            new Vector2(0.005f, 0.18f),
+            new Vector2(0.04f, 0.82f),
+            PanelLight,
+            () => ChangeStage(-1));
+
+        CreateButton(
+            "NextStageButton",
+            top,
+            ">",
+            new Vector2(0.34f, 0.18f),
+            new Vector2(0.375f, 0.82f),
+            PanelLight,
+            () => ChangeStage(1));
 
         goldText = CreateText(
             "GoldText",
@@ -242,6 +297,17 @@ public class MainGameUI : MonoBehaviour
             TextAlignmentOptions.Center,
             Accent);
 
+        Button autoButton = CreateButton(
+            "AutoAdvanceButton",
+            panel,
+            "AUTO ON",
+            new Vector2(0.72f, 0.9f),
+            new Vector2(0.94f, 0.97f),
+            PanelLight,
+            ToggleAutoAdvance);
+        autoAdvanceText =
+            autoButton.GetComponentInChildren<TMP_Text>();
+
         RectTransform enemyCard = CreatePanel(
             "EnemyCard",
             panel,
@@ -258,12 +324,13 @@ public class MainGameUI : MonoBehaviour
             new Vector2(0.92f, 0.96f),
             TextAlignmentOptions.Center);
 
-        RectTransform enemyVisual = CreatePanel(
+        enemyVisual = CreatePanel(
             "EnemyVisual",
             enemyCard,
             Danger,
             new Vector2(0.3f, 0.28f),
             new Vector2(0.7f, 0.75f));
+        enemyVisualImage = enemyVisual.GetComponent<Image>();
 
         CreateText(
             "EnemyGlyph",
@@ -307,6 +374,23 @@ public class MainGameUI : MonoBehaviour
             TextAlignmentOptions.Left,
             Accent);
 
+        playerVisual = CreatePanel(
+            "PlayerVisual",
+            playerCard,
+            Accent,
+            new Vector2(0.06f, 0.55f),
+            new Vector2(0.18f, 0.92f));
+        playerVisualImage = playerVisual.GetComponent<Image>();
+
+        CreateText(
+            "PlayerGlyph",
+            playerVisual,
+            "HERO",
+            22,
+            Vector2.zero,
+            Vector2.one,
+            TextAlignmentOptions.Center);
+
         combatStatusText = CreateText(
             "CombatStatus",
             playerCard,
@@ -341,6 +425,16 @@ public class MainGameUI : MonoBehaviour
             new Vector2(0.94f, 0.27f),
             TextAlignmentOptions.Center,
             new Color32(190, 203, 225, 255));
+
+        skillStatusText = CreateText(
+            "SkillStatus",
+            panel,
+            "Companion skills preparing...",
+            27,
+            new Vector2(0.06f, 0.08f),
+            new Vector2(0.94f, 0.16f),
+            TextAlignmentOptions.Center,
+            Gold);
     }
 
     private void BuildGrowthPanel(RectTransform root)
@@ -454,7 +548,7 @@ public class MainGameUI : MonoBehaviour
             "InventoryCard",
             panel,
             Panel,
-            new Vector2(0.05f, 0.49f),
+            new Vector2(0.05f, 0.64f),
             new Vector2(0.95f, 0.87f));
 
         inventoryText = CreateText(
@@ -463,15 +557,67 @@ public class MainGameUI : MonoBehaviour
             "Inventory",
             31,
             new Vector2(0.05f, 0.08f),
-            new Vector2(0.95f, 0.92f),
+            new Vector2(0.68f, 0.92f),
             TextAlignmentOptions.TopLeft);
+
+        CreateButton(
+            "ClaimMailButton",
+            inventoryCard,
+            "MAIL",
+            new Vector2(0.71f, 0.53f),
+            new Vector2(0.95f, 0.88f),
+            Gold,
+            ClaimAllMail);
+
+        CreateButton(
+            "EquipmentButton",
+            inventoryCard,
+            "EQUIPMENT",
+            new Vector2(0.71f, 0.12f),
+            new Vector2(0.95f, 0.47f),
+            PanelLight,
+            ShowEquipment);
+
+        RectTransform companionCard = CreatePanel(
+            "CompanionCard",
+            panel,
+            Panel,
+            new Vector2(0.05f, 0.42f),
+            new Vector2(0.95f, 0.61f));
+
+        companionText = CreateText(
+            "CompanionText",
+            companionCard,
+            "Companion",
+            29,
+            new Vector2(0.05f, 0.08f),
+            new Vector2(0.68f, 0.92f),
+            TextAlignmentOptions.TopLeft);
+
+        CreateButton(
+            "CollectionButton",
+            companionCard,
+            "COLLECTION",
+            new Vector2(0.71f, 0.53f),
+            new Vector2(0.95f, 0.88f),
+            PanelLight,
+            ShowCollection);
+
+        CreateButton(
+            "BestCompanionButton",
+            companionCard,
+            "BEST",
+            new Vector2(0.71f, 0.12f),
+            new Vector2(0.95f, 0.47f),
+            Accent,
+            HandleAutoEquip);
 
         RectTransform rewardCard = CreatePanel(
             "RewardCard",
             panel,
             Panel,
             new Vector2(0.05f, 0.25f),
-            new Vector2(0.95f, 0.46f));
+            new Vector2(0.95f, 0.39f));
 
         dailyRewardText = CreateText(
             "DailyRewardText",
@@ -502,6 +648,33 @@ public class MainGameUI : MonoBehaviour
             new Color32(174, 189, 214, 255));
 
         CreateButton(
+            "QuestButton",
+            panel,
+            "QUESTS",
+            new Vector2(0.06f, 0.14f),
+            new Vector2(0.31f, 0.23f),
+            Gold,
+            ShowQuests);
+
+        CreateButton(
+            "EventButton",
+            panel,
+            "EVENT",
+            new Vector2(0.36f, 0.14f),
+            new Vector2(0.64f, 0.23f),
+            Success,
+            ShowEvent);
+
+        CreateButton(
+            "ShopButton",
+            panel,
+            "SHOP",
+            new Vector2(0.69f, 0.14f),
+            new Vector2(0.94f, 0.23f),
+            Accent,
+            ShowShop);
+
+        CreateButton(
             "SaveButton",
             panel,
             "SAVE",
@@ -518,6 +691,351 @@ public class MainGameUI : MonoBehaviour
             new Vector2(0.94f, 0.12f),
             Danger,
             HandleLogoutAction);
+    }
+
+    private void BuildCollectionPanel(RectTransform root)
+    {
+        RectTransform panel = CreatePanel(
+            "CollectionPanel",
+            root,
+            Background,
+            new Vector2(0f, 0.12f),
+            new Vector2(1f, 0.9f));
+        collectionPanel = panel.gameObject;
+
+        CreateButton(
+            "CollectionBackButton",
+            panel,
+            "BACK",
+            new Vector2(0.04f, 0.9f),
+            new Vector2(0.22f, 0.97f),
+            PanelLight,
+            ShowMore);
+
+        CreateText(
+            "CollectionTitle",
+            panel,
+            "COMPANION COLLECTION",
+            42,
+            new Vector2(0.24f, 0.9f),
+            new Vector2(0.96f, 0.98f),
+            TextAlignmentOptions.Center,
+            Accent);
+
+        List<CharacterData> characters =
+            companionManager.GetAllCharacters();
+        for (int index = 0; index < characters.Count; index++)
+        {
+            CharacterData character = characters[index];
+            int column = index % 3;
+            int row = index / 3;
+            float xMin = 0.04f + column * 0.32f;
+            float yMax = 0.87f - row * 0.12f;
+
+            CreateButton(
+                "Character_" + character.characterName,
+                panel,
+                $"[{character.rarity}]\n{character.characterName}",
+                new Vector2(xMin, yMax - 0.09f),
+                new Vector2(xMin + 0.28f, yMax),
+                GetRarityColor(character.rarity),
+                () => SelectCharacter(character));
+        }
+
+        RectTransform detailCard = CreatePanel(
+            "CharacterDetailCard",
+            panel,
+            Panel,
+            new Vector2(0.04f, 0.05f),
+            new Vector2(0.96f, 0.37f));
+
+        characterDetailText = CreateText(
+            "CharacterDetailText",
+            detailCard,
+            "Select a companion.",
+            28,
+            new Vector2(0.05f, 0.28f),
+            new Vector2(0.67f, 0.94f),
+            TextAlignmentOptions.TopLeft);
+
+        CreateButton(
+            "PromoteButton",
+            detailCard,
+            "PROMOTE",
+            new Vector2(0.7f, 0.55f),
+            new Vector2(0.95f, 0.88f),
+            Gold,
+            PromoteSelectedCharacter);
+
+        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
+        {
+            int capturedSlot = slot;
+            float xMin = 0.05f + slot * 0.32f;
+            CreateButton(
+                "EquipSlot" + (slot + 1),
+                detailCard,
+                "SLOT " + (slot + 1),
+                new Vector2(xMin, 0.05f),
+                new Vector2(xMin + 0.27f, 0.23f),
+                Accent,
+                () => ToggleSelectedCharacterSlot(capturedSlot));
+        }
+    }
+
+    private void BuildEquipmentPanel(RectTransform root)
+    {
+        RectTransform panel = CreatePanel(
+            "EquipmentPanel",
+            root,
+            Background,
+            new Vector2(0f, 0.12f),
+            new Vector2(1f, 0.9f));
+        equipmentPanel = panel.gameObject;
+
+        CreateButton(
+            "EquipmentBackButton",
+            panel,
+            "BACK",
+            new Vector2(0.04f, 0.9f),
+            new Vector2(0.22f, 0.97f),
+            PanelLight,
+            ShowMore);
+
+        CreateText(
+            "EquipmentTitle",
+            panel,
+            "EQUIPMENT",
+            46,
+            new Vector2(0.24f, 0.9f),
+            new Vector2(0.96f, 0.98f),
+            TextAlignmentOptions.Center,
+            Accent);
+
+        RectTransform card = CreatePanel(
+            "EquipmentCard",
+            panel,
+            Panel,
+            new Vector2(0.06f, 0.35f),
+            new Vector2(0.94f, 0.85f));
+
+        equipmentText = CreateText(
+            "EquipmentText",
+            card,
+            "No equipment.",
+            34,
+            new Vector2(0.07f, 0.34f),
+            new Vector2(0.93f, 0.92f),
+            TextAlignmentOptions.TopLeft);
+
+        CreateButton(
+            "UpgradeWeaponButton",
+            card,
+            "UPGRADE WEAPON",
+            new Vector2(0.07f, 0.08f),
+            new Vector2(0.47f, 0.27f),
+            Accent,
+            UpgradeWeapon);
+
+        CreateButton(
+            "UpgradeArmorButton",
+            card,
+            "UPGRADE ARMOR",
+            new Vector2(0.53f, 0.08f),
+            new Vector2(0.93f, 0.27f),
+            Success,
+            UpgradeArmor);
+    }
+
+    private void BuildQuestPanel(RectTransform root)
+    {
+        RectTransform panel = CreatePanel(
+            "QuestPanel",
+            root,
+            Background,
+            new Vector2(0f, 0.12f),
+            new Vector2(1f, 0.9f));
+        questPanel = panel.gameObject;
+
+        CreateButton(
+            "QuestBackButton",
+            panel,
+            "BACK",
+            new Vector2(0.04f, 0.9f),
+            new Vector2(0.22f, 0.97f),
+            PanelLight,
+            ShowMore);
+
+        CreateText(
+            "QuestTitle",
+            panel,
+            "QUESTS & ACHIEVEMENTS",
+            42,
+            new Vector2(0.24f, 0.9f),
+            new Vector2(0.96f, 0.98f),
+            TextAlignmentOptions.Center,
+            Accent);
+
+        RectTransform card = CreatePanel(
+            "QuestCard",
+            panel,
+            Panel,
+            new Vector2(0.06f, 0.35f),
+            new Vector2(0.94f, 0.85f));
+
+        questText = CreateText(
+            "QuestText",
+            card,
+            "Quest data unavailable.",
+            36,
+            new Vector2(0.07f, 0.35f),
+            new Vector2(0.93f, 0.92f),
+            TextAlignmentOptions.TopLeft);
+
+        CreateButton(
+            "ClaimQuestButton",
+            card,
+            "CLAIM QUEST",
+            new Vector2(0.07f, 0.08f),
+            new Vector2(0.47f, 0.27f),
+            Success,
+            ClaimCurrentQuest);
+
+        CreateButton(
+            "ClaimAchievementButton",
+            card,
+            "CLAIM ACHIEVEMENTS",
+            new Vector2(0.53f, 0.08f),
+            new Vector2(0.93f, 0.27f),
+            Gold,
+            ClaimAchievements);
+    }
+
+    private void BuildShopPanel(RectTransform root)
+    {
+        RectTransform panel = CreatePanel(
+            "ShopPanel",
+            root,
+            Background,
+            new Vector2(0f, 0.12f),
+            new Vector2(1f, 0.9f));
+        shopPanel = panel.gameObject;
+
+        CreateButton(
+            "ShopBackButton",
+            panel,
+            "BACK",
+            new Vector2(0.05f, 0.9f),
+            new Vector2(0.25f, 0.98f),
+            PanelLight,
+            ShowMore);
+
+        CreateText(
+            "ShopTitle",
+            panel,
+            "SHOP",
+            48,
+            new Vector2(0.3f, 0.9f),
+            new Vector2(0.7f, 0.98f),
+            TextAlignmentOptions.Center,
+            Accent);
+
+        RectTransform card = CreatePanel(
+            "ShopCard",
+            panel,
+            Panel,
+            new Vector2(0.06f, 0.28f),
+            new Vector2(0.94f, 0.86f));
+
+        shopText = CreateText(
+            "ShopText",
+            card,
+            "Shop data unavailable.",
+            33,
+            new Vector2(0.07f, 0.62f),
+            new Vector2(0.93f, 0.93f),
+            TextAlignmentOptions.TopLeft);
+
+        CreateButton(
+            "BuyGoldPouchButton",
+            card,
+            "5,000 GOLD\n100 GEMS",
+            new Vector2(0.07f, 0.39f),
+            new Vector2(0.93f, 0.57f),
+            Gold,
+            BuyGoldPouch);
+
+        CreateButton(
+            "BuyTicketBundleButton",
+            card,
+            "3 GACHA TICKETS\n250 GEMS",
+            new Vector2(0.07f, 0.2f),
+            new Vector2(0.93f, 0.36f),
+            Accent,
+            BuyTicketBundle);
+
+        CreateButton(
+            "BuyGrowthChestButton",
+            card,
+            "30,000 GOLD\n500 GEMS",
+            new Vector2(0.07f, 0.02f),
+            new Vector2(0.93f, 0.17f),
+            Success,
+            BuyGrowthChest);
+    }
+
+    private void BuildEventPanel(RectTransform root)
+    {
+        RectTransform panel = CreatePanel(
+            "EventPanel",
+            root,
+            Background,
+            new Vector2(0f, 0.12f),
+            new Vector2(1f, 0.9f));
+        eventPanel = panel.gameObject;
+
+        CreateButton(
+            "EventBackButton",
+            panel,
+            "BACK",
+            new Vector2(0.05f, 0.9f),
+            new Vector2(0.25f, 0.98f),
+            PanelLight,
+            ShowMore);
+
+        CreateText(
+            "EventTitle",
+            panel,
+            "EVENT",
+            48,
+            new Vector2(0.3f, 0.9f),
+            new Vector2(0.7f, 0.98f),
+            TextAlignmentOptions.Center,
+            Success);
+
+        RectTransform card = CreatePanel(
+            "EventCard",
+            panel,
+            Panel,
+            new Vector2(0.06f, 0.35f),
+            new Vector2(0.94f, 0.85f));
+
+        eventText = CreateText(
+            "EventText",
+            card,
+            "Event data unavailable.",
+            34,
+            new Vector2(0.07f, 0.3f),
+            new Vector2(0.93f, 0.92f),
+            TextAlignmentOptions.TopLeft);
+
+        CreateButton(
+            "ClaimEventRewardButton",
+            card,
+            "CLAIM EVENT REWARD",
+            new Vector2(0.07f, 0.06f),
+            new Vector2(0.93f, 0.24f),
+            Success,
+            ClaimEventReward);
     }
 
     private void BuildBottomNavigation(RectTransform root)
@@ -701,6 +1219,15 @@ public class MainGameUI : MonoBehaviour
     private void BindEvents()
     {
         battleManager.OnBattleStateChanged += RefreshBattle;
+        battleManager.OnPlayerAttackPerformed += HandlePlayerAttackVisual;
+        battleManager.OnEnemyAttackPerformed += HandleEnemyAttackVisual;
+        battleManager.OnEnemyDefeated += HandleEnemyDefeatedVisual;
+        battleManager.OnPlayerDefeated += HandlePlayerDefeatedVisual;
+        battleManager.OnCompanionSkillUsed += HandleCompanionSkillVisual;
+        battleManager.OnBossChallengeFailed += HandleBossChallengeFailed;
+        if (EquipmentManager.Instance != null)
+            EquipmentManager.Instance.OnEquipmentDropped +=
+                HandleEquipmentDropped;
         growthManager.OnUpgraded += HandleGrowthUpdated;
         tutorialManager.OnTutorialChanged += RefreshTutorial;
 
@@ -716,6 +1243,11 @@ public class MainGameUI : MonoBehaviour
 
         goldText.text = $"Gold  {data.gold:N0}";
         stageText.text = $"Stage {data.currentStage}";
+        if (autoAdvanceText != null)
+        {
+            autoAdvanceText.text =
+                data.autoAdvance ? "AUTO ON" : "REPEAT";
+        }
         powerText.text =
             $"Power {GameBalance.GetCombatPower(data):N0}";
     }
@@ -728,8 +1260,10 @@ public class MainGameUI : MonoBehaviour
         PlayerData data = PlayerDataManager.Instance.playerData;
         enemyNameText.text =
             battleManager.IsBoss
-                ? $"STAGE {data.currentStage} BOSS"
-                : $"Enemy {data.stageEnemyIndex + 1}/" +
+                ? $"{battleManager.EnemyName}  " +
+                  $"{battleManager.BossTimeRemaining:0.0}s"
+                : $"{battleManager.EnemyName}  " +
+                  $"{data.stageEnemyIndex + 1}/" +
                   $"{GameBalance.EnemiesPerStage - 1}";
 
         enemyHealthText.text =
@@ -760,6 +1294,38 @@ public class MainGameUI : MonoBehaviour
         }
 
         RefreshTopBar();
+        RefreshSkillStatus();
+    }
+
+    private void RefreshSkillStatus()
+    {
+        if (skillStatusText == null || companionManager == null)
+            return;
+
+        StringBuilder builder = new StringBuilder();
+        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
+        {
+            CharacterData character =
+                companionManager.GetEquippedAtSlot(slot);
+            if (character == null)
+                continue;
+
+            if (builder.Length > 0)
+                builder.Append("   ");
+
+            float cooldown =
+                slot < battleManager.SkillCooldowns.Count
+                    ? battleManager.SkillCooldowns[slot]
+                    : 0f;
+            builder.Append(
+                cooldown <= 0f
+                    ? $"{character.characterName}: READY"
+                    : $"{character.characterName}: {cooldown:0.0}s");
+        }
+
+        skillStatusText.text = builder.Length > 0
+            ? builder.ToString()
+            : "No companion skills equipped.";
     }
 
     private void RefreshGrowth()
@@ -785,15 +1351,52 @@ public class MainGameUI : MonoBehaviour
             return;
 
         StringBuilder builder = new StringBuilder();
-        builder.AppendLine("INVENTORY");
+        builder.AppendLine("RESOURCES");
         foreach (var item in data.inventory.items)
-            builder.AppendLine($"{item.Key}   x{item.Value}");
+        {
+            if (companionManager == null ||
+                !companionManager.IsCharacterItem(item.Key))
+            {
+                builder.AppendLine($"{item.Key}   x{item.Value}");
+            }
+        }
 
-        builder.AppendLine();
         builder.AppendLine($"Mailbox   {data.mailbox.Count} waiting");
         builder.AppendLine(
             $"Monsters defeated   {data.totalMonstersDefeated:N0}");
         inventoryText.text = builder.ToString();
+
+        StringBuilder companionBuilder = new StringBuilder();
+        companionBuilder.AppendLine("COMPANION");
+
+        var party = companionManager?.GetEquippedParty();
+        if (party == null || party.Count == 0)
+        {
+            companionBuilder.AppendLine("Party 0/3");
+            companionBuilder.Append("Recruit one in Gacha.");
+        }
+        else
+        {
+            int bonus = 0;
+            companionBuilder.AppendLine(
+                $"PARTY {party.Count}/{CompanionManager.PartySize}");
+            for (int i = 0; i < party.Count; i++)
+            {
+                CharacterData character = party[i];
+                if (i > 0)
+                    companionBuilder.Append(", ");
+
+                companionBuilder.Append(
+                    $"[{character.rarity}] {character.characterName}");
+                bonus += CompanionManager.GetAttackBonusPercent(
+                    character.rarity);
+            }
+
+            companionBuilder.AppendLine();
+            companionBuilder.Append($"Team Attack +{bonus}%");
+        }
+
+        companionText.text = companionBuilder.ToString();
 
         string uid = string.IsNullOrEmpty(data.uid) ? "-" : data.uid;
         string shortUid = uid.Length > 16 ? uid.Substring(0, 16) + "..." : uid;
@@ -808,6 +1411,142 @@ public class MainGameUI : MonoBehaviour
                     ? $"Daily Reward Day {day} is ready"
                     : $"Daily Reward Day {day} already claimed";
         }
+    }
+
+    private void RefreshCollection()
+    {
+        if (characterDetailText == null || companionManager == null)
+            return;
+
+        if (selectedCharacter == null)
+        {
+            List<CharacterData> characters =
+                companionManager.GetAllCharacters();
+            if (characters.Count > 0)
+                selectedCharacter = characters[0];
+        }
+
+        if (selectedCharacter == null)
+            return;
+
+        int owned =
+            companionManager.GetOwnedCount(
+                selectedCharacter.characterName);
+        int bonus =
+            CompanionManager.GetAttackBonusPercent(
+                selectedCharacter.rarity,
+                companionManager.GetStars(
+                    selectedCharacter.characterName));
+        int stars =
+            companionManager.GetStars(selectedCharacter.characterName);
+        int promotionCost =
+            companionManager.GetPromotionCost(
+                selectedCharacter.characterName);
+
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine(
+            $"[{selectedCharacter.rarity}] " +
+            $"{selectedCharacter.characterName}");
+        builder.AppendLine(
+            owned > 0 ? $"Owned x{owned}" : "LOCKED");
+        builder.AppendLine(
+            $"Stars {stars}/5  |  Attack +{bonus}%");
+        if (owned > 0 && stars < 5)
+            builder.AppendLine($"Promotion needs {promotionCost} duplicate(s)");
+        builder.AppendLine(selectedCharacter.description);
+        builder.Append("Party: ");
+
+        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
+        {
+            if (slot > 0)
+                builder.Append("  |  ");
+
+            CharacterData equipped =
+                companionManager.GetEquippedAtSlot(slot);
+            builder.Append(
+                $"{slot + 1}. " +
+                $"{(equipped == null ? "Empty" : equipped.characterName)}");
+        }
+
+        characterDetailText.text = builder.ToString();
+    }
+
+    private void RefreshEquipment()
+    {
+        if (equipmentText == null)
+            return;
+
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        if (data == null)
+            return;
+
+        string weapon = string.IsNullOrEmpty(data.equippedWeapon)
+            ? "None"
+            : data.equippedWeapon;
+        string armor = string.IsNullOrEmpty(data.equippedArmor)
+            ? "None"
+            : data.equippedArmor;
+
+        equipmentText.text =
+            $"WEAPON\n{weapon}  Lv.{data.weaponUpgradeLevel}\n" +
+            $"Attack +{EquipmentManager.GetWeaponAttack(data)}\n" +
+            $"Next cost {(weapon == "None" ? "-" : EquipmentManager.GetUpgradeCost(data.weaponUpgradeLevel).ToString("N0"))}\n\n" +
+            $"ARMOR\n{armor}  Lv.{data.armorUpgradeLevel}\n" +
+            $"Health +{EquipmentManager.GetArmorHealth(data)}\n" +
+            $"Next cost {(armor == "None" ? "-" : EquipmentManager.GetUpgradeCost(data.armorUpgradeLevel).ToString("N0"))}";
+    }
+
+    private void RefreshQuests()
+    {
+        if (questText != null && QuestManager.Instance != null)
+            questText.text = QuestManager.Instance.GetStatusText();
+    }
+
+    private void RefreshShop()
+    {
+        if (shopText == null)
+            return;
+
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        if (data == null)
+        {
+            shopText.text = "Shop data unavailable.";
+            return;
+        }
+
+        int gems = GachaEconomy.GetItemCount(data, "Gem");
+        int tickets = GachaEconomy.GetItemCount(data, "GachaTicket");
+        shopText.text =
+            $"Gems   {gems:N0}\n" +
+            $"Gold   {data.gold:N0}\n" +
+            $"Gacha Tickets   {tickets:N0}";
+    }
+
+    private void RefreshEvent()
+    {
+        if (eventText != null && EventMissionManager.Instance != null)
+            eventText.text =
+                EventMissionManager.Instance.GetStatusText();
+    }
+
+    private void PromoteSelectedCharacter()
+    {
+        if (selectedCharacter == null || companionManager == null)
+            return;
+
+        if (!companionManager.TryPromote(selectedCharacter))
+        {
+            ShowToast("Not enough duplicate copies.");
+            return;
+        }
+
+        battleManager?.RefreshPlayerStats();
+        PlayerDataManager.Instance?.NotifyPlayerDataChanged();
+        if (bootstrap != null)
+            _ = bootstrap.SaveNowAsync();
+
+        RefreshCollection();
+        ShowToast($"{selectedCharacter.characterName} promoted.");
     }
 
     private void RefreshTutorial()
@@ -872,6 +1611,80 @@ public class MainGameUI : MonoBehaviour
         bootstrap?.RetryInitialization();
     }
 
+    private void HandleAutoEquip()
+    {
+        if (companionManager == null)
+            return;
+
+        companionManager.TryEquipBestOwned(
+            out CharacterData equipped);
+        ApplyCompanionSelection(equipped);
+    }
+
+    private void SelectCharacter(CharacterData character)
+    {
+        selectedCharacter = character;
+        RefreshCollection();
+    }
+
+    private void ToggleSelectedCharacterSlot(int slotIndex)
+    {
+        if (selectedCharacter == null || companionManager == null)
+            return;
+
+        CharacterData equipped =
+            companionManager.GetEquippedAtSlot(slotIndex);
+        bool changed;
+
+        if (equipped == selectedCharacter)
+        {
+            changed = companionManager.TryUnequipSlot(slotIndex);
+        }
+        else
+        {
+            changed = companionManager.TryEquipToSlot(
+                selectedCharacter,
+                slotIndex);
+        }
+
+        if (!changed)
+        {
+            ShowToast("This companion is not owned.");
+            return;
+        }
+
+        battleManager?.RefreshPlayerStats();
+        PlayerDataManager.Instance?.NotifyPlayerDataChanged();
+        if (bootstrap != null)
+            _ = bootstrap.SaveNowAsync();
+
+        RefreshCollection();
+        ShowToast(
+            equipped == selectedCharacter
+                ? $"{selectedCharacter.characterName} removed."
+                : $"{selectedCharacter.characterName} set to slot " +
+                  $"{slotIndex + 1}.");
+    }
+
+    private void ApplyCompanionSelection(CharacterData equipped)
+    {
+        if (equipped == null)
+        {
+            ShowToast("Recruit a companion first.");
+            return;
+        }
+
+        battleManager?.RefreshPlayerStats();
+        PlayerDataManager.Instance?.NotifyPlayerDataChanged();
+        if (bootstrap != null)
+            _ = bootstrap.SaveNowAsync();
+
+        int bonus =
+            CompanionManager.GetAttackBonusPercent(equipped.rarity);
+        ShowToast(
+            $"{equipped.characterName} equipped. Attack +{bonus}%.");
+    }
+
     private async void ClaimDailyReward()
     {
         try
@@ -893,11 +1706,246 @@ public class MainGameUI : MonoBehaviour
         }
     }
 
+    private async void ClaimAllMail()
+    {
+        try
+        {
+            if (MailboxManager.Instance == null)
+                return;
+
+            int claimed =
+                await MailboxManager.Instance.ClaimAllMailsAsync();
+            ShowToast(claimed > 0
+                ? $"{claimed} mail reward(s) collected."
+                : "No mail rewards available.");
+            RefreshMore();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+            ShowToast("Mail claim failed.");
+        }
+    }
+
+    private async void UpgradeWeapon()
+    {
+        await UpgradeEquipment(EquipmentSlot.Weapon);
+    }
+
+    private async void UpgradeArmor()
+    {
+        await UpgradeEquipment(EquipmentSlot.Armor);
+    }
+
+    private async System.Threading.Tasks.Task UpgradeEquipment(
+        EquipmentSlot slot)
+    {
+        if (EquipmentManager.Instance == null)
+            return;
+
+        bool upgraded =
+            await EquipmentManager.Instance.TryUpgradeAsync(slot);
+        if (!upgraded)
+        {
+            ShowToast("Equipment missing or not enough Gold.");
+            return;
+        }
+
+        battleManager.RefreshPlayerStats();
+        RefreshEquipment();
+        ShowToast($"{slot} upgraded.");
+    }
+
+    private void HandleEquipmentDropped(string itemName)
+    {
+        battleManager?.RefreshPlayerStats();
+        ShowToast($"Equipment found: {itemName}");
+        RefreshEquipment();
+    }
+
+    private async void ClaimCurrentQuest()
+    {
+        bool claimed = QuestManager.Instance != null &&
+            await QuestManager.Instance.ClaimCurrentQuestAsync();
+        ShowToast(claimed
+            ? "Quest reward collected. Next quest started."
+            : "Current quest is not complete.");
+        RefreshQuests();
+    }
+
+    private async void ClaimAchievements()
+    {
+        int claimed = QuestManager.Instance == null
+            ? 0
+            : await QuestManager.Instance
+                .ClaimAvailableAchievementsAsync();
+        ShowToast(claimed > 0
+            ? $"{claimed} achievement reward(s) collected."
+            : "No achievement rewards available.");
+        RefreshQuests();
+    }
+
+    private async void BuyGoldPouch()
+    {
+        await BuyShopProduct(ShopProduct.GoldPouch);
+    }
+
+    private async void BuyTicketBundle()
+    {
+        await BuyShopProduct(ShopProduct.TicketBundle);
+    }
+
+    private async void BuyGrowthChest()
+    {
+        await BuyShopProduct(ShopProduct.GrowthChest);
+    }
+
+    private async System.Threading.Tasks.Task BuyShopProduct(
+        ShopProduct product)
+    {
+        try
+        {
+            bool purchased = ShopManager.Instance != null &&
+                await ShopManager.Instance.TryPurchaseAsync(product);
+            ShowToast(purchased
+                ? $"Purchased: {ShopManager.GetDescription(product)}."
+                : "Not enough Gems.");
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+            ShowToast("Purchase failed. Gems were restored.");
+        }
+
+        RefreshTopBar();
+        RefreshMore();
+        RefreshShop();
+    }
+
+    private async void ClaimEventReward()
+    {
+        bool claimed = EventMissionManager.Instance != null &&
+            await EventMissionManager.Instance.ClaimRewardAsync();
+        ShowToast(claimed
+            ? "Event reward collected."
+            : "Event missions are not complete.");
+        RefreshTopBar();
+        RefreshMore();
+        RefreshEvent();
+    }
+
     private void HandleGrowthUpdated(UpgradeType type)
     {
         RefreshGrowth();
         RefreshTopBar();
         ShowToast($"{type} upgraded.");
+    }
+
+    private void ChangeStage(int direction)
+    {
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        if (data == null)
+            return;
+
+        if (!battleManager.SelectStage(data.currentStage + direction))
+        {
+            ShowToast(direction < 0
+                ? "This is the first stage."
+                : "Clear the current highest stage first.");
+            return;
+        }
+
+        if (bootstrap != null)
+            _ = bootstrap.SaveNowAsync();
+    }
+
+    private void ToggleAutoAdvance()
+    {
+        battleManager.ToggleAutoAdvance();
+        if (bootstrap != null)
+            _ = bootstrap.SaveNowAsync();
+
+        PlayerData data = PlayerDataManager.Instance.playerData;
+        ShowToast(data.autoAdvance
+            ? "Auto stage advance enabled."
+            : "Current stage repeat enabled.");
+    }
+
+    private void HandlePlayerAttackVisual(int damage)
+    {
+        playerAnimationTimer = 0.18f;
+        enemyAnimationTimer = 0.25f;
+    }
+
+    private void HandleEnemyAttackVisual(int damage)
+    {
+        enemyAnimationTimer = 0.18f;
+        playerAnimationTimer = 0.25f;
+    }
+
+    private void HandleEnemyDefeatedVisual(int reward)
+    {
+        enemyAnimationTimer = 0.4f;
+    }
+
+    private void HandlePlayerDefeatedVisual()
+    {
+        playerDefeatTimer = 1.8f;
+    }
+
+    private void HandleCompanionSkillVisual(
+        int slot,
+        CharacterData character,
+        int damage)
+    {
+        enemyAnimationTimer = 0.35f;
+        ShowToast(
+            $"{character.skillName}  DMG {damage:N0}");
+    }
+
+    private void HandleBossChallengeFailed()
+    {
+        enemyAnimationTimer = 0.4f;
+        ShowToast("Boss time expired. Retrying.");
+    }
+
+    private void UpdateBattleAnimations(float deltaTime)
+    {
+        enemyAnimationTimer = Mathf.Max(
+            0f,
+            enemyAnimationTimer - deltaTime);
+        playerAnimationTimer = Mathf.Max(
+            0f,
+            playerAnimationTimer - deltaTime);
+        playerDefeatTimer = Mathf.Max(
+            0f,
+            playerDefeatTimer - deltaTime);
+
+        if (enemyVisual != null)
+        {
+            float pulse = enemyAnimationTimer > 0f
+                ? Mathf.Sin(enemyAnimationTimer * 70f) * 12f
+                : 0f;
+            enemyVisual.anchoredPosition = new Vector2(pulse, 0f);
+            enemyVisual.localScale = enemyAnimationTimer > 0.3f
+                ? Vector3.one * 0.65f
+                : Vector3.one;
+            enemyVisualImage.color = enemyAnimationTimer > 0f
+                ? Color.Lerp(Danger, Color.white, 0.45f)
+                : Danger;
+        }
+
+        if (playerVisual != null)
+        {
+            float lunge = playerAnimationTimer > 0.12f ? 18f : 0f;
+            playerVisual.anchoredPosition = new Vector2(lunge, 0f);
+            playerVisual.localScale = playerDefeatTimer > 0f
+                ? Vector3.one * 0.55f
+                : Vector3.one;
+            playerVisualImage.color = playerAnimationTimer > 0f
+                ? Color.Lerp(Accent, Danger, 0.55f)
+                : Accent;
+        }
     }
 
     private void ShowBattle()
@@ -917,6 +1965,36 @@ public class MainGameUI : MonoBehaviour
         RefreshMore();
     }
 
+    private void ShowCollection()
+    {
+        SetActiveView(collectionPanel);
+        RefreshCollection();
+    }
+
+    private void ShowEquipment()
+    {
+        SetActiveView(equipmentPanel);
+        RefreshEquipment();
+    }
+
+    private void ShowQuests()
+    {
+        SetActiveView(questPanel);
+        RefreshQuests();
+    }
+
+    private void ShowShop()
+    {
+        SetActiveView(shopPanel);
+        RefreshShop();
+    }
+
+    private void ShowEvent()
+    {
+        SetActiveView(eventPanel);
+        RefreshEvent();
+    }
+
     private void SetActiveView(GameObject active)
     {
         if (battlePanel != null)
@@ -925,6 +2003,16 @@ public class MainGameUI : MonoBehaviour
             growthPanel.SetActive(active == growthPanel);
         if (morePanel != null)
             morePanel.SetActive(active == morePanel);
+        if (collectionPanel != null)
+            collectionPanel.SetActive(active == collectionPanel);
+        if (equipmentPanel != null)
+            equipmentPanel.SetActive(active == equipmentPanel);
+        if (questPanel != null)
+            questPanel.SetActive(active == questPanel);
+        if (shopPanel != null)
+            shopPanel.SetActive(active == shopPanel);
+        if (eventPanel != null)
+            eventPanel.SetActive(active == eventPanel);
     }
 
     private static void SetBar(
@@ -1064,6 +2152,19 @@ public class MainGameUI : MonoBehaviour
         return button;
     }
 
+    private static Color GetRarityColor(string rarity)
+    {
+        switch (rarity)
+        {
+            case "SSR":
+                return new Color32(184, 112, 255, 255);
+            case "SR":
+                return new Color32(77, 137, 235, 255);
+            default:
+                return PanelLight;
+        }
+    }
+
     private static void EnsureEventSystem()
     {
         if (FindAnyObjectByType<EventSystem>() != null)
@@ -1078,7 +2179,25 @@ public class MainGameUI : MonoBehaviour
     private void OnDestroy()
     {
         if (battleManager != null)
+        {
             battleManager.OnBattleStateChanged -= RefreshBattle;
+            battleManager.OnPlayerAttackPerformed -=
+                HandlePlayerAttackVisual;
+            battleManager.OnEnemyAttackPerformed -=
+                HandleEnemyAttackVisual;
+            battleManager.OnEnemyDefeated -=
+                HandleEnemyDefeatedVisual;
+            battleManager.OnPlayerDefeated -=
+                HandlePlayerDefeatedVisual;
+            battleManager.OnCompanionSkillUsed -=
+                HandleCompanionSkillVisual;
+            battleManager.OnBossChallengeFailed -=
+                HandleBossChallengeFailed;
+        }
+
+        if (EquipmentManager.Instance != null)
+            EquipmentManager.Instance.OnEquipmentDropped -=
+                HandleEquipmentDropped;
 
         if (growthManager != null)
             growthManager.OnUpgraded -= HandleGrowthUpdated;
