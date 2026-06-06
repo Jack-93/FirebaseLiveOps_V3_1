@@ -21,10 +21,12 @@ public class MailSlotUI : MonoBehaviour
         claimButton.onClick.AddListener(OnClickClaim);
     }
 
-    private void OnClickClaim()
+    private async void OnClickClaim()
     {
-        MailboxManager.Instance.ClaimMail(mailData);
+        bool claimed =
+            await MailboxManager.Instance.ClaimMailAsync(mailData);
 
-        Destroy(gameObject);
+        if (claimed)
+            Destroy(gameObject);
     }
 }

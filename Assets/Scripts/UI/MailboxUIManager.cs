@@ -1,9 +1,20 @@
+using System;
 using UnityEngine;
 
 public class MailboxUIManager : MonoBehaviour
 {
     [SerializeField] private Transform content;
     [SerializeField] private GameObject mailSlotPrefab;
+
+    private void Start()
+    {
+        RefreshUI();
+
+        if (PlayerDataManager.Instance != null)
+        {
+            PlayerDataManager.Instance.OnPlayerDataChanged += RefreshUI;
+        }
+    }
 
     public void RefreshUI()
     {
@@ -44,27 +55,42 @@ public class MailboxUIManager : MonoBehaviour
             MailSlotUI slotUI =
                 slot.GetComponent<MailSlotUI>();
 
+            if (slotUI == null)
+            {
+                Debug.LogError(
+                    "[MailboxUI] MailSlot prefab has no MailSlotUI.");
+                Destroy(slot);
+                continue;
+            }
+
             slotUI.Setup(mail);
         }
     }
 
-    public void AddTestMailAndRefresh()
+    public async void AddTestMailAndRefresh()
     {
-        Debug.Log("[MailboxUI] AddTestMailAndRefresh Called");
-
-        MailboxManager.Instance.AddTestMail();
-
-        RefreshUI();
+        try
+        {
+            await MailboxManager.Instance.AddTestMailAsync();
+            RefreshUI();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+        }
     }
 
-    public void ClaimAllAndRefresh()
+    public async void ClaimAllAndRefresh()
     {
-        Debug.Log("[MailboxUI] ClaimAllAndRefresh Called");
-
-        MailboxManager.Instance
-            .ClaimAllMails();
-
-        RefreshUI();
+        try
+        {
+            await MailboxManager.Instance.ClaimAllMailsAsync();
+            RefreshUI();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+        }
     }
 
     private void ClearSlots()
@@ -72,6 +98,14 @@ public class MailboxUIManager : MonoBehaviour
         foreach (Transform child in content)
         {
             Destroy(child.gameObject);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (PlayerDataManager.Instance != null)
+        {
+            PlayerDataManager.Instance.OnPlayerDataChanged -= RefreshUI;
         }
     }
 }

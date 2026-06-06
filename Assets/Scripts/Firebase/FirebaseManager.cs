@@ -1,56 +1,95 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Firebase;
 using Firebase.RemoteConfig;
-using System.Threading.Tasks;
-using System;
 using UnityEngine;
 
 public class FirebaseManager : MonoBehaviour
 {
-    public static bool IsFirebaseReady;
+    public static FirebaseManager Instance;
+    public static bool IsFirebaseReady { get; private set; }
 
-    async void Awake()
+    private static Task initializationTask;
+
+    private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        var status = await FirebaseApp.CheckAndFixDependenciesAsync();
+        initializationTask = InitializeFirebaseAsync();
+    }
 
-        if (status == DependencyStatus.Available)
-        {
-            IsFirebaseReady = true;
+    public static async Task WaitUntilReadyAsync()
+    {
+        while (initializationTask == null)
+            await Task.Yield();
 
-            Debug.Log("[Firebase] Ready");
+        await initializationTask;
+    }
 
-            await InitializeRemoteConfig();
-        }
-        else
+    private async Task InitializeFirebaseAsync()
+    {
+        DependencyStatus status =
+            await FirebaseApp.CheckAndFixDependenciesAsync();
+
+        if (status != DependencyStatus.Available)
         {
             Debug.LogError($"[Firebase] Error: {status}");
+            throw new InvalidOperationException(
+                $"Firebase dependencies are unavailable: {status}");
         }
+
+        IsFirebaseReady = true;
+        Debug.Log("[Firebase] Ready");
+
+        await InitializeRemoteConfigAsync();
     }
 
-    private async Task InitializeRemoteConfig()
+    private static async Task InitializeRemoteConfigAsync()
     {
-        await FirebaseRemoteConfig.DefaultInstance
-            .FetchAsync(TimeSpan.Zero);
+        FirebaseRemoteConfig remoteConfig =
+            FirebaseRemoteConfig.DefaultInstance;
 
-        await FirebaseRemoteConfig.DefaultInstance
-            .ActivateAsync();
+        await remoteConfig.SetDefaultsAsync(
+            new Dictionary<string, object>
+            {
+                { "ssr_rate", 3L },
+                { "sr_rate", 17L },
+                { "nikke_gacha_event", false },
+                { "current_banner", "default_banner" },
+                { "starter_pack_discount", 0L }
+            });
 
-        Debug.Log(
-            "[RemoteConfig] Loaded");
+        try
+        {
+            await remoteConfig.FetchAsync(TimeSpan.Zero);
+            await remoteConfig.ActivateAsync();
+            Debug.Log("[RemoteConfig] Loaded");
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning(
+                $"[RemoteConfig] Fetch failed. Defaults will be used: " +
+                exception.Message);
+        }
 
         GachaConfig.SSRRate =
-            (int)FirebaseRemoteConfig
-            .DefaultInstance.GetValue("ssr_rate").LongValue;
-
+            Mathf.Clamp((int)remoteConfig.GetValue("ssr_rate").LongValue, 0, 100);
         GachaConfig.SRRate =
-            (int)FirebaseRemoteConfig
-            .DefaultInstance.GetValue("sr_rate").LongValue;
+            Mathf.Clamp((int)remoteConfig.GetValue("sr_rate").LongValue, 0, 100);
+
+        if (GachaConfig.SSRRate + GachaConfig.SRRate > 100)
+            GachaConfig.SRRate = 100 - GachaConfig.SSRRate;
 
         Debug.Log(
-            $"[RemoteConfig] SSR = {GachaConfig.SSRRate}%");
-
+            $"[RemoteConfig] SSR={GachaConfig.SSRRate}% " +
+            $"SR={GachaConfig.SRRate}%");
     }
-
-
 }

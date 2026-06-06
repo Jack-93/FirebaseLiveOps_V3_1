@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using UnityEngine;
 
 public class MailboxManager : MonoBehaviour
@@ -7,97 +8,138 @@ public class MailboxManager : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance != null &&
-            Instance != this)
+        if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
             return;
         }
 
         Instance = this;
-
         DontDestroyOnLoad(gameObject);
     }
 
-    public void AddTestMail()
+    public async Task AddTestMailAsync()
     {
-        MailData mail = new MailData();
+        PlayerData data = GetPlayerData();
+        if (data == null)
+            return;
 
-        mail.mailId = Guid.NewGuid().ToString();
-        mail.title = "Maintenance Reward";
-        mail.itemName = "Gem";
-        mail.amount = 500;
-        mail.isClaimed = false;
+        data.mailbox.Add(new MailData
+        {
+            mailId = Guid.NewGuid().ToString(),
+            title = "Maintenance Reward",
+            itemName = "Gem",
+            amount = 500,
+            isClaimed = false
+        });
 
-        PlayerDataManager.Instance
-            .playerData
-            .mailbox
-            .Add(mail);
-
-        FirestoreManager.Instance
-            .SavePlayerData(
-                PlayerDataManager.Instance.playerData);
+        await FirestoreManager.Instance.SavePlayerDataAsync(data);
+        PlayerDataManager.Instance.NotifyPlayerDataChanged();
 
         Debug.Log("[Mailbox] Test Mail Added");
     }
 
-    public void ClaimMail(MailData mail)
+    public async Task<bool> ClaimMailAsync(MailData mail)
     {
-        if (mail == null)
-            return;
+        PlayerData data = GetPlayerData();
+        if (data == null || mail == null || mail.isClaimed)
+            return false;
 
-        if (mail.isClaimed)
-            return;
-
-        InventoryManager.Instance
-            .AddItem(mail.itemName, mail.amount);
+        InventoryManager.Instance.AddItem(
+            mail.itemName,
+            mail.amount,
+            false);
 
         mail.isClaimed = true;
+        RememberClaimedMail(data, mail.mailId);
+        data.mailbox.Remove(mail);
 
-        PlayerDataManager.Instance
-            .playerData
-            .mailbox
-            .Remove(mail);
+        await FirestoreManager.Instance.SavePlayerDataAsync(data);
+        PlayerDataManager.Instance.NotifyPlayerDataChanged();
 
-        FirestoreManager.Instance
-            .SavePlayerData(
-                PlayerDataManager.Instance.playerData);
-
-        Debug.Log($"[Mailbox] Claimed : {mail.title}");
+        Debug.Log($"[Mailbox] Claimed: {mail.title}");
+        return true;
     }
 
-    public void ClaimAllMails()
+    public async Task<int> ClaimAllMailsAsync()
     {
-        var mailbox =
-            PlayerDataManager.Instance
-            .playerData
-            .mailbox;
-
-        if (mailbox.Count <= 0)
+        PlayerData data = GetPlayerData();
+        if (data == null || data.mailbox.Count == 0)
         {
             Debug.Log("[Mailbox] No mails to claim");
-            return;
+            return 0;
         }
 
-        for (int i = mailbox.Count - 1; i >= 0; i--)
-        {
-            MailData mail = mailbox[i];
+        int claimedCount = 0;
 
-            if (mail.isClaimed)
+        for (int index = data.mailbox.Count - 1; index >= 0; index--)
+        {
+            MailData mail = data.mailbox[index];
+            if (mail == null || mail.isClaimed)
                 continue;
 
-            InventoryManager.Instance
-                .AddItem(mail.itemName, mail.amount);
+            InventoryManager.Instance.AddItem(
+                mail.itemName,
+                mail.amount,
+                false);
 
             mail.isClaimed = true;
-
-            mailbox.RemoveAt(i);
+            RememberClaimedMail(data, mail.mailId);
+            data.mailbox.RemoveAt(index);
+            claimedCount++;
         }
 
-        FirestoreManager.Instance
-            .SavePlayerData(
-                PlayerDataManager.Instance.playerData);
+        await FirestoreManager.Instance.SavePlayerDataAsync(data);
+        PlayerDataManager.Instance.NotifyPlayerDataChanged();
 
-        Debug.Log("[Mailbox] Claim All Complete");
+        Debug.Log($"[Mailbox] Claim All Complete: {claimedCount}");
+        return claimedCount;
+    }
+
+    public async void AddTestMail()
+    {
+        try
+        {
+            await AddTestMailAsync();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+        }
+    }
+
+    public async void ClaimAllMails()
+    {
+        try
+        {
+            await ClaimAllMailsAsync();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+        }
+    }
+
+    private static PlayerData GetPlayerData()
+    {
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+
+        if (data == null)
+        {
+            Debug.LogError("[Mailbox] PlayerData is not ready.");
+            return null;
+        }
+
+        data.EnsureInitialized();
+        return data;
+    }
+
+    private static void RememberClaimedMail(PlayerData data, string mailId)
+    {
+        if (!string.IsNullOrEmpty(mailId) &&
+            !data.claimedMailIds.Contains(mailId))
+        {
+            data.claimedMailIds.Add(mailId);
+        }
     }
 }

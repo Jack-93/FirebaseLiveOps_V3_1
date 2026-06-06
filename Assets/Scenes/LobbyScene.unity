@@ -715,7 +715,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Claim Mail
+  m_text: Daily Reward
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -2037,7 +2037,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3b886c74f21366d4f99db25f1d73f8aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DailyRewardUIManager
-  dayText: {fileID: 0}
+  dayText: {fileID: 208541613}
 --- !u!4 &739775959
 Transform:
   m_ObjectHideFlags: 0
@@ -5681,9 +5681,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 737733378}
-        m_TargetAssemblyTypeName: MailboxManager, Assembly-CSharp
-        m_MethodName: 
+      - m_Target: {fileID: 739775958}
+        m_TargetAssemblyTypeName: DailyRewardUIManager, Assembly-CSharp
+        m_MethodName: ClaimReward
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

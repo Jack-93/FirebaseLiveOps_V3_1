@@ -1,50 +1,79 @@
+using System;
 using TMPro;
 using UnityEngine;
 
 public class PlayerUIManager : MonoBehaviour
 {
     public TMP_InputField nicknameInput;
-
     public TMP_Text goldText;
     public TMP_Text playerInfoText;
 
     private void Start()
     {
         RefreshUI();
+
+        if (PlayerDataManager.Instance != null)
+            PlayerDataManager.Instance.OnPlayerDataChanged += RefreshUI;
     }
 
-    public void SaveNickname()
+    public async void SaveNickname()
     {
-        string nickname =
-            nicknameInput.text;
+        if (nicknameInput == null)
+            return;
 
-        PlayerDataManager.Instance
-            .playerData.nickname = nickname;
+        string nickname = nicknameInput.text.Trim();
+        if (string.IsNullOrEmpty(nickname))
+            return;
 
-        FirestoreManager.Instance
-            .UpdateNickname(nickname);
-
-        RefreshUI();
+        try
+        {
+            await FirestoreManager.Instance.UpdateNicknameAsync(nickname);
+            PlayerDataManager.Instance.NotifyPlayerDataChanged();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+        }
     }
 
-    public void AddGold()
+    public async void AddGold()
     {
-        FirestoreManager.Instance
-            .AddGold(100);
-
-        RefreshUI();
+        try
+        {
+            await FirestoreManager.Instance.AddGoldAsync(100);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+        }
     }
 
     public void RefreshUI()
     {
-        PlayerData data =
-            PlayerDataManager.Instance.playerData;
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        if (data == null)
+            return;
 
-        playerInfoText.text =
-            $"Nickname: {data.nickname}\\n" +
-            $"Level: {data.level}";
+        if (playerInfoText != null)
+        {
+            playerInfoText.text =
+                $"Nickname: {data.nickname}\n" +
+                $"Level: {data.level}";
+        }
 
-        goldText.text =
-            $"Gold: {data.gold}";
+        if (goldText != null)
+            goldText.text = $"Gold: {data.gold}";
+
+        if (nicknameInput != null &&
+            !nicknameInput.isFocused)
+        {
+            nicknameInput.text = data.nickname;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (PlayerDataManager.Instance != null)
+            PlayerDataManager.Instance.OnPlayerDataChanged -= RefreshUI;
     }
 }

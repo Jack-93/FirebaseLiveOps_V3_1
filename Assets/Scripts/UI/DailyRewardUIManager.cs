@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 
@@ -5,20 +6,47 @@ public class DailyRewardUIManager : MonoBehaviour
 {
     public TMP_Text dayText;
 
-    public void RefreshUI()
+    private void Start()
     {
-        PlayerData player =
-            PlayerDataManager.Instance.playerData;
+        RefreshUI();
 
-        dayText.text =
-            $"Day {player.loginDay + 1}";
+        if (PlayerDataManager.Instance != null)
+        {
+            PlayerDataManager.Instance.OnPlayerDataChanged += RefreshUI;
+        }
     }
 
-    public void ClaimReward()
+    public void RefreshUI()
     {
-        DailyRewardManager.Instance
-            .ClaimReward();
+        if (dayText == null || DailyRewardManager.Instance == null)
+            return;
 
-        RefreshUI();
+        int day = DailyRewardManager.Instance.GetNextRewardDay();
+        string state = DailyRewardManager.Instance.CanClaimReward()
+            ? "Available"
+            : "Claimed";
+
+        dayText.text = $"Claim Day {day} ({state})";
+    }
+
+    public async void ClaimReward()
+    {
+        try
+        {
+            await DailyRewardManager.Instance.ClaimRewardAsync();
+            RefreshUI();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (PlayerDataManager.Instance != null)
+        {
+            PlayerDataManager.Instance.OnPlayerDataChanged -= RefreshUI;
+        }
     }
 }

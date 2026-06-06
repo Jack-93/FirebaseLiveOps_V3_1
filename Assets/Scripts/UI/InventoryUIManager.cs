@@ -10,7 +10,14 @@ public class InventoryUIManager : MonoBehaviour
     {
         RefreshInventoryUI();
 
-        InventoryManager.Instance.OnInventoryChanged += RefreshInventoryUI;
+        if (InventoryManager.Instance != null)
+            InventoryManager.Instance.OnInventoryChanged += RefreshInventoryUI;
+
+        if (PlayerDataManager.Instance != null)
+        {
+            PlayerDataManager.Instance.OnPlayerDataChanged +=
+                RefreshInventoryUI;
+        }
     }
 
     public void AddPotion()
@@ -31,6 +38,12 @@ public class InventoryUIManager : MonoBehaviour
 
     public void RefreshInventoryUI()
     {
+        if (inventoryText == null ||
+            PlayerDataManager.Instance?.playerData?.inventory?.items == null)
+        {
+            return;
+        }
+
         var inventory =
             PlayerDataManager.Instance
             .playerData.inventory.items;
@@ -50,12 +63,18 @@ public class InventoryUIManager : MonoBehaviour
         inventoryText.text = sb.ToString();
     }
 
-    // 이벤트 중복 등록 방지 메서드 (씬 전환 시)
+    // Remove event handlers when the scene UI is destroyed.
     private void OnDestroy()
     {
         if(InventoryManager.Instance != null)
         {
             InventoryManager.Instance.OnInventoryChanged -= RefreshInventoryUI;
         }
-}
+
+        if (PlayerDataManager.Instance != null)
+        {
+            PlayerDataManager.Instance.OnPlayerDataChanged -=
+                RefreshInventoryUI;
+        }
+    }
 }

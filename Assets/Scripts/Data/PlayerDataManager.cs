@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class PlayerDataManager : MonoBehaviour
@@ -5,7 +6,7 @@ public class PlayerDataManager : MonoBehaviour
     public static PlayerDataManager Instance;
 
     public PlayerData playerData;
-    //public PlayerData PlayerData2;
+    public event Action OnPlayerDataChanged;
 
     private void Awake()
     {
@@ -20,6 +21,19 @@ public class PlayerDataManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         playerData = new PlayerData();
-        // PlayerData2 = new PlayerData();
+    }
+
+    public void SetPlayerData(PlayerData data)
+    {
+        playerData = data ?? new PlayerData();
+        playerData.EnsureInitialized();
+
+        NotifyPlayerDataChanged();
+        Debug.Log("[PlayerData] Data Set");
+    }
+
+    public void NotifyPlayerDataChanged()
+    {
+        OnPlayerDataChanged?.Invoke();
     }
 }

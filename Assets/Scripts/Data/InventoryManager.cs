@@ -19,8 +19,14 @@ public class InventoryManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    public void AddItem(string itemName, int amount)
+    public void AddItem(
+        string itemName,
+        int amount,
+        bool savePlayerData = true)
     {
+        if (string.IsNullOrWhiteSpace(itemName) || amount <= 0)
+            return;
+
         var inventory =
             PlayerDataManager.Instance
             .playerData
@@ -40,16 +46,25 @@ public class InventoryManager : MonoBehaviour
             $"[Inventory] {itemName} +{amount}"
         );
 
-        FirestoreManager.Instance
-            .SavePlayerData(
-                PlayerDataManager.Instance.playerData
-            );
+        if (savePlayerData)
+        {
+            FirestoreManager.Instance
+                .SavePlayerData(
+                    PlayerDataManager.Instance.playerData
+                );
+        }
 
         OnInventoryChanged?.Invoke();
     }
 
-    public void RemoveItem(string itemName, int amount)
+    public void RemoveItem(
+        string itemName,
+        int amount,
+        bool savePlayerData = true)
     {
+        if (string.IsNullOrWhiteSpace(itemName) || amount <= 0)
+            return;
+
         var inventory =
             PlayerDataManager.Instance
             .playerData
@@ -70,10 +85,15 @@ public class InventoryManager : MonoBehaviour
             $"[Inventory] {itemName} - {amount}"
         );
 
-        FirestoreManager.Instance
-            .SavePlayerData(
-                PlayerDataManager.Instance
-                .playerData
-            );
+        if (savePlayerData)
+        {
+            FirestoreManager.Instance
+                .SavePlayerData(
+                    PlayerDataManager.Instance
+                    .playerData
+                );
+        }
+
+        OnInventoryChanged?.Invoke();
     }
 }

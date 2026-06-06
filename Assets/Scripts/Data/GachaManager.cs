@@ -7,7 +7,7 @@ public class GachaManager : MonoBehaviour
 
     public static GachaManager Instance;
 
-    // °¢ µî±Şº° Ä³¸¯ÅÍ Ç®
+    // ê° ë“±ê¸‰ë³„ ìºë¦­í„° í’€
     private List<CharacterData> rCharacters = new List<CharacterData>();
     private List<CharacterData> srCharacters = new List<CharacterData>();
     private List<CharacterData> ssrCharacters = new List<CharacterData>();
@@ -27,7 +27,7 @@ public class GachaManager : MonoBehaviour
         InitializeCharacterPoolFromDatabase();
 
         //initializeCharacterPool();
-        //// Ä³¸¯ÅÍ Ç® ÃÊ±âÈ­
+        //// ìºë¦­í„° í’€ ì´ˆê¸°í™”
         //rCharacterPool.Add(new CharacterData("R_Character1", "R"));
         //rCharacterPool.Add(new CharacterData("R_Character2", "R"));
         //srCharacterPool.Add(new CharacterData("SR_Character1", "SR"));
@@ -38,8 +38,8 @@ public class GachaManager : MonoBehaviour
     /*
     private void initializeCharacterPool()
     {
-        // ½ÇÁ¦ °ÔÀÓ¿¡¼­´Â ÀÌ µ¥ÀÌÅÍ¸¦ ¿ÜºÎ¿¡¼­ ºÒ·¯¿Ã ¼ö ÀÖµµ·Ï Á¦ÀÛ
-        // Ä³¸¯ÅÍ µ¥ÀÌÅÍ ¿¡¼Â Ãß°¡ ScriptableObject
+        // ì‹¤ì œ ê²Œì„ì—ì„œëŠ” ì´ ë°ì´í„°ë¥¼ ì™¸ë¶€ì—ì„œ ë¶ˆëŸ¬ì˜¬ ìˆ˜ ìˆë„ë¡ ì œì‘
+        // ìºë¦­í„° ë°ì´í„° ì—ì…‹ ì¶”ê°€ ScriptableObject
          
         rCharacters.Add(new CharacterData("R_Character1", "R"));
         rCharacters.Add(new CharacterData("R_Character2", "R"));
@@ -52,18 +52,20 @@ public class GachaManager : MonoBehaviour
     }
     */
 
-    // Ä³¸¯ÅÍ µ¥ÀÌÅÍ ¿¡¼Â Ãß°¡ ScriptableObject
+    // ìºë¦­í„° ë°ì´í„° ì—ì…‹ ì¶”ê°€ ScriptableObject
     private void InitializeCharacterPoolFromDatabase()
     {
-        Debug.Log(database);
-
         if (database == null)
         {
-            Debug.LogError("Database is NULL");
+            Debug.LogError("[Gacha] Character database is not assigned.");
             return;
         }
 
-        Debug.Log(database.characters);
+        if (database.characters == null)
+        {
+            Debug.LogError("[Gacha] Character database list is null.");
+            return;
+        }
 
         rCharacters.Clear();
         srCharacters.Clear();
@@ -71,6 +73,9 @@ public class GachaManager : MonoBehaviour
 
         foreach (CharacterData character in database.characters)
         {
+            if (character == null)
+                continue;
+
             switch (character.rarity)
             {
                 case "SSR":
@@ -94,7 +99,7 @@ public class GachaManager : MonoBehaviour
     }
 
 
-    // È®·ü -> RemoteConfig¿¡¼­ ¼öÄ¡ °ü¸®
+    // í™•ë¥  -> RemoteConfigì—ì„œ ìˆ˜ì¹˜ ê´€ë¦¬
     public CharacterData RollCharacter()
     {
         int randomRoll = Random.Range(1, 101); // 1~100
@@ -102,12 +107,13 @@ public class GachaManager : MonoBehaviour
         UnityEngine.Debug.Log(
             $"[Gacha] Random Value: {randomRoll}");
 
-        if (randomRoll < GachaConfig.SSRRate)
+        if (randomRoll <= GachaConfig.SSRRate)
         {
             // return ssrCharacterPool[Random.Range(0, ssrCharacterPool.Count)];
             return GetRandomCharacter(ssrCharacters);
         }
-        else if (randomRoll < GachaConfig.SSRRate + GachaConfig.SRRate)
+        else if (randomRoll <=
+            GachaConfig.SSRRate + GachaConfig.SRRate)
         {
             //return srCharacterPool[Random.Range(0, srCharacterPool.Count)];
             return GetRandomCharacter(srCharacters);
@@ -119,7 +125,7 @@ public class GachaManager : MonoBehaviour
         }
     }
 
-    // 10¿¬Â÷ »Ì±â Å¬·¡½º
+    // 10ì—°ì°¨ ë½‘ê¸° í´ë˜ìŠ¤
     public List<CharacterData> RollTen()
     {
         List<CharacterData> results =
@@ -152,16 +158,26 @@ public class GachaManager : MonoBehaviour
 
     private CharacterData GetRandomCharacter(List<CharacterData> list)
     {
+        if (list == null || list.Count == 0)
+        {
+            throw new System.InvalidOperationException(
+                "[Gacha] The selected rarity pool is empty.");
+        }
+
         int index = Random.Range(0, list.Count);
 
         return list[index];
     }
 
-    // ÃµÀå ½Ã½ºÅÛ Å¬·¡½º
+    // ì²œì¥ ì‹œìŠ¤í…œ í´ë˜ìŠ¤
     public CharacterData RollCharacterWithPity()
     {
-        PlayerData data =
-            PlayerDataManager.Instance.playerData;
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        if (data == null)
+        {
+            throw new System.InvalidOperationException(
+                "[Gacha] PlayerData is not ready.");
+        }
 
         if (data.pityCount >= 99)
         {

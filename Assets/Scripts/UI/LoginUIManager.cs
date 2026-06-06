@@ -1,6 +1,9 @@
+using System;
+using System.Threading.Tasks;
 using Firebase.Auth;
 using TMPro;
 using UnityEngine;
+
 public class LoginUIManager : MonoBehaviour
 {
     [Header("UI")]
@@ -9,111 +12,140 @@ public class LoginUIManager : MonoBehaviour
 
     private FirebaseAuth auth;
     private FirebaseUser user;
+    private bool isInitializingPlayer;
 
-    async void Start()
+    private async void Start()
     {
-        // Firebase 초기화 대기
-        while (!FirebaseManager.IsFirebaseReady)
+        try
         {
-            await System.Threading.Tasks.Task.Yield();
-        }
+            await FirebaseManager.WaitUntilReadyAsync();
+            auth = FirebaseAuth.DefaultInstance;
 
-        auth = FirebaseAuth.DefaultInstance;
+            if (auth.CurrentUser == null)
+            {
+                SetLoginStatus("Not Logged In", null);
+                return;
+            }
 
-        // 자동 로그인 체크
-        if (auth.CurrentUser != null)
-        {
             user = auth.CurrentUser;
-
-            statusText.text = "Auto Login Success";
-            uidText.text = $"UID: {user.UserId}";
-
+            SetLoginStatus("Auto Login Success", user);
             Debug.Log("[Auth] Auto Login");
 
-            // 자동 로그인 후 Analytics 이벤트 로그, 유저 데이터 로드, 일일 보상 체크
-            FirestoreManager.Instance
-                .LoadPlayerData();
-            //DailyRewardManager.Instance
-            //    .ClaimReward();
-            AnalyticsManager.Instance
-                .LogLogin();
-            FirestoreManager.Instance
-                .LoadGlobalMails();
-
             CheckNewUser();
+            await InitializePlayerAfterLoginAsync();
         }
-        else
+        catch (Exception exception)
         {
-            statusText.text = "Not Logged In";
-            uidText.text = "UID: -";
+            SetLoginStatus("Initialization Failed", null);
+            Debug.LogException(exception);
         }
-
-
     }
 
     public async void GuestLogin()
     {
-        statusText.text = "Logging In...";
+        if (isInitializingPlayer)
+            return;
+
+        SetLoginStatus("Logging In...", null);
 
         try
         {
-            var result =
-                await auth.SignInAnonymouslyAsync();
+            await FirebaseManager.WaitUntilReadyAsync();
+            auth = auth ?? FirebaseAuth.DefaultInstance;
 
+            AuthResult result = await auth.SignInAnonymouslyAsync();
             user = result.User;
 
-            statusText.text = "Guest Login Success";
-            uidText.text = $"UID: {user.UserId}";
-
-            // 로그인 후 유저 초기 데이터 로드 체크
+            SetLoginStatus("Guest Login Success", user);
             Debug.Log($"[Auth] Login Success: {user.UserId}");
 
-            // 로그인 후 Analytics 이벤트 로그, 유저 데이터 로드, 일일 보상 체크
-            AnalyticsManager.Instance
-                .LogLogin();
-            FirestoreManager.Instance
-                .LoadPlayerData();
-            FirestoreManager.Instance
-                .LoadGlobalMails();
-            //DailyRewardManager.Instance
-            //    .ClaimReward();
-
             CheckNewUser();
+            await InitializePlayerAfterLoginAsync();
         }
-        catch (System.Exception e)
+        catch (Exception exception)
         {
-            statusText.text = "Login Failed";
-
-            Debug.LogError($"[Auth] {e.Message}");
-        }
-    }
-
-    private void CheckNewUser()
-    {
-        if (user.Metadata.CreationTimestamp ==
-            user.Metadata.LastSignInTimestamp)
-        {
-            Debug.Log("[Auth] New User");
-
-            statusText.text += "\\nNew User";
-        }
-        else
-        {
-            Debug.Log("[Auth] Returning User");
-
-            statusText.text += "\\nReturning User";
+            SetLoginStatus("Login Failed", null);
+            Debug.LogError($"[Auth] {exception.Message}");
         }
     }
 
     public void Logout()
     {
-        auth.SignOut();
+        if (auth == null)
+            return;
 
+        auth.SignOut();
         user = null;
 
-        statusText.text = "Logged Out";
-        uidText.text = "UID: -";
+        PlayerDataManager.Instance?.SetPlayerData(new PlayerData());
+        SetLoginStatus("Logged Out", null);
 
         Debug.Log("[Auth] Logout");
+    }
+
+    private async Task InitializePlayerAfterLoginAsync()
+    {
+        if (isInitializingPlayer || user == null)
+            return;
+
+        isInitializingPlayer = true;
+
+        try
+        {
+            PlayerData data =
+                await FirestoreManager.Instance.LoadPlayerDataAsync();
+
+            if (data == null)
+                return;
+
+            data.uid = user.UserId;
+            data.lastLoginDate = DateTime.UtcNow.ToString("yyyy-MM-dd");
+
+            PlayerDataManager.Instance.SetPlayerData(data);
+
+            await FirestoreManager.Instance.LoadGlobalMailsAsync();
+            await FirestoreManager.Instance.SavePlayerDataAsync(data);
+
+            PlayerDataManager.Instance.NotifyPlayerDataChanged();
+            AnalyticsManager.Instance?.LogLogin();
+
+            Debug.Log("[Login] Player Initialized");
+        }
+        finally
+        {
+            isInitializingPlayer = false;
+        }
+    }
+
+    private void CheckNewUser()
+    {
+        if (user == null)
+            return;
+
+        bool isNewUser =
+            user.Metadata.CreationTimestamp ==
+            user.Metadata.LastSignInTimestamp;
+
+        Debug.Log(isNewUser
+            ? "[Auth] New User"
+            : "[Auth] Returning User");
+
+        if (statusText != null)
+            statusText.text += isNewUser
+                ? "\nNew User"
+                : "\nReturning User";
+    }
+
+    private void SetLoginStatus(string status, FirebaseUser currentUser)
+    {
+        if (statusText != null)
+            statusText.text = status;
+
+        if (uidText != null)
+        {
+            uidText.text = currentUser == null
+                ? "UID: -"
+                : $"UID: {currentUser.UserId}";
+        }
     }
 }
