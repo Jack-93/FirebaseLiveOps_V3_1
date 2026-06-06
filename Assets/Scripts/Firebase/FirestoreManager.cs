@@ -162,6 +162,7 @@ public class FirestoreManager : MonoBehaviour
         QuerySnapshot snapshot =
             await db.Collection("global_mails").GetSnapshotAsync();
         int addedCount = 0;
+        int changedCount = 0;
 
         foreach (DocumentSnapshot document in snapshot.Documents)
         {
@@ -170,15 +171,31 @@ public class FirestoreManager : MonoBehaviour
             if (!GetBoolean(values, "isActive"))
                 continue;
 
-            if (HasMail(playerData, document.Id) ||
-                playerData.claimedMailIds.Contains(document.Id))
+            if (playerData.claimedMailIds.Contains(document.Id))
             {
                 continue;
             }
 
-            if (!values.TryGetValue("title", out object title) ||
-                !values.TryGetValue("itemName", out object itemName) ||
-                !values.TryGetValue("amount", out object amount))
+            MailData existingMail =
+                FindMail(playerData, document.Id);
+            if (existingMail != null)
+            {
+                // Old saves did not persist the global-mail marker.
+                if (!existingMail.isGlobalMail)
+                {
+                    existingMail.isGlobalMail = true;
+                    changedCount++;
+                }
+
+                continue;
+            }
+
+            if (!TryGetNonEmptyString(values, "title", out string title) ||
+                !TryGetNonEmptyString(
+                    values,
+                    "itemName",
+                    out string itemName) ||
+                !TryGetPositiveInt(values, "amount", out int amount))
             {
                 Debug.LogWarning(
                     $"[Mailbox] Global mail {document.Id} is missing fields.");
@@ -188,17 +205,19 @@ public class FirestoreManager : MonoBehaviour
             playerData.mailbox.Add(new MailData
             {
                 mailId = document.Id,
-                title = title.ToString(),
-                itemName = itemName.ToString(),
-                amount = Convert.ToInt32(amount),
+                isGlobalMail = true,
+                title = title,
+                itemName = itemName,
+                amount = amount,
                 isClaimed = false
             });
 
             addedCount++;
+            changedCount++;
         }
 
         Debug.Log($"[Mailbox] Global mails loaded: {addedCount}");
-        return addedCount;
+        return changedCount;
     }
 
     public async void LoadGlobalMails()
@@ -239,23 +258,66 @@ public class FirestoreManager : MonoBehaviour
             db = FirebaseFirestore.DefaultInstance;
     }
 
-    private static bool HasMail(PlayerData data, string mailId)
+    private static MailData FindMail(PlayerData data, string mailId)
     {
         foreach (MailData mail in data.mailbox)
         {
             if (mail != null && mail.mailId == mailId)
-                return true;
+                return mail;
         }
 
-        return false;
+        return null;
     }
 
     private static bool GetBoolean(
         Dictionary<string, object> values,
         string key)
     {
-        return values.TryGetValue(key, out object value) &&
-            value != null &&
-            Convert.ToBoolean(value);
+        if (!values.TryGetValue(key, out object value) || value == null)
+            return false;
+
+        try
+        {
+            return Convert.ToBoolean(value);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool TryGetNonEmptyString(
+        Dictionary<string, object> values,
+        string key,
+        out string result)
+    {
+        result = null;
+
+        if (!values.TryGetValue(key, out object value) || value == null)
+            return false;
+
+        result = value.ToString();
+        return !string.IsNullOrWhiteSpace(result);
+    }
+
+    private static bool TryGetPositiveInt(
+        Dictionary<string, object> values,
+        string key,
+        out int result)
+    {
+        result = 0;
+
+        if (!values.TryGetValue(key, out object value) || value == null)
+            return false;
+
+        try
+        {
+            result = Convert.ToInt32(value);
+            return result > 0;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

@@ -27,6 +27,16 @@ public class PlayerData
     public string lastRewardDate; // Firestore에 저장할 때는 DateTime을 문자열로 변환, 저장
     public int loginDay;
 
+    public int currentStage;
+    public int highestStage;
+    public int stageEnemyIndex;
+    public int attackLevel;
+    public int healthLevel;
+    public int attackSpeedLevel;
+    public int tutorialStep;
+    public int totalMonstersDefeated;
+    public long lastOnlineUnixTime;
+
     // 서버, 클라이언트 둘 다 사용 (디폴트값 설정소)
     public PlayerData()
     {
@@ -45,6 +55,16 @@ public class PlayerData
 
         mailbox = new List<MailData>();
         claimedMailIds = new List<string>();
+
+        currentStage = 1;
+        highestStage = 1;
+        stageEnemyIndex = 0;
+        attackLevel = 1;
+        healthLevel = 1;
+        attackSpeedLevel = 1;
+        tutorialStep = 0;
+        totalMonstersDefeated = 0;
+        lastOnlineUnixTime = 0;
     }
 
     public void EnsureInitialized()
@@ -69,5 +89,19 @@ public class PlayerData
 
         if (lastRewardDate == null)
             lastRewardDate = "";
+
+        currentStage = System.Math.Max(1, currentStage);
+        highestStage = System.Math.Max(currentStage, highestStage);
+        stageEnemyIndex = System.Math.Max(
+            0,
+            System.Math.Min(4, stageEnemyIndex));
+        attackLevel = System.Math.Max(1, attackLevel);
+        healthLevel = System.Math.Max(1, healthLevel);
+        attackSpeedLevel = System.Math.Max(1, attackSpeedLevel);
+        tutorialStep = System.Math.Max(0, tutorialStep);
+        totalMonstersDefeated =
+            System.Math.Max(0, totalMonstersDefeated);
+        lastOnlineUnixTime =
+            System.Math.Max(0, lastOnlineUnixTime);
     }
 }

@@ -7,7 +7,7 @@ public class GachaManager : MonoBehaviour
 
     public static GachaManager Instance;
 
-    // 각 등급별 캐릭터 풀
+    // 媛??깃툒蹂?罹먮┃???
     private List<CharacterData> rCharacters = new List<CharacterData>();
     private List<CharacterData> srCharacters = new List<CharacterData>();
     private List<CharacterData> ssrCharacters = new List<CharacterData>();
@@ -27,7 +27,7 @@ public class GachaManager : MonoBehaviour
         InitializeCharacterPoolFromDatabase();
 
         //initializeCharacterPool();
-        //// 캐릭터 풀 초기화
+        //// 罹먮┃??? 珥덇린??
         //rCharacterPool.Add(new CharacterData("R_Character1", "R"));
         //rCharacterPool.Add(new CharacterData("R_Character2", "R"));
         //srCharacterPool.Add(new CharacterData("SR_Character1", "SR"));
@@ -38,8 +38,8 @@ public class GachaManager : MonoBehaviour
     /*
     private void initializeCharacterPool()
     {
-        // 실제 게임에서는 이 데이터를 외부에서 불러올 수 있도록 제작
-        // 캐릭터 데이터 에셋 추가 ScriptableObject
+        // ?ㅼ젣 寃뚯엫?먯꽌?????곗씠?곕? ?몃??먯꽌 遺덈윭?????덈룄濡??쒖옉
+        // 罹먮┃???곗씠???먯뀑 異붽? ScriptableObject
          
         rCharacters.Add(new CharacterData("R_Character1", "R"));
         rCharacters.Add(new CharacterData("R_Character2", "R"));
@@ -52,7 +52,7 @@ public class GachaManager : MonoBehaviour
     }
     */
 
-    // 캐릭터 데이터 에셋 추가 ScriptableObject
+    // 罹먮┃???곗씠???먯뀑 異붽? ScriptableObject
     private void InitializeCharacterPoolFromDatabase()
     {
         if (database == null)
@@ -99,9 +99,11 @@ public class GachaManager : MonoBehaviour
     }
 
 
-    // 확률 -> RemoteConfig에서 수치 관리
+    // ?뺣쪧 -> RemoteConfig?먯꽌 ?섏튂 愿由?
     public CharacterData RollCharacter()
     {
+        ValidateRollPools();
+
         int randomRoll = Random.Range(1, 101); // 1~100
 
         UnityEngine.Debug.Log(
@@ -125,9 +127,17 @@ public class GachaManager : MonoBehaviour
         }
     }
 
-    // 10연차 뽑기 클래스
+    // 10?곗감 戮묎린 ?대옒??
     public List<CharacterData> RollTen()
     {
+        ValidateRollPools();
+
+        if (srCharacters.Count == 0)
+        {
+            throw new System.InvalidOperationException(
+                "[Gacha] Ten-roll guarantee requires at least one SR.");
+        }
+
         List<CharacterData> results =
             new List<CharacterData>();
 
@@ -169,9 +179,11 @@ public class GachaManager : MonoBehaviour
         return list[index];
     }
 
-    // 천장 시스템 클래스
+    // 泥쒖옣 ?쒖뒪???대옒??
     public CharacterData RollCharacterWithPity()
     {
+        ValidateRollPools();
+
         PlayerData data = PlayerDataManager.Instance?.playerData;
         if (data == null)
         {
@@ -201,4 +213,28 @@ public class GachaManager : MonoBehaviour
         return result;
     }
 
+    private void ValidateRollPools()
+    {
+        int rRate = 100 - GachaConfig.SSRRate - GachaConfig.SRRate;
+        if (rRate > 0 && rCharacters.Count == 0)
+        {
+            throw new System.InvalidOperationException(
+                "[Gacha] At least one R character is required.");
+        }
+
+        if (GachaConfig.SRRate > 0 && srCharacters.Count == 0)
+        {
+            throw new System.InvalidOperationException(
+                "[Gacha] SR rate is enabled, but the SR pool is empty.");
+        }
+
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        if ((GachaConfig.SSRRate > 0 ||
+             data != null && data.pityCount >= 99) &&
+            ssrCharacters.Count == 0)
+        {
+            throw new System.InvalidOperationException(
+                "[Gacha] SSR can be selected, but the SSR pool is empty.");
+        }
+    }
 }

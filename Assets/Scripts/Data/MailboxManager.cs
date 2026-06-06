@@ -27,6 +27,7 @@ public class MailboxManager : MonoBehaviour
         data.mailbox.Add(new MailData
         {
             mailId = Guid.NewGuid().ToString(),
+            isGlobalMail = false,
             title = "Maintenance Reward",
             itemName = "Gem",
             amount = 500,
@@ -42,16 +43,30 @@ public class MailboxManager : MonoBehaviour
     public async Task<bool> ClaimMailAsync(MailData mail)
     {
         PlayerData data = GetPlayerData();
-        if (data == null || mail == null || mail.isClaimed)
+        if (data == null ||
+            mail == null ||
+            mail.isClaimed ||
+            string.IsNullOrWhiteSpace(mail.itemName) ||
+            mail.amount <= 0)
+        {
+            Debug.LogWarning("[Mailbox] Invalid mail cannot be claimed.");
             return false;
+        }
 
-        InventoryManager.Instance.AddItem(
+        InventoryManager inventoryManager = InventoryManager.Instance;
+        if (inventoryManager == null)
+        {
+            Debug.LogError("[Mailbox] InventoryManager is missing.");
+            return false;
+        }
+
+        inventoryManager.AddItem(
             mail.itemName,
             mail.amount,
             false);
 
         mail.isClaimed = true;
-        RememberClaimedMail(data, mail.mailId);
+        RememberClaimedMail(data, mail);
         data.mailbox.Remove(mail);
 
         await FirestoreManager.Instance.SavePlayerDataAsync(data);
@@ -71,6 +86,12 @@ public class MailboxManager : MonoBehaviour
         }
 
         int claimedCount = 0;
+        InventoryManager inventoryManager = InventoryManager.Instance;
+        if (inventoryManager == null)
+        {
+            Debug.LogError("[Mailbox] InventoryManager is missing.");
+            return 0;
+        }
 
         for (int index = data.mailbox.Count - 1; index >= 0; index--)
         {
@@ -78,13 +99,20 @@ public class MailboxManager : MonoBehaviour
             if (mail == null || mail.isClaimed)
                 continue;
 
-            InventoryManager.Instance.AddItem(
+            if (string.IsNullOrWhiteSpace(mail.itemName) ||
+                mail.amount <= 0)
+            {
+                Debug.LogWarning("[Mailbox] Invalid mail was skipped.");
+                continue;
+            }
+
+            inventoryManager.AddItem(
                 mail.itemName,
                 mail.amount,
                 false);
 
             mail.isClaimed = true;
-            RememberClaimedMail(data, mail.mailId);
+            RememberClaimedMail(data, mail);
             data.mailbox.RemoveAt(index);
             claimedCount++;
         }
@@ -134,12 +162,14 @@ public class MailboxManager : MonoBehaviour
         return data;
     }
 
-    private static void RememberClaimedMail(PlayerData data, string mailId)
+    private static void RememberClaimedMail(PlayerData data, MailData mail)
     {
-        if (!string.IsNullOrEmpty(mailId) &&
-            !data.claimedMailIds.Contains(mailId))
+        if (mail != null &&
+            mail.isGlobalMail &&
+            !string.IsNullOrEmpty(mail.mailId) &&
+            !data.claimedMailIds.Contains(mail.mailId))
         {
-            data.claimedMailIds.Add(mailId);
+            data.claimedMailIds.Add(mail.mailId);
         }
     }
 }

@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: edbddcf0806d01c46b7c1bf4982395b7, type: 3}
-  m_Name: Rapi
+  m_Name: Astra
   m_EditorClassIdentifier: Assembly-CSharp::CharacterData
-  characterName: Rapi
-  rarity: SR
+  characterName: Astra
+  rarity: SSR
   icon: {fileID: 0}
-  description: 
+  description: Placeholder ranged companion.

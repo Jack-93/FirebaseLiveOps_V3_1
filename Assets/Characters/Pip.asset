@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: edbddcf0806d01c46b7c1bf4982395b7, type: 3}
-  m_Name: Scarlet
+  m_Name: Pip
   m_EditorClassIdentifier: Assembly-CSharp::CharacterData
-  characterName: Scarlet
-  rarity: SSR
-  icon: {fileID: 21300000, guid: ab178e4574fdd614991fadfb826dc5ee, type: 3}
-  description: 
+  characterName: Pip
+  rarity: R
+  icon: {fileID: 0}
+  description: Placeholder starter companion.

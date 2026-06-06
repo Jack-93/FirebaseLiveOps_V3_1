@@ -2,6 +2,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
+/*
+ * PlayerData와 Dictionary<string, object> 간의 변환을 담당하는 유틸리티 클래스
+ * Firestore에서 데이터를 읽고 쓸 때 사용
+ */
 public static class PlayerDataConverter
 {
     public static Dictionary<string, object> ToDictionary(PlayerData data)
@@ -21,7 +25,16 @@ public static class PlayerDataConverter
             { "claimedMailIds", new List<string>(data.claimedMailIds) },
             { "lastLoginDate", data.lastLoginDate },
             { "lastRewardDate", data.lastRewardDate },
-            { "loginDay", data.loginDay }
+            { "loginDay", data.loginDay },
+            { "currentStage", data.currentStage },
+            { "highestStage", data.highestStage },
+            { "stageEnemyIndex", data.stageEnemyIndex },
+            { "attackLevel", data.attackLevel },
+            { "healthLevel", data.healthLevel },
+            { "attackSpeedLevel", data.attackSpeedLevel },
+            { "tutorialStep", data.tutorialStep },
+            { "totalMonstersDefeated", data.totalMonstersDefeated },
+            { "lastOnlineUnixTime", data.lastOnlineUnixTime }
         };
     }
 
@@ -37,9 +50,23 @@ public static class PlayerDataConverter
             pityCount = GetInt(values, "pityCount", 0),
             lastLoginDate = GetString(values, "lastLoginDate", ""),
             lastRewardDate = GetString(values, "lastRewardDate", ""),
-            loginDay = GetInt(values, "loginDay", 0)
+            loginDay = GetInt(values, "loginDay", 0),
+            currentStage = GetInt(values, "currentStage", 1),
+            highestStage = GetInt(values, "highestStage", 1),
+            stageEnemyIndex = GetInt(values, "stageEnemyIndex", 0),
+            attackLevel = GetInt(values, "attackLevel", 1),
+            healthLevel = GetInt(values, "healthLevel", 1),
+            attackSpeedLevel = GetInt(values, "attackSpeedLevel", 1),
+            tutorialStep = GetInt(values, "tutorialStep", 0),
+            totalMonstersDefeated =
+                GetInt(values, "totalMonstersDefeated", 0),
+            lastOnlineUnixTime =
+                GetLong(values, "lastOnlineUnixTime", 0)
         };
 
+        /*
+         * 안전하게 체크, 변환
+         */
         if (values.TryGetValue("inventory", out object inventoryValue))
             data.inventory = ConvertInventory(inventoryValue);
 
@@ -52,7 +79,7 @@ public static class PlayerDataConverter
         data.EnsureInitialized();
         return data;
     }
-
+    // Dictionary<string, int> -> Dictionary<string, object>
     private static Dictionary<string, object> ConvertInventoryToDictionary(
         InventoryData inventory)
     {
@@ -65,6 +92,7 @@ public static class PlayerDataConverter
         return result;
     }
 
+    // Dictionary<string, int> <- Dictionary<string, object>
     private static InventoryData ConvertInventory(object raw)
     {
         InventoryData inventory = new InventoryData();
@@ -95,6 +123,7 @@ public static class PlayerDataConverter
             result.Add(new Dictionary<string, object>
             {
                 { "mailId", mail.mailId ?? "" },
+                { "isGlobalMail", mail.isGlobalMail },
                 { "title", mail.title ?? "" },
                 { "itemName", mail.itemName ?? "" },
                 { "amount", mail.amount },
@@ -120,6 +149,8 @@ public static class PlayerDataConverter
             mails.Add(new MailData
             {
                 mailId = GetDictionaryString(dictionary, "mailId"),
+                isGlobalMail =
+                    GetDictionaryBool(dictionary, "isGlobalMail"),
                 title = GetDictionaryString(dictionary, "title"),
                 itemName = GetDictionaryString(dictionary, "itemName"),
                 amount = GetDictionaryInt(dictionary, "amount"),
@@ -152,6 +183,7 @@ public static class PlayerDataConverter
         string key,
         string fallback)
     {
+        // fallback : 값이 없거나 null인 경우 사용할 기본값 (1 or 값)
         return values.TryGetValue(key, out object value) && value != null
             ? value.ToString()
             : fallback;
@@ -175,6 +207,24 @@ public static class PlayerDataConverter
         return values.TryGetValue(key, out object value)
             ? ConvertToBool(value, fallback)
             : fallback;
+    }
+
+    private static long GetLong(
+        Dictionary<string, object> values,
+        string key,
+        long fallback)
+    {
+        if (!values.TryGetValue(key, out object value) || value == null)
+            return fallback;
+
+        try
+        {
+            return Convert.ToInt64(value);
+        }
+        catch
+        {
+            return fallback;
+        }
     }
 
     private static string GetDictionaryString(

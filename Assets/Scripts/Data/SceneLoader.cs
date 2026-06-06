@@ -5,7 +5,12 @@ public class SceneLoader : MonoBehaviour
 {
     public void LoadLobby()
     {
-        SceneManager.LoadScene("LobbyScene");
+        SceneManager.LoadScene("MainGameScene");
+    }
+
+    public void LoadMainGame()
+    {
+        SceneManager.LoadScene("MainGameScene");
     }
 
     public void LoadGacha()

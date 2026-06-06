@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: edbddcf0806d01c46b7c1bf4982395b7, type: 3}
-  m_Name: Modernia
+  m_Name: Ember
   m_EditorClassIdentifier: Assembly-CSharp::CharacterData
-  characterName: Modernia
+  characterName: Ember
   rarity: SSR
-  icon: {fileID: 21300000, guid: 94ece64e636232f4f92243442d5c27b2, type: 3}
-  description: 
+  icon: {fileID: 0}
+  description: Placeholder burst companion.
