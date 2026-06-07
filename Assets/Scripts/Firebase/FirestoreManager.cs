@@ -8,7 +8,11 @@ using UnityEngine;
 
 public class FirestoreManager : MonoBehaviour
 {
+    private const int SaveAttemptCount = 3;
+
     public static FirestoreManager Instance;
+    public bool HasPendingSave { get; private set; }
+    public string LastSaveError { get; private set; }
 
     private readonly SemaphoreSlim saveLock = new SemaphoreSlim(1, 1);
     private FirebaseFirestore db;
@@ -63,23 +67,54 @@ public class FirestoreManager : MonoBehaviour
             return;
         }
 
-        FirebaseUser user = await GetCurrentUserAsync();
-        if (user == null)
-            return;
-
         await saveLock.WaitAsync();
 
         try
         {
+            FirebaseUser user = await GetCurrentUserAsync();
+            if (user == null)
+                throw new InvalidOperationException(
+                    "No authenticated user is available.");
+
+            HasPendingSave = true;
             data.uid = user.UserId;
 
             DocumentReference docRef =
                 db.Collection("users").Document(user.UserId);
-            Dictionary<string, object> values =
-                PlayerDataConverter.ToDictionary(data);
 
-            await docRef.SetAsync(values);
-            Debug.Log("[Firestore] Save Success");
+            for (int attempt = 1; attempt <= SaveAttemptCount; attempt++)
+            {
+                try
+                {
+                    Dictionary<string, object> values =
+                        PlayerDataConverter.ToDictionary(data);
+                    await docRef.SetAsync(values);
+
+                    HasPendingSave = false;
+                    LastSaveError = "";
+                    Debug.Log("[Firestore] Save Success");
+                    return;
+                }
+                catch (Exception exception)
+                {
+                    LastSaveError = exception.Message;
+                    if (attempt >= SaveAttemptCount)
+                        throw;
+
+                    int delayMilliseconds =
+                        500 * (1 << (attempt - 1));
+                    Debug.LogWarning(
+                        $"[Firestore] Save attempt {attempt} failed. " +
+                        $"Retrying in {delayMilliseconds}ms.");
+                    await Task.Delay(delayMilliseconds);
+                }
+            }
+        }
+        catch (Exception exception)
+        {
+            HasPendingSave = true;
+            LastSaveError = exception.Message;
+            throw;
         }
         finally
         {
@@ -96,6 +131,29 @@ public class FirestoreManager : MonoBehaviour
         catch (Exception exception)
         {
             Debug.LogException(exception);
+        }
+    }
+
+    public async Task<bool> RetryPendingSaveAsync()
+    {
+        if (!HasPendingSave)
+            return true;
+
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        if (data == null)
+            return false;
+
+        try
+        {
+            await SavePlayerDataAsync(data);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning(
+                $"[Firestore] Pending save retry failed: " +
+                exception.Message);
+            return false;
         }
     }
 

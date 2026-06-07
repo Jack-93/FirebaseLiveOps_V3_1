@@ -15,4 +15,10 @@ MonoBehaviour:
   characterName: Astra
   rarity: SSR
   icon: {fileID: 0}
+  battleSprite: {fileID: 0}
+  battleAnimator: {fileID: 0}
+  element: 3
+  role: 1
+  synergyTags:
+  - Arcane
   description: Placeholder ranged companion.

@@ -18,20 +18,27 @@ public class MainGameBootstrap : MonoBehaviour
 
     private void Awake()
     {
-        Application.targetFrameRate = 60;
+        GameSettingsManager.ApplySavedSettings();
         Screen.orientation = ScreenOrientation.Portrait;
         EnsureMainCamera();
 
+        EnsurePersistentManager<GameSettingsManager>(
+            "GameSettingsManager");
         EnsurePersistentManager<PlayerDataManager>("PlayerDataManager");
         EnsurePersistentManager<FirebaseManager>("FirebaseManager");
         EnsurePersistentManager<FirestoreManager>("FirestoreManager");
+        EnsurePersistentManager<PushNotificationManager>(
+            "PushNotificationManager");
         EnsurePersistentManager<InventoryManager>("InventoryManager");
         EnsurePersistentManager<MailboxManager>("MailboxManager");
         EnsurePersistentManager<DailyRewardManager>("DailyRewardManager");
         EnsurePersistentManager<AnalyticsManager>("AnalyticsManager");
+        EnsurePersistentManager<AccountLinkManager>("AccountLinkManager");
         EnsurePersistentManager<EquipmentManager>("EquipmentManager");
         EnsurePersistentManager<QuestManager>("QuestManager");
         EnsurePersistentManager<ShopManager>("ShopManager");
+        EnsurePersistentManager<MonetizationManager>(
+            "MonetizationManager");
         EnsurePersistentManager<EventMissionManager>(
             "EventMissionManager");
         companionManager =
@@ -103,6 +110,8 @@ public class MainGameBootstrap : MonoBehaviour
                 100000);
 
             PlayerDataManager.Instance.SetPlayerData(data);
+            await MonetizationManager.Instance.InitializeAsync();
+            await PushNotificationManager.Instance.InitializeAsync();
             EquipmentManager.Instance.InitializeStarterEquipment();
             companionManager.Initialize();
 
@@ -177,7 +186,8 @@ public class MainGameBootstrap : MonoBehaviour
         catch (Exception exception)
         {
             Debug.LogException(exception);
-            mainGameUI.ShowToast("Save failed.");
+            mainGameUI.ShowToast(
+                "Save failed. Progress will retry automatically.");
         }
     }
 
@@ -207,6 +217,35 @@ public class MainGameBootstrap : MonoBehaviour
         }
     }
 
+    public async Task<AccountLinkResult> LinkAccountAsync(
+        AccountLinkProvider provider)
+    {
+        if (!IsReady || AccountLinkManager.Instance == null)
+        {
+            return AccountLinkResult.Failed(
+                "Game services are not ready.");
+        }
+
+        await SaveNowAsync();
+        AccountLinkResult result =
+            await AccountLinkManager.Instance.LinkAsync(provider);
+
+        if (result.Success)
+        {
+            PlayerData data = PlayerDataManager.Instance?.playerData;
+            FirebaseUser user =
+                FirebaseAuth.DefaultInstance.CurrentUser;
+            if (data != null && user != null)
+            {
+                data.uid = user.UserId;
+                await FirestoreManager.Instance.SavePlayerDataAsync(data);
+                PlayerDataManager.Instance.NotifyPlayerDataChanged();
+            }
+        }
+
+        return result;
+    }
+
     private void Update()
     {
         if (!IsReady)
@@ -216,14 +255,14 @@ public class MainGameBootstrap : MonoBehaviour
         if (autosaveTimer <= 0f)
         {
             autosaveTimer = 60f;
-            _ = SaveNowAsync();
+            _ = SaveInBackgroundAsync();
         }
     }
 
     private void OnApplicationPause(bool paused)
     {
         if (paused && IsReady)
-            _ = SaveNowAsync();
+            _ = SaveInBackgroundAsync();
     }
 
     private void OnApplicationQuit()
@@ -233,6 +272,20 @@ public class MainGameBootstrap : MonoBehaviour
         {
             data.lastOnlineUnixTime =
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        }
+    }
+
+    private async Task SaveInBackgroundAsync()
+    {
+        try
+        {
+            await SaveNowAsync();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning(
+                $"[MainGame] Background save deferred: " +
+                exception.Message);
         }
     }
 

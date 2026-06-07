@@ -147,6 +147,11 @@ public class CompanionManager : MonoBehaviour
         return party;
     }
 
+    public CompanionSynergyResult GetSynergyResult()
+    {
+        return CompanionSynergySystem.Calculate(GetEquippedParty());
+    }
+
     public List<CharacterData> GetOwnedCharacters()
     {
         List<CharacterData> owned = new List<CharacterData>();

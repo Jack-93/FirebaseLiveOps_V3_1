@@ -12,6 +12,7 @@ public class BattleManager : MonoBehaviour
     public event Action<int> OnEnemyAttackPerformed;
     public event Action OnPlayerDefeated;
     public event Action<int, CharacterData, int> OnCompanionSkillUsed;
+    public event Action<BossPatternDefinition, int> OnBossPatternUsed;
     public event Action OnBossChallengeFailed;
 
     public bool IsInitialized { get; private set; }
@@ -36,6 +37,9 @@ public class BattleManager : MonoBehaviour
     private float enemyAttackTimer;
     private float recoveryTimer;
     private bool isRecovering;
+    private float bossPatternTimer;
+    private int bossPatternIndex;
+    private List<BossPatternDefinition> bossPatterns;
     private readonly float[] skillCooldowns =
         new float[CompanionManager.PartySize];
 
@@ -139,6 +143,13 @@ public class BattleManager : MonoBehaviour
                 ResetBossChallenge();
                 return;
             }
+
+            bossPatternTimer -= deltaTime;
+            if (bossPatternTimer <= 0f)
+                UseBossPattern();
+
+            if (isRecovering)
+                return;
         }
 
         playerAttackTimer -= deltaTime;
@@ -175,8 +186,55 @@ public class BattleManager : MonoBehaviour
     {
         LastEnemyDamage =
             GameBalance.GetEnemyAttack(Data.currentStage, IsBoss);
-        PlayerHealth = Math.Max(0, PlayerHealth - LastEnemyDamage);
+        ApplyDamageToPlayer(LastEnemyDamage);
         OnEnemyAttackPerformed?.Invoke(LastEnemyDamage);
+        NotifyChanged();
+    }
+
+    private void UseBossPattern()
+    {
+        if (bossPatterns == null || bossPatterns.Count == 0)
+            return;
+
+        BossPatternDefinition pattern =
+            bossPatterns[bossPatternIndex % bossPatterns.Count];
+        bossPatternIndex++;
+        if (pattern == null)
+        {
+            bossPatternTimer = 1f;
+            return;
+        }
+
+        bossPatternTimer = Mathf.Max(1f, pattern.cooldown);
+
+        int hitCount = Mathf.Max(1, pattern.hitCount);
+        int damagePerHit = Mathf.Max(
+            1,
+            Mathf.RoundToInt(
+                GameBalance.GetEnemyAttack(
+                    Data.currentStage,
+                    true) *
+                Mathf.Max(0.1f, pattern.damageMultiplier)));
+        int totalDamage = damagePerHit * hitCount;
+        LastEnemyDamage = totalDamage;
+        ApplyDamageToPlayer(totalDamage);
+
+        if (pattern.patternType == BossPatternType.DrainStrike &&
+            pattern.healPercent > 0f)
+        {
+            EnemyHealth = Mathf.Min(
+                EnemyMaxHealth,
+                EnemyHealth +
+                Mathf.RoundToInt(EnemyMaxHealth * pattern.healPercent));
+        }
+
+        OnBossPatternUsed?.Invoke(pattern, totalDamage);
+        NotifyChanged();
+    }
+
+    private void ApplyDamageToPlayer(int damage)
+    {
+        PlayerHealth = Math.Max(0, PlayerHealth - damage);
 
         if (PlayerHealth <= 0)
         {
@@ -185,8 +243,6 @@ public class BattleManager : MonoBehaviour
             recoveryTimer = 2f;
             OnPlayerDefeated?.Invoke();
         }
-
-        NotifyChanged();
     }
 
     private void TickCompanionSkills(float deltaTime)
@@ -287,6 +343,11 @@ public class BattleManager : MonoBehaviour
         EnemyHealth = EnemyMaxHealth;
         BossTimeRemaining =
             IsBoss ? GameBalance.BossTimeLimit : 0f;
+        bossPatterns = IsBoss
+            ? BossPatternResolver.GetPatterns(data.currentStage)
+            : null;
+        bossPatternIndex = 0;
+        bossPatternTimer = GetFirstBossPatternCooldown();
         playerAttackTimer = 0.25f;
         enemyAttackTimer = IsBoss ? 1.15f : 1.55f;
     }
@@ -297,8 +358,24 @@ public class BattleManager : MonoBehaviour
         BossTimeRemaining = GameBalance.BossTimeLimit;
         playerAttackTimer = 0.25f;
         enemyAttackTimer = 1.15f;
+        bossPatternIndex = 0;
+        bossPatternTimer = GetFirstBossPatternCooldown();
         OnBossChallengeFailed?.Invoke();
         NotifyChanged();
+    }
+
+    private float GetFirstBossPatternCooldown()
+    {
+        if (!IsBoss || bossPatterns == null)
+            return 0f;
+
+        foreach (BossPatternDefinition pattern in bossPatterns)
+        {
+            if (pattern != null)
+                return Mathf.Max(1f, pattern.cooldown);
+        }
+
+        return 0f;
     }
 
     private void RecoverPlayer()

@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 [CreateAssetMenu(
     fileName = "CharacterData",
@@ -9,6 +10,11 @@ public class CharacterData : ScriptableObject
     public string rarity;
 
     public Sprite icon;
+    public Sprite battleSprite;
+    public RuntimeAnimatorController battleAnimator;
+    public CompanionElement element;
+    public CompanionRole role;
+    public List<string> synergyTags = new List<string>();
 
     [TextArea]
     public string description;

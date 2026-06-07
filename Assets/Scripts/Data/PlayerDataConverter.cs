@@ -68,6 +68,32 @@ public static class PlayerDataConverter
             {
                 "claimedAchievementIds",
                 new List<string>(data.claimedAchievementIds)
+            },
+            {
+                "processedPurchaseIds",
+                new List<string>(data.processedPurchaseIds)
+            },
+            {
+                "ownedPurchaseProducts",
+                new List<string>(data.ownedPurchaseProducts)
+            },
+            { "rewardedAdDate", data.rewardedAdDate },
+            {
+                "rewardedAdsWatchedToday",
+                data.rewardedAdsWatchedToday
+            },
+            {
+                "lastRewardedAdUnixTime",
+                data.lastRewardedAdUnixTime
+            },
+            {
+                "processedAdRewardIds",
+                new List<string>(data.processedAdRewardIds)
+            },
+            { "fcmToken", data.fcmToken },
+            {
+                "fcmTokenUpdatedUnixTime",
+                data.fcmTokenUpdatedUnixTime
             }
         };
     }
@@ -121,6 +147,15 @@ public static class PlayerDataConverter
                 GetInt(values, "eventMissionPoints", 0),
             eventRewardClaimed =
                 GetBool(values, "eventRewardClaimed", false),
+            rewardedAdDate =
+                GetString(values, "rewardedAdDate", ""),
+            rewardedAdsWatchedToday =
+                GetInt(values, "rewardedAdsWatchedToday", 0),
+            lastRewardedAdUnixTime =
+                GetLong(values, "lastRewardedAdUnixTime", 0),
+            fcmToken = GetString(values, "fcmToken", ""),
+            fcmTokenUpdatedUnixTime =
+                GetLong(values, "fcmTokenUpdatedUnixTime", 0),
             equippedCompanion =
                 GetString(values, "equippedCompanion", ""),
             equippedCompanionRarity =
@@ -145,6 +180,30 @@ public static class PlayerDataConverter
         {
             data.claimedAchievementIds =
                 ConvertStrings(achievementsValue);
+        }
+
+        if (values.TryGetValue(
+                "processedPurchaseIds",
+                out object purchaseIdsValue))
+        {
+            data.processedPurchaseIds =
+                ConvertStrings(purchaseIdsValue);
+        }
+
+        if (values.TryGetValue(
+                "ownedPurchaseProducts",
+                out object ownedProductsValue))
+        {
+            data.ownedPurchaseProducts =
+                ConvertStrings(ownedProductsValue);
+        }
+
+        if (values.TryGetValue(
+                "processedAdRewardIds",
+                out object adRewardIdsValue))
+        {
+            data.processedAdRewardIds =
+                ConvertStrings(adRewardIdsValue);
         }
 
         if (values.TryGetValue(

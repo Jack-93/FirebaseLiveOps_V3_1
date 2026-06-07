@@ -35,11 +35,12 @@ public class VerticalGachaUI : MonoBehaviour
 
     private void Start()
     {
-        Application.targetFrameRate = 60;
+        GameSettingsManager.ApplySavedSettings();
         Screen.orientation = ScreenOrientation.Portrait;
         EnsureEventSystem();
         BuildInterface();
         RefreshHeader();
+        LocalizationManager.ApplyTo(transform);
     }
 
     private void BuildInterface()

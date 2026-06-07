@@ -23,6 +23,8 @@ public class MainGameUI : MonoBehaviour
     private GameObject questPanel;
     private GameObject shopPanel;
     private GameObject eventPanel;
+    private GameObject settingsPanel;
+    private GameObject accountPanel;
     private GameObject tutorialPanel;
     private GameObject loadingOverlay;
     private GameObject offlineOverlay;
@@ -47,7 +49,9 @@ public class MainGameUI : MonoBehaviour
     private TMP_Text questText;
     private TMP_Text shopText;
     private TMP_Text eventText;
+    private TMP_Text settingsText;
     private TMP_Text accountText;
+    private TMP_Text accountDetailText;
     private TMP_Text dailyRewardText;
     private TMP_Text tutorialText;
     private TMP_Text tutorialButtonText;
@@ -61,8 +65,18 @@ public class MainGameUI : MonoBehaviour
     private RectTransform playerVisual;
     private Image enemyVisualImage;
     private Image playerVisualImage;
+    private BattleActorView enemyActorView;
+    private BattleActorView playerActorView;
+    private readonly List<BattleActorView> companionActorViews =
+        new List<BattleActorView>();
     private Button tutorialButton;
     private Button retryButton;
+    private Button googleLinkButton;
+    private Button appleLinkButton;
+    private Button starterPackButton;
+    private Button smallGemPackButton;
+    private Button largeGemPackButton;
+    private Button rewardedAdButton;
     private CharacterData selectedCharacter;
     private float toastTimer;
     private float enemyAnimationTimer;
@@ -99,6 +113,7 @@ public class MainGameUI : MonoBehaviour
 
         BuildInterface();
         BindEvents();
+        LocalizationManager.ApplyTo(transform);
         ShowBattle();
     }
 
@@ -113,7 +128,10 @@ public class MainGameUI : MonoBehaviour
         RefreshQuests();
         RefreshShop();
         RefreshEvent();
+        RefreshSettings();
+        RefreshAccount();
         RefreshTutorial();
+        LocalizationManager.ApplyTo(transform);
     }
 
     public void SetLoading(bool visible, string message)
@@ -214,6 +232,8 @@ public class MainGameUI : MonoBehaviour
         BuildQuestPanel(portraitRoot);
         BuildShopPanel(portraitRoot);
         BuildEventPanel(portraitRoot);
+        BuildSettingsPanel(portraitRoot);
+        BuildAccountPanel(portraitRoot);
         BuildBottomNavigation(portraitRoot);
         BuildTutorial(portraitRoot);
         BuildOfflinePopup(portraitRoot);
@@ -332,7 +352,7 @@ public class MainGameUI : MonoBehaviour
             new Vector2(0.7f, 0.75f));
         enemyVisualImage = enemyVisual.GetComponent<Image>();
 
-        CreateText(
+        TMP_Text enemyGlyph = CreateText(
             "EnemyGlyph",
             enemyVisual,
             "BOSS",
@@ -340,6 +360,9 @@ public class MainGameUI : MonoBehaviour
             new Vector2(0f, 0f),
             Vector2.one,
             TextAlignmentOptions.Center);
+        enemyActorView =
+            enemyVisual.gameObject.AddComponent<BattleActorView>();
+        enemyActorView.Initialize(enemyGlyph, Danger);
 
         enemyHealthFill = CreateHealthBar(
             enemyCard,
@@ -382,7 +405,7 @@ public class MainGameUI : MonoBehaviour
             new Vector2(0.18f, 0.92f));
         playerVisualImage = playerVisual.GetComponent<Image>();
 
-        CreateText(
+        TMP_Text playerGlyph = CreateText(
             "PlayerGlyph",
             playerVisual,
             "HERO",
@@ -390,6 +413,9 @@ public class MainGameUI : MonoBehaviour
             Vector2.zero,
             Vector2.one,
             TextAlignmentOptions.Center);
+        playerActorView =
+            playerVisual.gameObject.AddComponent<BattleActorView>();
+        playerActorView.Initialize(playerGlyph, Accent);
 
         combatStatusText = CreateText(
             "CombatStatus",
@@ -416,12 +442,35 @@ public class MainGameUI : MonoBehaviour
             new Vector2(0.94f, 0.51f),
             TextAlignmentOptions.Center);
 
+        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
+        {
+            float minX = 0.06f + slot * 0.1f;
+            RectTransform companionVisual = CreatePanel(
+                $"CompanionVisual{slot + 1}",
+                playerCard,
+                PanelLight,
+                new Vector2(minX, 0.05f),
+                new Vector2(minX + 0.08f, 0.28f));
+            TMP_Text companionGlyph = CreateText(
+                "Glyph",
+                companionVisual,
+                (slot + 1).ToString(),
+                20,
+                Vector2.zero,
+                Vector2.one,
+                TextAlignmentOptions.Center);
+            BattleActorView actorView =
+                companionVisual.gameObject.AddComponent<BattleActorView>();
+            actorView.Initialize(companionGlyph, PanelLight);
+            companionActorViews.Add(actorView);
+        }
+
         CreateText(
             "AutoNotice",
             playerCard,
             "Your hero attacks automatically.",
             27,
-            new Vector2(0.06f, 0.05f),
+            new Vector2(0.39f, 0.05f),
             new Vector2(0.94f, 0.27f),
             TextAlignmentOptions.Center,
             new Color32(190, 203, 225, 255));
@@ -639,12 +688,12 @@ public class MainGameUI : MonoBehaviour
 
         accountText = CreateText(
             "AccountText",
-            panel,
+            rewardCard,
             "Account",
-            24,
-            new Vector2(0.06f, 0.14f),
-            new Vector2(0.94f, 0.23f),
-            TextAlignmentOptions.Center,
+            22,
+            new Vector2(0.05f, 0.05f),
+            new Vector2(0.64f, 0.4f),
+            TextAlignmentOptions.Left,
             new Color32(174, 189, 214, 255));
 
         CreateButton(
@@ -679,18 +728,27 @@ public class MainGameUI : MonoBehaviour
             panel,
             "SAVE",
             new Vector2(0.06f, 0.03f),
-            new Vector2(0.46f, 0.12f),
+            new Vector2(0.31f, 0.12f),
             PanelLight,
             HandleSaveAction);
 
         CreateButton(
-            "LogoutButton",
+            "SettingsButton",
             panel,
-            "NEW GUEST",
-            new Vector2(0.54f, 0.03f),
+            "SETTINGS",
+            new Vector2(0.36f, 0.03f),
+            new Vector2(0.64f, 0.12f),
+            PanelLight,
+            ShowSettings);
+
+        CreateButton(
+            "AccountButton",
+            panel,
+            "ACCOUNT",
+            new Vector2(0.69f, 0.03f),
             new Vector2(0.94f, 0.12f),
-            Danger,
-            HandleLogoutAction);
+            Accent,
+            ShowAccount);
     }
 
     private void BuildCollectionPanel(RectTransform root)
@@ -943,42 +1001,78 @@ public class MainGameUI : MonoBehaviour
             "ShopCard",
             panel,
             Panel,
-            new Vector2(0.06f, 0.28f),
+            new Vector2(0.06f, 0.18f),
             new Vector2(0.94f, 0.86f));
 
         shopText = CreateText(
             "ShopText",
             card,
             "Shop data unavailable.",
-            33,
-            new Vector2(0.07f, 0.62f),
+            28,
+            new Vector2(0.07f, 0.78f),
             new Vector2(0.93f, 0.93f),
             TextAlignmentOptions.TopLeft);
+
+        starterPackButton = CreateButton(
+            "StarterPackButton",
+            card,
+            "STARTER PACK",
+            new Vector2(0.07f, 0.62f),
+            new Vector2(0.93f, 0.75f),
+            Gold,
+            BuyStarterPack);
+
+        smallGemPackButton = CreateButton(
+            "SmallGemPackButton",
+            card,
+            "1,200 GEMS",
+            new Vector2(0.07f, 0.47f),
+            new Vector2(0.93f, 0.59f),
+            Accent,
+            BuySmallGemPack);
+
+        largeGemPackButton = CreateButton(
+            "LargeGemPackButton",
+            card,
+            "6,500 GEMS",
+            new Vector2(0.07f, 0.32f),
+            new Vector2(0.93f, 0.44f),
+            Success,
+            BuyLargeGemPack);
+
+        rewardedAdButton = CreateButton(
+            "RewardedAdButton",
+            card,
+            "WATCH AD  +100 GEMS",
+            new Vector2(0.07f, 0.18f),
+            new Vector2(0.93f, 0.29f),
+            PanelLight,
+            WatchRewardedAd);
 
         CreateButton(
             "BuyGoldPouchButton",
             card,
-            "5,000 GOLD\n100 GEMS",
-            new Vector2(0.07f, 0.39f),
-            new Vector2(0.93f, 0.57f),
+            "5K GOLD\n100 GEM",
+            new Vector2(0.03f, 0.02f),
+            new Vector2(0.32f, 0.14f),
             Gold,
             BuyGoldPouch);
 
         CreateButton(
             "BuyTicketBundleButton",
             card,
-            "3 GACHA TICKETS\n250 GEMS",
-            new Vector2(0.07f, 0.2f),
-            new Vector2(0.93f, 0.36f),
+            "3 TICKETS\n250 GEM",
+            new Vector2(0.35f, 0.02f),
+            new Vector2(0.65f, 0.14f),
             Accent,
             BuyTicketBundle);
 
         CreateButton(
             "BuyGrowthChestButton",
             card,
-            "30,000 GOLD\n500 GEMS",
-            new Vector2(0.07f, 0.02f),
-            new Vector2(0.93f, 0.17f),
+            "30K GOLD\n500 GEM",
+            new Vector2(0.68f, 0.02f),
+            new Vector2(0.97f, 0.14f),
             Success,
             BuyGrowthChest);
     }
@@ -1036,6 +1130,180 @@ public class MainGameUI : MonoBehaviour
             new Vector2(0.93f, 0.24f),
             Success,
             ClaimEventReward);
+    }
+
+    private void BuildSettingsPanel(RectTransform root)
+    {
+        RectTransform panel = CreatePanel(
+            "SettingsPanel",
+            root,
+            Background,
+            new Vector2(0f, 0.12f),
+            new Vector2(1f, 0.9f));
+        settingsPanel = panel.gameObject;
+
+        CreateButton(
+            "SettingsBackButton",
+            panel,
+            "BACK",
+            new Vector2(0.05f, 0.9f),
+            new Vector2(0.25f, 0.98f),
+            PanelLight,
+            ShowMore);
+
+        CreateText(
+            "SettingsTitle",
+            panel,
+            "SETTINGS",
+            48,
+            new Vector2(0.3f, 0.9f),
+            new Vector2(0.7f, 0.98f),
+            TextAlignmentOptions.Center,
+            Accent);
+
+        RectTransform card = CreatePanel(
+            "SettingsCard",
+            panel,
+            Panel,
+            new Vector2(0.06f, 0.3f),
+            new Vector2(0.94f, 0.85f));
+
+        settingsText = CreateText(
+            "SettingsText",
+            card,
+            "Settings unavailable.",
+            36,
+            new Vector2(0.08f, 0.74f),
+            new Vector2(0.92f, 0.92f),
+            TextAlignmentOptions.TopLeft);
+
+        CreateButton(
+            "ToggleSoundButton",
+            card,
+            "TOGGLE SOUND",
+            new Vector2(0.08f, 0.58f),
+            new Vector2(0.92f, 0.7f),
+            Accent,
+            ToggleSound);
+
+        CreateButton(
+            "ToggleVibrationButton",
+            card,
+            "TOGGLE VIBRATION",
+            new Vector2(0.08f, 0.43f),
+            new Vector2(0.92f, 0.55f),
+            Success,
+            ToggleVibration);
+
+        CreateButton(
+            "ToggleNotificationsButton",
+            card,
+            "TOGGLE NOTIFICATIONS",
+            new Vector2(0.08f, 0.28f),
+            new Vector2(0.92f, 0.4f),
+            PanelLight,
+            ToggleNotifications);
+
+        CreateButton(
+            "ToggleFrameRateButton",
+            card,
+            "SWITCH 30 / 60 FPS",
+            new Vector2(0.08f, 0.13f),
+            new Vector2(0.92f, 0.25f),
+            Gold,
+            ToggleFrameRate);
+
+        CreateButton(
+            "ToggleLanguageButton",
+            card,
+            "SWITCH LANGUAGE",
+            new Vector2(0.08f, 0.01f),
+            new Vector2(0.92f, 0.1f),
+            Danger,
+            ToggleLanguage);
+    }
+
+    private void BuildAccountPanel(RectTransform root)
+    {
+        RectTransform panel = CreatePanel(
+            "AccountPanel",
+            root,
+            Background,
+            new Vector2(0f, 0.12f),
+            new Vector2(1f, 0.9f));
+        accountPanel = panel.gameObject;
+
+        CreateButton(
+            "AccountBackButton",
+            panel,
+            "BACK",
+            new Vector2(0.05f, 0.9f),
+            new Vector2(0.25f, 0.98f),
+            PanelLight,
+            ShowMore);
+
+        CreateText(
+            "AccountTitle",
+            panel,
+            "ACCOUNT LINK",
+            48,
+            new Vector2(0.27f, 0.9f),
+            new Vector2(0.82f, 0.98f),
+            TextAlignmentOptions.Center,
+            Accent);
+
+        RectTransform card = CreatePanel(
+            "AccountCard",
+            panel,
+            Panel,
+            new Vector2(0.06f, 0.24f),
+            new Vector2(0.94f, 0.85f));
+
+        accountDetailText = CreateText(
+            "AccountDetailText",
+            card,
+            "Account status",
+            33,
+            new Vector2(0.08f, 0.67f),
+            new Vector2(0.92f, 0.93f),
+            TextAlignmentOptions.TopLeft);
+
+        googleLinkButton = CreateButton(
+            "GoogleLinkButton",
+            card,
+            "LINK GOOGLE",
+            new Vector2(0.08f, 0.46f),
+            new Vector2(0.92f, 0.61f),
+            Accent,
+            HandleGoogleLink);
+
+        appleLinkButton = CreateButton(
+            "AppleLinkButton",
+            card,
+            "LINK APPLE",
+            new Vector2(0.08f, 0.27f),
+            new Vector2(0.92f, 0.42f),
+            PanelLight,
+            HandleAppleLink);
+
+        CreateText(
+            "AccountNotice",
+            card,
+            "Linking keeps the current UID and all guest progress.",
+            25,
+            new Vector2(0.08f, 0.14f),
+            new Vector2(0.92f, 0.24f),
+            TextAlignmentOptions.Center,
+            new Color32(174, 189, 214, 255));
+
+        CreateButton(
+            "NewGuestButton",
+            card,
+            "START NEW GUEST",
+            new Vector2(0.2f, 0.02f),
+            new Vector2(0.8f, 0.12f),
+            Danger,
+            HandleLogoutAction);
     }
 
     private void BuildBottomNavigation(RectTransform root)
@@ -1224,6 +1492,7 @@ public class MainGameUI : MonoBehaviour
         battleManager.OnEnemyDefeated += HandleEnemyDefeatedVisual;
         battleManager.OnPlayerDefeated += HandlePlayerDefeatedVisual;
         battleManager.OnCompanionSkillUsed += HandleCompanionSkillVisual;
+        battleManager.OnBossPatternUsed += HandleBossPatternVisual;
         battleManager.OnBossChallengeFailed += HandleBossChallengeFailed;
         if (EquipmentManager.Instance != null)
             EquipmentManager.Instance.OnEquipmentDropped +=
@@ -1233,6 +1502,15 @@ public class MainGameUI : MonoBehaviour
 
         if (PlayerDataManager.Instance != null)
             PlayerDataManager.Instance.OnPlayerDataChanged += RefreshAll;
+
+        if (AccountLinkManager.Instance != null)
+            AccountLinkManager.Instance.OnAccountChanged += RefreshAccount;
+
+        if (MonetizationManager.Instance != null)
+        {
+            MonetizationManager.Instance.OnMonetizationChanged +=
+                RefreshShop;
+        }
     }
 
     private void RefreshTopBar()
@@ -1295,6 +1573,40 @@ public class MainGameUI : MonoBehaviour
 
         RefreshTopBar();
         RefreshSkillStatus();
+        RefreshBattleVisuals();
+    }
+
+    private void RefreshBattleVisuals()
+    {
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        if (data == null)
+            return;
+
+        BattleVisualProfile hero = BattleVisualResolver.GetHero();
+        playerActorView?.SetVisual(
+            hero?.sprite,
+            hero?.animatorController);
+
+        BattleVisualProfile enemy =
+            BattleVisualResolver.GetEnemy(
+                data.currentStage,
+                battleManager.IsBoss);
+        enemyActorView?.SetVisual(
+            enemy?.sprite,
+            enemy?.animatorController);
+
+        for (int slot = 0;
+             slot < companionActorViews.Count;
+             slot++)
+        {
+            CharacterData character =
+                companionManager?.GetEquippedAtSlot(slot);
+            companionActorViews[slot].SetVisual(
+                character == null
+                    ? null
+                    : character.battleSprite ?? character.icon,
+                character?.battleAnimator);
+        }
     }
 
     private void RefreshSkillStatus()
@@ -1394,14 +1706,22 @@ public class MainGameUI : MonoBehaviour
 
             companionBuilder.AppendLine();
             companionBuilder.Append($"Team Attack +{bonus}%");
+            CompanionSynergyResult synergy =
+                companionManager.GetSynergyResult();
+            companionBuilder.AppendLine();
+            companionBuilder.Append(synergy.GetSummary());
         }
 
         companionText.text = companionBuilder.ToString();
 
-        string uid = string.IsNullOrEmpty(data.uid) ? "-" : data.uid;
-        string shortUid = uid.Length > 16 ? uid.Substring(0, 16) + "..." : uid;
+        AccountLinkManager accounts = AccountLinkManager.Instance;
+        string accountType = accounts != null &&
+            (accounts.IsLinked(AccountLinkProvider.Google) ||
+             accounts.IsLinked(AccountLinkProvider.Apple))
+                ? "Linked account"
+                : "Guest account";
         accountText.text =
-            $"Guest account  {shortUid}  |  Highest {data.highestStage}";
+            $"{accountType}  |  Highest {data.highestStage}";
 
         if (DailyRewardManager.Instance != null)
         {
@@ -1451,6 +1771,8 @@ public class MainGameUI : MonoBehaviour
             owned > 0 ? $"Owned x{owned}" : "LOCKED");
         builder.AppendLine(
             $"Stars {stars}/5  |  Attack +{bonus}%");
+        builder.AppendLine(
+            $"{selectedCharacter.element} / {selectedCharacter.role}");
         if (owned > 0 && stars < 5)
             builder.AppendLine($"Promotion needs {promotionCost} duplicate(s)");
         builder.AppendLine(selectedCharacter.description);
@@ -1516,10 +1838,60 @@ public class MainGameUI : MonoBehaviour
 
         int gems = GachaEconomy.GetItemCount(data, "Gem");
         int tickets = GachaEconomy.GetItemCount(data, "GachaTicket");
+        MonetizationManager monetization = MonetizationManager.Instance;
         shopText.text =
-            $"Gems   {gems:N0}\n" +
-            $"Gold   {data.gold:N0}\n" +
-            $"Gacha Tickets   {tickets:N0}";
+            $"Gems {gems:N0}  |  Gold {data.gold:N0}  |  " +
+            $"Tickets {tickets:N0}\n" +
+            (monetization?.GetStoreStatus() ??
+             "Monetization service unavailable");
+
+        if (monetization == null)
+            return;
+
+        bool busy = monetization.IsBusy;
+        bool starterOwned = data.ownedPurchaseProducts.Contains(
+            MonetizationManager.GetProductId(
+                RealMoneyProduct.StarterPack));
+        SetButtonLabel(
+            starterPackButton,
+            starterOwned
+                ? "STARTER PACK  OWNED"
+                : "STARTER PACK  " +
+                  monetization.GetPriceLabel(
+                      RealMoneyProduct.StarterPack) +
+                  "\n1K GEMS + 10 TICKETS + 50K GOLD");
+        SetButtonLabel(
+            smallGemPackButton,
+            "1,200 GEMS  " +
+            monetization.GetPriceLabel(
+                RealMoneyProduct.GemPackSmall));
+        SetButtonLabel(
+            largeGemPackButton,
+            "6,500 GEMS  " +
+            monetization.GetPriceLabel(
+                RealMoneyProduct.GemPackLarge));
+
+        if (starterPackButton != null)
+            starterPackButton.interactable = !busy && !starterOwned;
+        if (smallGemPackButton != null)
+            smallGemPackButton.interactable = !busy;
+        if (largeGemPackButton != null)
+            largeGemPackButton.interactable = !busy;
+
+        if (rewardedAdButton != null)
+        {
+            bool canWatch =
+                monetization.CanWatchRewardedAd(out string reason);
+            rewardedAdButton.interactable =
+                !busy && monetization.RewardedAdReady && canWatch;
+            SetButtonLabel(
+                rewardedAdButton,
+                !monetization.AdProviderReady
+                    ? "AD SDK PENDING"
+                    : canWatch
+                    ? $"WATCH AD  +{MonetizationManager.RewardedAdGemAmount} GEMS"
+                    : reason.ToUpperInvariant());
+        }
     }
 
     private void RefreshEvent()
@@ -1527,6 +1899,34 @@ public class MainGameUI : MonoBehaviour
         if (eventText != null && EventMissionManager.Instance != null)
             eventText.text =
                 EventMissionManager.Instance.GetStatusText();
+    }
+
+    private void RefreshSettings()
+    {
+        if (settingsText == null)
+            return;
+
+        GameSettingsManager settings = GameSettingsManager.Instance;
+        if (settings == null)
+        {
+            settingsText.text = "Settings unavailable.";
+            return;
+        }
+
+        settingsText.text =
+            LocalizationManager.Text(
+                $"Sound   {(settings.SoundEnabled ? "ON" : "OFF")}\n" +
+                $"Vibration   {(settings.VibrationEnabled ? "ON" : "OFF")}\n" +
+                $"Notifications   " +
+                $"{(settings.NotificationsEnabled ? "ON" : "OFF")}\n" +
+                $"Frame Rate   {settings.TargetFrameRate} FPS\n" +
+                "Language   English",
+                $"사운드   {(settings.SoundEnabled ? "켜짐" : "꺼짐")}\n" +
+                $"진동   {(settings.VibrationEnabled ? "켜짐" : "꺼짐")}\n" +
+                $"알림   " +
+                $"{(settings.NotificationsEnabled ? "켜짐" : "꺼짐")}\n" +
+                $"프레임   {settings.TargetFrameRate} FPS\n" +
+                "언어   한국어");
     }
 
     private void PromoteSelectedCharacter()
@@ -1574,6 +1974,36 @@ public class MainGameUI : MonoBehaviour
         }
     }
 
+    private void RefreshAccount()
+    {
+        if (accountDetailText == null)
+            return;
+
+        AccountLinkManager accounts = AccountLinkManager.Instance;
+        if (accounts == null)
+        {
+            accountDetailText.text = "Account service is unavailable.";
+            return;
+        }
+
+        accountDetailText.text = accounts.GetAccountSummary();
+
+        bool busy = accounts.IsBusy;
+        if (googleLinkButton != null)
+        {
+            googleLinkButton.interactable =
+                !busy &&
+                !accounts.IsLinked(AccountLinkProvider.Google);
+        }
+
+        if (appleLinkButton != null)
+        {
+            appleLinkButton.interactable =
+                !busy &&
+                !accounts.IsLinked(AccountLinkProvider.Apple);
+        }
+    }
+
     private void HandleTutorialAction()
     {
         switch (tutorialManager.CurrentStep)
@@ -1599,6 +2029,30 @@ public class MainGameUI : MonoBehaviour
     private void HandleLogoutAction()
     {
         bootstrap?.Logout();
+    }
+
+    private async void HandleGoogleLink()
+    {
+        await HandleAccountLink(AccountLinkProvider.Google);
+    }
+
+    private async void HandleAppleLink()
+    {
+        await HandleAccountLink(AccountLinkProvider.Apple);
+    }
+
+    private async System.Threading.Tasks.Task HandleAccountLink(
+        AccountLinkProvider provider)
+    {
+        if (bootstrap == null)
+            return;
+
+        RefreshAccount();
+        AccountLinkResult result =
+            await bootstrap.LinkAccountAsync(provider);
+        RefreshAccount();
+        RefreshMore();
+        ShowToast(result.Message);
     }
 
     private void HandleGachaAction()
@@ -1800,6 +2254,49 @@ public class MainGameUI : MonoBehaviour
         await BuyShopProduct(ShopProduct.GrowthChest);
     }
 
+    private async void BuyStarterPack()
+    {
+        await BuyRealMoneyProduct(RealMoneyProduct.StarterPack);
+    }
+
+    private async void BuySmallGemPack()
+    {
+        await BuyRealMoneyProduct(RealMoneyProduct.GemPackSmall);
+    }
+
+    private async void BuyLargeGemPack()
+    {
+        await BuyRealMoneyProduct(RealMoneyProduct.GemPackLarge);
+    }
+
+    private async void WatchRewardedAd()
+    {
+        MonetizationManager monetization = MonetizationManager.Instance;
+        if (monetization == null)
+            return;
+
+        string message = await monetization.ShowRewardedAdAsync(
+            RewardedAdPlacement.ShopFreeGems);
+        ShowToast(message);
+        RefreshTopBar();
+        RefreshMore();
+        RefreshShop();
+    }
+
+    private async System.Threading.Tasks.Task BuyRealMoneyProduct(
+        RealMoneyProduct product)
+    {
+        MonetizationManager monetization = MonetizationManager.Instance;
+        if (monetization == null)
+            return;
+
+        string message = await monetization.PurchaseAsync(product);
+        ShowToast(message);
+        RefreshTopBar();
+        RefreshMore();
+        RefreshShop();
+    }
+
     private async System.Threading.Tasks.Task BuyShopProduct(
         ShopProduct product)
     {
@@ -1832,6 +2329,39 @@ public class MainGameUI : MonoBehaviour
         RefreshTopBar();
         RefreshMore();
         RefreshEvent();
+    }
+
+    private void ToggleSound()
+    {
+        GameSettingsManager.Instance?.ToggleSound();
+        RefreshSettings();
+    }
+
+    private void ToggleVibration()
+    {
+        GameSettingsManager.Instance?.ToggleVibration();
+        RefreshSettings();
+    }
+
+    private void ToggleNotifications()
+    {
+        GameSettingsManager.Instance?.ToggleNotifications();
+        RefreshSettings();
+    }
+
+    private void ToggleFrameRate()
+    {
+        GameSettingsManager.Instance?.ToggleFrameRate();
+        RefreshSettings();
+    }
+
+    private void ToggleLanguage()
+    {
+        GameSettingsManager.Instance?.ToggleLanguage();
+        RefreshAll();
+        ShowToast(LocalizationManager.Text(
+            "Language changed to English.",
+            "언어가 한국어로 변경되었습니다."));
     }
 
     private void HandleGrowthUpdated(UpgradeType type)
@@ -1875,22 +2405,28 @@ public class MainGameUI : MonoBehaviour
     {
         playerAnimationTimer = 0.18f;
         enemyAnimationTimer = 0.25f;
+        playerActorView?.Play(BattleAnimationCue.Attack);
+        enemyActorView?.Play(BattleAnimationCue.Hit);
     }
 
     private void HandleEnemyAttackVisual(int damage)
     {
         enemyAnimationTimer = 0.18f;
         playerAnimationTimer = 0.25f;
+        enemyActorView?.Play(BattleAnimationCue.Attack);
+        playerActorView?.Play(BattleAnimationCue.Hit);
     }
 
     private void HandleEnemyDefeatedVisual(int reward)
     {
         enemyAnimationTimer = 0.4f;
+        enemyActorView?.Play(BattleAnimationCue.Death);
     }
 
     private void HandlePlayerDefeatedVisual()
     {
         playerDefeatTimer = 1.8f;
+        playerActorView?.Play(BattleAnimationCue.Death);
     }
 
     private void HandleCompanionSkillVisual(
@@ -1899,6 +2435,9 @@ public class MainGameUI : MonoBehaviour
         int damage)
     {
         enemyAnimationTimer = 0.35f;
+        if (slot >= 0 && slot < companionActorViews.Count)
+            companionActorViews[slot].Play(BattleAnimationCue.Skill);
+        enemyActorView?.Play(BattleAnimationCue.Hit);
         ShowToast(
             $"{character.skillName}  DMG {damage:N0}");
     }
@@ -1907,6 +2446,17 @@ public class MainGameUI : MonoBehaviour
     {
         enemyAnimationTimer = 0.4f;
         ShowToast("Boss time expired. Retrying.");
+    }
+
+    private void HandleBossPatternVisual(
+        BossPatternDefinition pattern,
+        int damage)
+    {
+        enemyAnimationTimer = 0.3f;
+        playerAnimationTimer = 0.3f;
+        enemyActorView?.Play(BattleAnimationCue.Skill);
+        playerActorView?.Play(BattleAnimationCue.Hit);
+        ShowToast($"{pattern.patternName}  DMG {damage:N0}");
     }
 
     private void UpdateBattleAnimations(float deltaTime)
@@ -1930,9 +2480,14 @@ public class MainGameUI : MonoBehaviour
             enemyVisual.localScale = enemyAnimationTimer > 0.3f
                 ? Vector3.one * 0.65f
                 : Vector3.one;
-            enemyVisualImage.color = enemyAnimationTimer > 0f
-                ? Color.Lerp(Danger, Color.white, 0.45f)
-                : Danger;
+            enemyVisualImage.color =
+                enemyActorView != null && enemyActorView.HasSprite
+                    ? enemyAnimationTimer > 0f
+                        ? Color.Lerp(Color.white, Danger, 0.4f)
+                        : Color.white
+                    : enemyAnimationTimer > 0f
+                        ? Color.Lerp(Danger, Color.white, 0.45f)
+                        : Danger;
         }
 
         if (playerVisual != null)
@@ -1942,9 +2497,14 @@ public class MainGameUI : MonoBehaviour
             playerVisual.localScale = playerDefeatTimer > 0f
                 ? Vector3.one * 0.55f
                 : Vector3.one;
-            playerVisualImage.color = playerAnimationTimer > 0f
-                ? Color.Lerp(Accent, Danger, 0.55f)
-                : Accent;
+            playerVisualImage.color =
+                playerActorView != null && playerActorView.HasSprite
+                    ? playerAnimationTimer > 0f
+                        ? Color.Lerp(Color.white, Danger, 0.45f)
+                        : Color.white
+                    : playerAnimationTimer > 0f
+                        ? Color.Lerp(Accent, Danger, 0.55f)
+                        : Accent;
         }
     }
 
@@ -1995,6 +2555,18 @@ public class MainGameUI : MonoBehaviour
         RefreshEvent();
     }
 
+    private void ShowSettings()
+    {
+        SetActiveView(settingsPanel);
+        RefreshSettings();
+    }
+
+    private void ShowAccount()
+    {
+        SetActiveView(accountPanel);
+        RefreshAccount();
+    }
+
     private void SetActiveView(GameObject active)
     {
         if (battlePanel != null)
@@ -2013,6 +2585,10 @@ public class MainGameUI : MonoBehaviour
             shopPanel.SetActive(active == shopPanel);
         if (eventPanel != null)
             eventPanel.SetActive(active == eventPanel);
+        if (settingsPanel != null)
+            settingsPanel.SetActive(active == settingsPanel);
+        if (accountPanel != null)
+            accountPanel.SetActive(active == accountPanel);
     }
 
     private static void SetBar(
@@ -2152,6 +2728,16 @@ public class MainGameUI : MonoBehaviour
         return button;
     }
 
+    private static void SetButtonLabel(Button button, string value)
+    {
+        if (button == null)
+            return;
+
+        TMP_Text label = button.GetComponentInChildren<TMP_Text>();
+        if (label != null)
+            label.text = value;
+    }
+
     private static Color GetRarityColor(string rarity)
     {
         switch (rarity)
@@ -2191,6 +2777,8 @@ public class MainGameUI : MonoBehaviour
                 HandlePlayerDefeatedVisual;
             battleManager.OnCompanionSkillUsed -=
                 HandleCompanionSkillVisual;
+            battleManager.OnBossPatternUsed -=
+                HandleBossPatternVisual;
             battleManager.OnBossChallengeFailed -=
                 HandleBossChallengeFailed;
         }
@@ -2207,5 +2795,14 @@ public class MainGameUI : MonoBehaviour
 
         if (PlayerDataManager.Instance != null)
             PlayerDataManager.Instance.OnPlayerDataChanged -= RefreshAll;
+
+        if (AccountLinkManager.Instance != null)
+            AccountLinkManager.Instance.OnAccountChanged -= RefreshAccount;
+
+        if (MonetizationManager.Instance != null)
+        {
+            MonetizationManager.Instance.OnMonetizationChanged -=
+                RefreshShop;
+        }
     }
 }

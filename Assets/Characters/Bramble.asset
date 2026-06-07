@@ -15,4 +15,10 @@ MonoBehaviour:
   characterName: Bramble
   rarity: SR
   icon: {fileID: 0}
+  battleSprite: {fileID: 0}
+  battleAnimator: {fileID: 0}
+  element: 2
+  role: 2
+  synergyTags:
+  - Forest
   description: A sturdy forest defender who absorbs heavy attacks.

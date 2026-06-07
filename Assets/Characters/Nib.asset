@@ -15,4 +15,10 @@ MonoBehaviour:
   characterName: Nib
   rarity: R
   icon: {fileID: 0}
+  battleSprite: {fileID: 0}
+  battleAnimator: {fileID: 0}
+  element: 5
+  role: 1
+  synergyTags:
+  - Scout
   description: A curious apprentice with reliable ranged attacks.

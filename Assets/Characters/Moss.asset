@@ -15,4 +15,10 @@ MonoBehaviour:
   characterName: Moss
   rarity: R
   icon: {fileID: 0}
+  battleSprite: {fileID: 0}
+  battleAnimator: {fileID: 0}
+  element: 2
+  role: 3
+  synergyTags:
+  - Forest
   description: A small herbalist who provides steady support.

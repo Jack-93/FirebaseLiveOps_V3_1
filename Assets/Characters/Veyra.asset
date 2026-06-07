@@ -15,4 +15,10 @@ MonoBehaviour:
   characterName: Veyra
   rarity: SSR
   icon: {fileID: 0}
+  battleSprite: {fileID: 0}
+  battleAnimator: {fileID: 0}
+  element: 4
+  role: 1
+  synergyTags:
+  - Burst
   description: A swift shadow hunter specialized in boss damage.

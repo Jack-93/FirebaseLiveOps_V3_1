@@ -58,6 +58,14 @@ public class PlayerData
     public int eventMissionPoints;
     public bool eventRewardClaimed;
     public List<string> claimedAchievementIds;
+    public List<string> processedPurchaseIds;
+    public List<string> ownedPurchaseProducts;
+    public string rewardedAdDate;
+    public int rewardedAdsWatchedToday;
+    public long lastRewardedAdUnixTime;
+    public List<string> processedAdRewardIds;
+    public string fcmToken;
+    public long fcmTokenUpdatedUnixTime;
 
     // 서버, 클라이언트 둘 다 사용 (디폴트값 설정소)
     public PlayerData()
@@ -109,6 +117,14 @@ public class PlayerData
         eventMissionPoints = 0;
         eventRewardClaimed = false;
         claimedAchievementIds = new List<string>();
+        processedPurchaseIds = new List<string>();
+        ownedPurchaseProducts = new List<string>();
+        rewardedAdDate = "";
+        rewardedAdsWatchedToday = 0;
+        lastRewardedAdUnixTime = 0;
+        processedAdRewardIds = new List<string>();
+        fcmToken = "";
+        fcmTokenUpdatedUnixTime = 0;
     }
 
     public void EnsureInitialized()
@@ -190,6 +206,29 @@ public class PlayerData
 
         if (claimedAchievementIds == null)
             claimedAchievementIds = new List<string>();
+
+        if (processedPurchaseIds == null)
+            processedPurchaseIds = new List<string>();
+
+        if (ownedPurchaseProducts == null)
+            ownedPurchaseProducts = new List<string>();
+
+        if (rewardedAdDate == null)
+            rewardedAdDate = "";
+
+        rewardedAdsWatchedToday =
+            System.Math.Max(0, rewardedAdsWatchedToday);
+        lastRewardedAdUnixTime =
+            System.Math.Max(0, lastRewardedAdUnixTime);
+
+        if (processedAdRewardIds == null)
+            processedAdRewardIds = new List<string>();
+
+        if (fcmToken == null)
+            fcmToken = "";
+
+        fcmTokenUpdatedUnixTime =
+            System.Math.Max(0, fcmTokenUpdatedUnixTime);
 
         if (equippedCompanions.Count == 0 &&
             !string.IsNullOrEmpty(equippedCompanion))

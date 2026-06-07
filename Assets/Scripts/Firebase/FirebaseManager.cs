@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Firebase;
+using Firebase.Crashlytics;
 using Firebase.RemoteConfig;
 using UnityEngine;
 
@@ -48,8 +49,21 @@ public class FirebaseManager : MonoBehaviour
 
         IsFirebaseReady = true;
         Debug.Log("[Firebase] Ready");
+        InitializeCrashlytics();
 
         await InitializeRemoteConfigAsync();
+    }
+
+    private static void InitializeCrashlytics()
+    {
+        Crashlytics.IsCrashlyticsCollectionEnabled = true;
+        Crashlytics.SetCustomKey(
+            "app_version",
+            Application.version);
+        Crashlytics.SetCustomKey(
+            "platform",
+            Application.platform.ToString());
+        Crashlytics.Log("Firebase initialized.");
     }
 
     private static async Task InitializeRemoteConfigAsync()

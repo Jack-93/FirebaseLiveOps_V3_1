@@ -62,21 +62,39 @@ public static class GameBalance
                     data.equippedCompanionRarity);
         }
 
+        CompanionSynergyResult synergy =
+            CompanionManager.Instance?.GetSynergyResult();
+        bonusPercent += synergy?.AttackPercent ?? 0;
+
         return Mathf.RoundToInt(
             baseAttack * (1f + bonusPercent / 100f));
     }
 
     public static int GetPlayerMaxHealth(PlayerData data)
     {
-        return 90 + data.level * 10 + data.healthLevel * 30 +
+        int baseHealth =
+            90 + data.level * 10 + data.healthLevel * 30 +
             EquipmentManager.GetArmorHealth(data);
+        int synergyPercent =
+            CompanionManager.Instance
+                ?.GetSynergyResult()
+                .HealthPercent ?? 0;
+        return Mathf.RoundToInt(
+            baseHealth * (1f + synergyPercent / 100f));
     }
 
     public static float GetPlayerAttackInterval(PlayerData data)
     {
-        return Mathf.Max(
+        float baseInterval = Mathf.Max(
             0.25f,
             1.2f - (data.attackSpeedLevel - 1) * 0.045f);
+        int synergyPercent =
+            CompanionManager.Instance
+                ?.GetSynergyResult()
+                .AttackSpeedPercent ?? 0;
+        return Mathf.Max(
+            0.2f,
+            baseInterval / (1f + synergyPercent / 100f));
     }
 
     public static int GetEnemyMaxHealth(int stage, bool isBoss)

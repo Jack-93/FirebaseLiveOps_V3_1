@@ -15,4 +15,10 @@ MonoBehaviour:
   characterName: Mirael
   rarity: SR
   icon: {fileID: 0}
+  battleSprite: {fileID: 0}
+  battleAnimator: {fileID: 0}
+  element: 3
+  role: 3
+  synergyTags:
+  - Arcane
   description: A calm healer who protects weakened allies.

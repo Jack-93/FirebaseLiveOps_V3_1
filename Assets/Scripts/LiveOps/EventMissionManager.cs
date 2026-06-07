@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class EventMissionManager : MonoBehaviour
 {
-    public const int KillTarget = 20;
+    public const int KillTarget = 4;
     public const int GachaTarget = 3;
     public const int RewardPointTarget = 30;
 

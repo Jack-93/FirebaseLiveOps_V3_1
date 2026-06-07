@@ -19,13 +19,21 @@ public class TutorialManager : MonoBehaviour
             switch (CurrentStep)
             {
                 case 0:
-                    return "Welcome. Begin the adventure.";
+                    return LocalizationManager.Text(
+                        "Welcome. Begin the adventure.",
+                        "환영합니다. 모험을 시작하세요.");
                 case 1:
-                    return "Open Growth and upgrade Attack once.";
+                    return LocalizationManager.Text(
+                        "Open Growth and upgrade Attack once.",
+                        "성장에서 공격력을 한 번 강화하세요.");
                 case 2:
-                    return "Return to Battle and defeat one enemy.";
+                    return LocalizationManager.Text(
+                        "Return to Battle and defeat one enemy.",
+                        "전투로 돌아가 적 한 마리를 처치하세요.");
                 default:
-                    return "Tutorial complete. Keep advancing.";
+                    return LocalizationManager.Text(
+                        "Tutorial complete. Keep advancing.",
+                        "튜토리얼 완료. 계속 전진하세요.");
             }
         }
     }

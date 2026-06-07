@@ -192,3 +192,6 @@ Assets/Plugins/**/*.bundle
 Library/PackageCache/.tmp*/
 
 # End of .gitignore
+
+# Local planning and reference files
+/Making/
