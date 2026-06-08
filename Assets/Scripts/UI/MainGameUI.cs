@@ -72,7 +72,6 @@ public class MainGameUI : MonoBehaviour
     private Button tutorialButton;
     private Button retryButton;
     private Button googleLinkButton;
-    private Button appleLinkButton;
     private Button starterPackButton;
     private Button smallGemPackButton;
     private Button largeGemPackButton;
@@ -186,42 +185,10 @@ public class MainGameUI : MonoBehaviour
     {
         EnsureEventSystem();
 
-        GameObject canvasObject = new GameObject(
-            "MainGameCanvas",
-            typeof(RectTransform),
-            typeof(Canvas),
-            typeof(CanvasScaler),
-            typeof(GraphicRaycaster));
-
-        Canvas canvas = canvasObject.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-        CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1080f, 1920f);
-        scaler.matchWidthOrHeight = 1f;
-
-        RectTransform root =
-            canvasObject.GetComponent<RectTransform>();
-
-        CreatePanel(
-            "OuterBackground",
-            root,
-            Color.black,
-            Vector2.zero,
-            Vector2.one);
-
-        RectTransform portraitRoot = CreatePanel(
-            "PortraitViewport",
-            root,
-            Background,
-            Vector2.zero,
-            Vector2.one);
-
-        AspectRatioFitter fitter =
-            portraitRoot.gameObject.AddComponent<AspectRatioFitter>();
-        fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-        fitter.aspectRatio = 9f / 16f;
+        RectTransform portraitRoot =
+            MobileScreenLayout.CreateSafeAreaCanvas(
+                "MainGameCanvas",
+                Background);
 
         BuildTopBar(portraitRoot);
         BuildBattlePanel(portraitRoot);
@@ -254,17 +221,17 @@ public class MainGameUI : MonoBehaviour
             "StageText",
             top,
             "Stage 1",
-            42,
-            new Vector2(0.04f, 0.12f),
-            new Vector2(0.34f, 0.88f),
-            TextAlignmentOptions.Left);
+            38,
+            new Vector2(0.075f, 0.12f),
+            new Vector2(0.315f, 0.88f),
+            TextAlignmentOptions.Center);
 
         CreateButton(
             "PreviousStageButton",
             top,
             "<",
-            new Vector2(0.005f, 0.18f),
-            new Vector2(0.04f, 0.82f),
+            new Vector2(0.012f, 0.22f),
+            new Vector2(0.065f, 0.78f),
             PanelLight,
             () => ChangeStage(-1));
 
@@ -272,8 +239,8 @@ public class MainGameUI : MonoBehaviour
             "NextStageButton",
             top,
             ">",
-            new Vector2(0.34f, 0.18f),
-            new Vector2(0.375f, 0.82f),
+            new Vector2(0.325f, 0.22f),
+            new Vector2(0.378f, 0.78f),
             PanelLight,
             () => ChangeStage(1));
 
@@ -281,8 +248,8 @@ public class MainGameUI : MonoBehaviour
             "GoldText",
             top,
             "Gold 0",
-            40,
-            new Vector2(0.36f, 0.12f),
+            38,
+            new Vector2(0.39f, 0.12f),
             new Vector2(0.68f, 0.88f),
             TextAlignmentOptions.Center,
             Gold);
@@ -1263,36 +1230,28 @@ public class MainGameUI : MonoBehaviour
             "AccountDetailText",
             card,
             "Account status",
-            33,
-            new Vector2(0.08f, 0.67f),
-            new Vector2(0.92f, 0.93f),
+            25,
+            new Vector2(0.08f, 0.5f),
+            new Vector2(0.92f, 0.94f),
             TextAlignmentOptions.TopLeft);
 
         googleLinkButton = CreateButton(
             "GoogleLinkButton",
             card,
             "LINK GOOGLE",
-            new Vector2(0.08f, 0.46f),
-            new Vector2(0.92f, 0.61f),
+            new Vector2(0.08f, 0.34f),
+            new Vector2(0.92f, 0.47f),
             Accent,
             HandleGoogleLink);
-
-        appleLinkButton = CreateButton(
-            "AppleLinkButton",
-            card,
-            "LINK APPLE",
-            new Vector2(0.08f, 0.27f),
-            new Vector2(0.92f, 0.42f),
-            PanelLight,
-            HandleAppleLink);
 
         CreateText(
             "AccountNotice",
             card,
+            "Android build uses Google login only.\n" +
             "Linking keeps the current UID and all guest progress.",
             25,
-            new Vector2(0.08f, 0.14f),
-            new Vector2(0.92f, 0.24f),
+            new Vector2(0.08f, 0.17f),
+            new Vector2(0.92f, 0.31f),
             TextAlignmentOptions.Center,
             new Color32(174, 189, 214, 255));
 
@@ -1716,8 +1675,7 @@ public class MainGameUI : MonoBehaviour
 
         AccountLinkManager accounts = AccountLinkManager.Instance;
         string accountType = accounts != null &&
-            (accounts.IsLinked(AccountLinkProvider.Google) ||
-             accounts.IsLinked(AccountLinkProvider.Apple))
+            accounts.IsLinked(AccountLinkProvider.Google)
                 ? "Linked account"
                 : "Guest account";
         accountText.text =
@@ -1914,19 +1872,13 @@ public class MainGameUI : MonoBehaviour
         }
 
         settingsText.text =
-            LocalizationManager.Text(
-                $"Sound   {(settings.SoundEnabled ? "ON" : "OFF")}\n" +
-                $"Vibration   {(settings.VibrationEnabled ? "ON" : "OFF")}\n" +
-                $"Notifications   " +
-                $"{(settings.NotificationsEnabled ? "ON" : "OFF")}\n" +
-                $"Frame Rate   {settings.TargetFrameRate} FPS\n" +
-                "Language   English",
-                $"사운드   {(settings.SoundEnabled ? "켜짐" : "꺼짐")}\n" +
-                $"진동   {(settings.VibrationEnabled ? "켜짐" : "꺼짐")}\n" +
-                $"알림   " +
-                $"{(settings.NotificationsEnabled ? "켜짐" : "꺼짐")}\n" +
-                $"프레임   {settings.TargetFrameRate} FPS\n" +
-                "언어   한국어");
+            $"Sound   {(settings.SoundEnabled ? "ON" : "OFF")}\n" +
+            $"Vibration   {(settings.VibrationEnabled ? "ON" : "OFF")}\n" +
+            $"Notifications   " +
+            $"{(settings.NotificationsEnabled ? "ON" : "OFF")}\n" +
+            $"Frame Rate   {settings.TargetFrameRate} FPS\n" +
+            $"Language   " +
+            $"{(GameSettingsManager.IsKoreanLanguage ? "Korean" : "English")}";
     }
 
     private void PromoteSelectedCharacter()
@@ -1986,7 +1938,13 @@ public class MainGameUI : MonoBehaviour
             return;
         }
 
-        accountDetailText.text = accounts.GetAccountSummary();
+        accountDetailText.text =
+            accounts.GetAccountSummary() + "\n\n" +
+            GoogleCredentialTokenProvider.GetSetupStatus() + "\n" +
+            FirebaseManager.GetDiagnosticsStatus() + "\n" +
+            (PushNotificationManager.Instance != null
+                ? PushNotificationManager.Instance.GetTokenStatus()
+                : "FCM: Pending");
 
         bool busy = accounts.IsBusy;
         if (googleLinkButton != null)
@@ -1996,12 +1954,6 @@ public class MainGameUI : MonoBehaviour
                 !accounts.IsLinked(AccountLinkProvider.Google);
         }
 
-        if (appleLinkButton != null)
-        {
-            appleLinkButton.interactable =
-                !busy &&
-                !accounts.IsLinked(AccountLinkProvider.Apple);
-        }
     }
 
     private void HandleTutorialAction()
@@ -2034,11 +1986,6 @@ public class MainGameUI : MonoBehaviour
     private async void HandleGoogleLink()
     {
         await HandleAccountLink(AccountLinkProvider.Google);
-    }
-
-    private async void HandleAppleLink()
-    {
-        await HandleAccountLink(AccountLinkProvider.Apple);
     }
 
     private async System.Threading.Tasks.Task HandleAccountLink(

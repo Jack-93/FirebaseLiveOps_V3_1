@@ -104,8 +104,6 @@ public class AccountLinkManager : MonoBehaviour
         List<string> linked = new List<string>();
         if (IsLinked(AccountLinkProvider.Google))
             linked.Add("Google");
-        if (IsLinked(AccountLinkProvider.Apple))
-            linked.Add("Apple");
 
         string type = user.IsAnonymous ? "Guest" : "Linked";
         string providers = linked.Count == 0

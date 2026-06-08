@@ -24,6 +24,10 @@ public static class VerticalPrototypeBuilder
 
         PlayerSettings.defaultInterfaceOrientation =
             UIOrientation.Portrait;
+        PlayerSettings.defaultScreenWidth =
+            (int)MobileScreenLayout.ReferenceWidth;
+        PlayerSettings.defaultScreenHeight =
+            (int)MobileScreenLayout.ReferenceHeight;
         PlayerSettings.allowedAutorotateToPortrait = true;
         PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
         PlayerSettings.allowedAutorotateToLandscapeLeft = false;
@@ -86,9 +90,9 @@ public static class VerticalPrototypeBuilder
             typeof(AudioListener));
         cameraObject.tag = "MainCamera";
         Camera camera = cameraObject.GetComponent<Camera>();
-        camera.clearFlags = CameraClearFlags.SolidColor;
-        camera.backgroundColor = new Color32(20, 28, 45, 255);
-        camera.orthographic = true;
+        MobileScreenLayout.ConfigureCamera(
+            camera,
+            new Color32(20, 28, 45, 255));
         cameraObject.transform.position = new Vector3(0f, 0f, -10f);
     }
 }

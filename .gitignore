@@ -187,6 +187,10 @@ Assets/Plugins/*.bundle
 Assets/Plugins/**/*.dll
 Assets/Plugins/**/*.so
 Assets/Plugins/**/*.bundle
+!Assets/Plugins/
+!Assets/Plugins/Android/
+!Assets/Plugins/Android/AndroidManifest.xml
+!Assets/Plugins/Android/AndroidManifest.xml.meta
 
 # Exclude any temporary packagecache tmp dirs
 Library/PackageCache/.tmp*/
@@ -195,3 +199,7 @@ Library/PackageCache/.tmp*/
 
 # Local planning and reference files
 /Making/
+
+# Local Android SDK/emulator installs used by Codex QA
+/.android-sdk/
+/.android-sdk-emu/

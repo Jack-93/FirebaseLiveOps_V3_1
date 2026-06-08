@@ -19,8 +19,9 @@ public class MainGameBootstrap : MonoBehaviour
     private void Awake()
     {
         GameSettingsManager.ApplySavedSettings();
-        Screen.orientation = ScreenOrientation.Portrait;
-        EnsureMainCamera();
+        MobileScreenLayout.ApplyPortraitSettings();
+        MobileScreenLayout.EnsureMainCamera(
+            new Color32(20, 28, 45, 255));
 
         EnsurePersistentManager<GameSettingsManager>(
             "GameSettingsManager");
@@ -316,22 +317,4 @@ public class MainGameBootstrap : MonoBehaviour
         return managerObject.AddComponent<T>();
     }
 
-    private static void EnsureMainCamera()
-    {
-        Camera existing = Camera.main;
-        if (existing != null)
-            return;
-
-        GameObject cameraObject = new GameObject(
-            "Main Camera",
-            typeof(Camera),
-            typeof(AudioListener));
-        cameraObject.tag = "MainCamera";
-
-        Camera camera = cameraObject.GetComponent<Camera>();
-        camera.clearFlags = CameraClearFlags.SolidColor;
-        camera.backgroundColor = new Color32(20, 28, 45, 255);
-        camera.orthographic = true;
-        cameraObject.transform.position = new Vector3(0f, 0f, -10f);
-    }
 }

@@ -1,3 +1,34 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:1b5fb48d19741aada5672b479c32bd35a1bd08f739648d39b5d6ea2c103a10df
-size 1321
+pluginManagement {
+    repositories {
+        **ARTIFACTORYREPOSITORY**
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
+
+include ':launcher'
+include ':unityLibrary'
+**INCLUDES**
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    repositories {
+        **ARTIFACTORYREPOSITORY**
+        google()
+        mavenCentral()
+// Android Resolver Repos Start
+        def unityProjectPath = new File($/**DIR_UNITYPROJECT**/$)
+        maven {
+            url = uri(new File(unityProjectPath, "Assets/GeneratedLocalRepo/Firebase/m2repository")) // Assets/Firebase/Editor/AnalyticsDependencies.xml:21, Assets/Firebase/Editor/AppCheckDependencies.xml:27, Assets/Firebase/Editor/AppDependencies.xml:25, Assets/Firebase/Editor/AuthDependencies.xml:23, Assets/Firebase/Editor/CrashlyticsDependencies.xml:23, Assets/Firebase/Editor/FirestoreDependencies.xml:23, Assets/Firebase/Editor/MessagingDependencies.xml:27, Assets/Firebase/Editor/RemoteConfigDependencies.xml:23
+        }
+        maven {
+            url "https://maven.google.com/" // Assets/LevelPlay/Editor/IronSourceSDKDependencies.xml:12
+        }
+        mavenLocal()
+// Android Resolver Repos End
+        flatDir {
+            dirs "${project(':unityLibrary').projectDir}/libs"
+        }
+    }
+}

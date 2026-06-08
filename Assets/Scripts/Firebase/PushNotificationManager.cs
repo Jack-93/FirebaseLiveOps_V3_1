@@ -7,6 +7,8 @@ public class PushNotificationManager : MonoBehaviour
 {
     public static PushNotificationManager Instance;
 
+    public bool IsInitialized => initialized;
+
     private bool initialized;
 
     private void Awake()
@@ -43,6 +45,19 @@ public class PushNotificationManager : MonoBehaviour
                 $"[Messaging] Token initialization deferred: " +
                 exception.Message);
         }
+    }
+
+    public string GetTokenStatus()
+    {
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        string token = data?.fcmToken;
+        string tokenPreview = string.IsNullOrWhiteSpace(token)
+            ? "None"
+            : token.Substring(0, Math.Min(12, token.Length)) + "...";
+
+        return
+            $"FCM: {(initialized ? "Initialized" : "Pending")}  " +
+            $"Token: {tokenPreview}";
     }
 
     private void OnDestroy()

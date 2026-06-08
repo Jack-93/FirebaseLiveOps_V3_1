@@ -35,6 +35,27 @@ public class FirebaseManager : MonoBehaviour
         await initializationTask;
     }
 
+    public static string GetDiagnosticsStatus()
+    {
+        string crashlytics = "Pending";
+        try
+        {
+            crashlytics = Crashlytics.IsCrashlyticsCollectionEnabled
+                ? "On"
+                : "Off";
+        }
+        catch
+        {
+            crashlytics = "Pending";
+        }
+
+        return
+            $"Firebase: {(IsFirebaseReady ? "Ready" : "Pending")}\n" +
+            $"Crashlytics: {crashlytics}\n" +
+            $"RemoteConfig: SSR {GachaConfig.SSRRate}% / " +
+            $"SR {GachaConfig.SRRate}%";
+    }
+
     private async Task InitializeFirebaseAsync()
     {
         DependencyStatus status =

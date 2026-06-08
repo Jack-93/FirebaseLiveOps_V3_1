@@ -36,7 +36,7 @@ public class VerticalGachaUI : MonoBehaviour
     private void Start()
     {
         GameSettingsManager.ApplySavedSettings();
-        Screen.orientation = ScreenOrientation.Portrait;
+        MobileScreenLayout.ApplyPortraitSettings();
         EnsureEventSystem();
         BuildInterface();
         RefreshHeader();
@@ -45,41 +45,10 @@ public class VerticalGachaUI : MonoBehaviour
 
     private void BuildInterface()
     {
-        GameObject canvasObject = new GameObject(
-            "VerticalGachaCanvas",
-            typeof(RectTransform),
-            typeof(Canvas),
-            typeof(CanvasScaler),
-            typeof(GraphicRaycaster));
-
-        Canvas canvas = canvasObject.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-        CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1080f, 1920f);
-        scaler.matchWidthOrHeight = 1f;
-
-        RectTransform root =
-            canvasObject.GetComponent<RectTransform>();
-
-        CreatePanel(
-            "OuterBackground",
-            root,
-            Color.black,
-            Vector2.zero,
-            Vector2.one);
-
-        RectTransform portrait = CreatePanel(
-            "PortraitViewport",
-            root,
-            Background,
-            Vector2.zero,
-            Vector2.one);
-        AspectRatioFitter fitter =
-            portrait.gameObject.AddComponent<AspectRatioFitter>();
-        fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-        fitter.aspectRatio = 9f / 16f;
+        RectTransform portrait =
+            MobileScreenLayout.CreateSafeAreaCanvas(
+                "VerticalGachaCanvas",
+                Background);
 
         CreateText(
             "Title",

@@ -12,6 +12,21 @@ public sealed class GoogleCredentialTokenProvider : IAccountTokenProvider
 {
     public AccountLinkProvider Provider => AccountLinkProvider.Google;
 
+    public static string GetSetupStatus()
+    {
+        string webClientId = LoadWebClientId();
+        if (string.IsNullOrWhiteSpace(webClientId))
+            return "Google login: web client ID missing.";
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        return "Google login: Android provider ready.";
+#elif UNITY_EDITOR
+        return "Google login: Android build only. Config loaded.";
+#else
+        return "Google login: Android only.";
+#endif
+    }
+
     public Task<AccountLinkTokens> RequestTokensAsync()
     {
 #if UNITY_ANDROID && !UNITY_EDITOR
@@ -79,6 +94,7 @@ public sealed class GoogleCredentialTokenProvider : IAccountTokenProvider
 
         return completion.Task;
     }
+#endif
 
     private static string LoadWebClientId()
     {
@@ -93,6 +109,7 @@ public sealed class GoogleCredentialTokenProvider : IAccountTokenProvider
         return config?.webClientId ?? "";
     }
 
+#if UNITY_ANDROID && !UNITY_EDITOR
     private static AndroidJavaObject GetUnityActivity()
     {
         AndroidJavaClass unityPlayer =
