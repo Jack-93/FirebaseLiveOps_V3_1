@@ -4,9 +4,12 @@ using UnityEngine;
 
 public class EventMissionManager : MonoBehaviour
 {
-    public const int KillTarget = 4;
-    public const int GachaTarget = 3;
-    public const int RewardPointTarget = 30;
+    public const int KillTarget =
+        GameBalanceConfig.EventKillTarget;
+    public const int GachaTarget =
+        GameBalanceConfig.EventGachaTarget;
+    public const int RewardPointTarget =
+        GameBalanceConfig.EventRewardPointTarget;
 
     public static EventMissionManager Instance;
 
@@ -59,8 +62,14 @@ public class EventMissionManager : MonoBehaviour
         }
 
         data.eventRewardClaimed = true;
-        InventoryManager.Instance.AddItem("Gem", 300, false);
-        InventoryManager.Instance.AddItem("GachaTicket", 2, false);
+        InventoryManager.Instance.AddItem(
+            "Gem",
+            GameBalanceConfig.EventRewardGems,
+            false);
+        InventoryManager.Instance.AddItem(
+            "GachaTicket",
+            GameBalanceConfig.EventRewardTickets,
+            false);
         PlayerDataManager.Instance.NotifyPlayerDataChanged();
 
         if (FirestoreManager.Instance != null)
@@ -74,18 +83,32 @@ public class EventMissionManager : MonoBehaviour
         ResetIfNeeded();
         PlayerData data = PlayerDataManager.Instance?.playerData;
         if (data == null)
-            return "Event data unavailable.";
+            return LocalizationManager.Text(
+                "Event data unavailable.",
+                "이벤트 정보를 불러올 수 없습니다.");
 
         string reward = data.eventRewardClaimed
-            ? "Reward claimed"
-            : $"Points {data.eventMissionPoints}/{RewardPointTarget}";
+            ? LocalizationManager.Text(
+                "Reward claimed",
+                "보상 수령 완료")
+            : $"{LocalizationManager.Text("Points", "포인트")} " +
+              $"{data.eventMissionPoints}/{RewardPointTarget}";
         return
-            "DAILY PLAY EVENT\n" +
-            $"Defeat monsters  {data.eventKillCount}/{KillTarget}  " +
-            "(10 pts)\n" +
-            $"Recruit companions  {data.eventGachaCount}/{GachaTarget}  " +
-            "(20 pts)\n\n" +
-            $"{reward}\nReward: 300 Gems + 2 Gacha Tickets";
+            $"{LocalizationManager.Text("DAILY PLAY EVENT", "일일 플레이 이벤트")}\n" +
+            $"{LocalizationManager.Text("Defeat monsters", "몬스터 처치")}  " +
+            $"{data.eventKillCount}/{KillTarget}  " +
+            $"({GameBalanceConfig.EventKillPoints} " +
+            $"{LocalizationManager.Text("pts", "점")})\n" +
+            $"{LocalizationManager.Text("Recruit companions", "동료 모집")}  " +
+            $"{data.eventGachaCount}/{GachaTarget}  " +
+            $"({GameBalanceConfig.EventGachaPoints} " +
+            $"{LocalizationManager.Text("pts", "점")})\n\n" +
+            $"{reward}\n" +
+            $"{LocalizationManager.Text("Reward", "보상")}: " +
+            $"{GameBalanceConfig.EventRewardGems} " +
+            $"{LocalizationManager.Text("Gems", "젬")} + " +
+            $"{GameBalanceConfig.EventRewardTickets} " +
+            $"{LocalizationManager.Text("Gacha Tickets", "뽑기 티켓")}";
     }
 
     private void HandleEnemyDefeated(int reward)
@@ -105,9 +128,9 @@ public class EventMissionManager : MonoBehaviour
     {
         int points = 0;
         if (data.eventKillCount >= KillTarget)
-            points += 10;
+            points += GameBalanceConfig.EventKillPoints;
         if (data.eventGachaCount >= GachaTarget)
-            points += 20;
+            points += GameBalanceConfig.EventGachaPoints;
 
         data.eventMissionPoints = points;
         PlayerDataManager.Instance.NotifyPlayerDataChanged();

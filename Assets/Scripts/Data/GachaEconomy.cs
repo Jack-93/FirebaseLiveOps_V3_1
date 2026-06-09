@@ -2,8 +2,10 @@ using System;
 
 public static class GachaEconomy
 {
-    public const int SingleGemCost = 100;
-    public const int TenGemCost = 900;
+    public const int SingleGemCost =
+        GameBalanceConfig.GachaSingleGemCost;
+    public const int TenGemCost =
+        GameBalanceConfig.GachaTenGemCost;
 
     public static bool TrySpend(
         PlayerData data,

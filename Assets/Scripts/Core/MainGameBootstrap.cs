@@ -25,6 +25,7 @@ public class MainGameBootstrap : MonoBehaviour
 
         EnsurePersistentManager<GameSettingsManager>(
             "GameSettingsManager");
+        EnsurePersistentManager<AudioManager>("AudioManager");
         EnsurePersistentManager<PlayerDataManager>("PlayerDataManager");
         EnsurePersistentManager<FirebaseManager>("FirebaseManager");
         EnsurePersistentManager<FirestoreManager>("FirestoreManager");
@@ -81,69 +82,14 @@ public class MainGameBootstrap : MonoBehaviour
 
             if (user == null)
             {
-                mainGameUI.SetLoading(true, "Creating guest account...");
-                AuthResult result = await auth.SignInAnonymouslyAsync();
-                user = result.User;
+                mainGameUI.SetLoading(false, "");
+                mainGameUI.ShowTitleScreen(
+                    "Choose how to start.\n" +
+                    GoogleCredentialTokenProvider.GetSetupStatus());
+                return;
             }
 
-            mainGameUI.SetLoading(true, "Loading player data...");
-            PlayerData data =
-                await FirestoreManager.Instance.LoadPlayerDataAsync();
-
-            if (data == null)
-                throw new InvalidOperationException(
-                    "Player data could not be loaded.");
-
-            long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            int offlineGold = CalculateOfflineGold(data, now);
-            long offlineSeconds = data.lastOnlineUnixTime > 0
-                ? Math.Max(0, now - data.lastOnlineUnixTime)
-                : 0;
-
-            data.uid = user.UserId;
-            data.lastLoginDate = DateTime.UtcNow.ToString("yyyy-MM-dd");
-            data.lastOnlineUnixTime = now;
-            data.gold += offlineGold;
-            data.EnsureInitialized();
-            data.gold = Math.Max(data.gold, 100000);
-            data.inventory.items["Gem"] = Math.Max(
-                GachaEconomy.GetItemCount(data, "Gem"),
-                100000);
-
-            PlayerDataManager.Instance.SetPlayerData(data);
-            await MonetizationManager.Instance.InitializeAsync();
-            await PushNotificationManager.Instance.InitializeAsync();
-            EquipmentManager.Instance.InitializeStarterEquipment();
-            companionManager.Initialize();
-
-            mainGameUI.SetLoading(true, "Checking rewards...");
-            await FirestoreManager.Instance.LoadGlobalMailsAsync();
-
-            growthManager.Initialize(battleManager);
-            battleManager.Initialize();
-            tutorialManager.Initialize(battleManager, growthManager);
-            QuestManager.Instance.Initialize(
-                battleManager,
-                growthManager,
-                EquipmentManager.Instance);
-            EventMissionManager.Instance.Initialize(battleManager);
-
-            await FirestoreManager.Instance.SavePlayerDataAsync(data);
-
-            IsReady = true;
-            autosaveTimer = 60f;
-            mainGameUI.SetLoading(false, "");
-            mainGameUI.RefreshAll();
-
-            if (offlineGold > 0)
-            {
-                mainGameUI.ShowOfflineReward(
-                    offlineSeconds,
-                    offlineGold);
-            }
-
-            AnalyticsManager.Instance?.LogLogin();
-            Debug.Log("[MainGame] Session initialized.");
+            await InitializeSignedInSessionAsync(user);
         }
         catch (Exception exception)
         {
@@ -154,6 +100,152 @@ public class MainGameBootstrap : MonoBehaviour
         {
             isInitializing = false;
         }
+    }
+
+    public async void StartGuestLogin()
+    {
+        if (isInitializing)
+            return;
+
+        isInitializing = true;
+        IsReady = false;
+        mainGameUI.SetTitleBusy(true, "Creating guest account...");
+        mainGameUI.SetLoading(true, "Creating guest account...");
+
+        try
+        {
+            await FirebaseManager.WaitUntilReadyAsync();
+            AuthResult result =
+                await FirebaseAuth.DefaultInstance.SignInAnonymouslyAsync();
+            await InitializeSignedInSessionAsync(result.User);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+            mainGameUI.SetLoading(false, "");
+            mainGameUI.ShowTitleScreen(
+                "Guest login failed.\n" + exception.Message);
+        }
+        finally
+        {
+            isInitializing = false;
+            mainGameUI.SetTitleBusy(false, "");
+        }
+    }
+
+    public async void StartGoogleLogin()
+    {
+        if (isInitializing)
+            return;
+
+        isInitializing = true;
+        IsReady = false;
+        mainGameUI.SetTitleBusy(true, "Waiting for Google...");
+        mainGameUI.SetLoading(true, "Waiting for Google...");
+
+        try
+        {
+            await FirebaseManager.WaitUntilReadyAsync();
+            AccountLinkTokens tokens =
+                await new GoogleCredentialTokenProvider()
+                    .RequestTokensAsync();
+
+            if (tokens == null ||
+                string.IsNullOrWhiteSpace(tokens.IdToken))
+            {
+                throw new InvalidOperationException(
+                    "Google did not return a valid ID token.");
+            }
+
+            Credential credential = GoogleAuthProvider.GetCredential(
+                tokens.IdToken,
+                tokens.AccessToken);
+            FirebaseUser user =
+                await FirebaseAuth.DefaultInstance
+                    .SignInWithCredentialAsync(credential);
+            await InitializeSignedInSessionAsync(user);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+            mainGameUI.SetLoading(false, "");
+            mainGameUI.ShowTitleScreen(
+                "Google login failed.\n" + exception.Message);
+        }
+        finally
+        {
+            isInitializing = false;
+            mainGameUI.SetTitleBusy(false, "");
+        }
+    }
+
+    private async Task InitializeSignedInSessionAsync(FirebaseUser user)
+    {
+        if (user == null)
+            throw new InvalidOperationException(
+                "No signed-in user is available.");
+
+        mainGameUI.HideTitleScreen();
+        mainGameUI.SetLoading(true, "Loading player data...");
+        PlayerData data =
+            await FirestoreManager.Instance.LoadPlayerDataAsync();
+
+        if (data == null)
+            throw new InvalidOperationException(
+                "Player data could not be loaded.");
+
+        long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        int offlineGold = CalculateOfflineGold(data, now);
+        long offlineSeconds = data.lastOnlineUnixTime > 0
+            ? Math.Max(0, now - data.lastOnlineUnixTime)
+            : 0;
+
+        data.uid = user.UserId;
+        data.lastLoginDate = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        data.lastOnlineUnixTime = now;
+        data.gold += offlineGold;
+        data.EnsureInitialized();
+        data.gold = Math.Max(
+            data.gold,
+            GameBalanceConfig.PrototypeMinimumGold);
+        data.inventory.items["Gem"] = Math.Max(
+            GachaEconomy.GetItemCount(data, "Gem"),
+            GameBalanceConfig.PrototypeMinimumGems);
+
+        PlayerDataManager.Instance.SetPlayerData(data);
+        await MonetizationManager.Instance.InitializeAsync();
+        await PushNotificationManager.Instance.InitializeAsync();
+        EquipmentManager.Instance.InitializeStarterEquipment();
+        companionManager.Initialize();
+
+        mainGameUI.SetLoading(true, "Checking rewards...");
+        await FirestoreManager.Instance.LoadGlobalMailsAsync();
+
+        growthManager.Initialize(battleManager);
+        battleManager.Initialize();
+        tutorialManager.Initialize(battleManager, growthManager);
+        QuestManager.Instance.Initialize(
+            battleManager,
+            growthManager,
+            EquipmentManager.Instance);
+        EventMissionManager.Instance.Initialize(battleManager);
+
+        await FirestoreManager.Instance.SavePlayerDataAsync(data);
+
+        IsReady = true;
+        autosaveTimer = 60f;
+        mainGameUI.SetLoading(false, "");
+        mainGameUI.RefreshAll();
+
+        if (offlineGold > 0)
+        {
+            mainGameUI.ShowOfflineReward(
+                offlineSeconds,
+                offlineGold);
+        }
+
+        AnalyticsManager.Instance?.LogLogin();
+        Debug.Log("[MainGame] Session initialized.");
     }
 
     public async void RetryInitialization()

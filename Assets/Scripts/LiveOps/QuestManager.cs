@@ -23,8 +23,18 @@ public class QuestManager : MonoBehaviour
         "Upgrade equipment"
     };
 
+    private static readonly string[] KoreanQuestNames =
+    {
+        "몬스터 처치",
+        "동료 모집",
+        "영웅 강화",
+        "스테이지 클리어",
+        "장비 강화"
+    };
+
     private static readonly int[] QuestTargets = { 5, 1, 1, 1, 1 };
-    private const int QuestRewardGold = 300;
+    private const int QuestRewardGold =
+        GameBalanceConfig.QuestRewardGold;
 
     public static QuestManager Instance;
 
@@ -110,7 +120,10 @@ public class QuestManager : MonoBehaviour
         if (data.highestStage >= 5 &&
             ClaimOnce(data, "stage_5"))
         {
-            InventoryManager.Instance.AddItem("Gem", 500, false);
+            InventoryManager.Instance.AddItem(
+                "Gem",
+                GameBalanceConfig.AchievementStageFiveGemReward,
+                false);
             claimed++;
         }
 
@@ -119,7 +132,7 @@ public class QuestManager : MonoBehaviour
         {
             InventoryManager.Instance.AddItem(
                 "GachaTicket",
-                3,
+                GameBalanceConfig.AchievementKillFiftyTicketReward,
                 false);
             claimed++;
         }
@@ -134,21 +147,43 @@ public class QuestManager : MonoBehaviour
     {
         PlayerData data = PlayerDataManager.Instance?.playerData;
         if (data == null)
-            return "Quest data unavailable.";
+            return LocalizationManager.Text(
+                "Quest data unavailable.",
+                "퀘스트 정보를 불러올 수 없습니다.");
 
         NormalizeProgress();
         int index = data.sequentialQuestIndex;
         int target = QuestTargets[index];
+        bool complete = data.sequentialQuestProgress >= target;
+        string questName = LocalizationManager.Text(
+            QuestNames[index],
+            KoreanQuestNames[index]);
         string current =
-            $"Quest {index + 1}/5: {QuestNames[index]}\n" +
+            $"{LocalizationManager.Text("Quest", "퀘스트")} " +
+            $"{index + 1}/5: {questName}\n" +
             $"{data.sequentialQuestProgress}/{target}  " +
-            $"Reward: {QuestRewardGold} Gold";
+            $"{LocalizationManager.Text("Reward", "보상")}: " +
+            $"{QuestRewardGold} " +
+            $"{LocalizationManager.Text("Gold", "골드")}\n" +
+            (complete
+                ? LocalizationManager.Text(
+                    "Ready to claim. Next quest starts immediately.",
+                    "수령 가능. 다음 퀘스트가 바로 시작됩니다.")
+                : LocalizationManager.Text(
+                    "Keep playing to complete this objective.",
+                    "계속 플레이해서 목표를 완료하세요."));
         string stage = data.claimedAchievementIds.Contains("stage_5")
-            ? "Stage 5: Claimed"
-            : $"Stage 5: {Math.Min(data.highestStage, 5)}/5";
+            ? LocalizationManager.Text(
+                "Stage 5: Claimed",
+                "스테이지 5: 수령 완료")
+            : $"{LocalizationManager.Text("Stage", "스테이지")} 5: " +
+              $"{Math.Min(data.highestStage, 5)}/5";
         string kills = data.claimedAchievementIds.Contains("kills_50")
-            ? "50 kills: Claimed"
-            : $"Total kills: {Math.Min(data.totalMonstersDefeated, 50)}/50";
+            ? LocalizationManager.Text(
+                "50 kills: Claimed",
+                "50마리 처치: 수령 완료")
+            : $"{LocalizationManager.Text("Total kills", "총 처치")}:" +
+              $" {Math.Min(data.totalMonstersDefeated, 50)}/50";
 
         return $"{current}\n{stage} | {kills}";
     }

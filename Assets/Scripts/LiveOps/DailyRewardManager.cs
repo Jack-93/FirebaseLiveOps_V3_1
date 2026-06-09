@@ -50,7 +50,8 @@ public class DailyRewardManager : MonoBehaviour
         GiveReward(data.loginDay);
         data.lastRewardDate = DateTime.UtcNow.ToString("yyyy-MM-dd");
 
-        await FirestoreManager.Instance.SavePlayerDataAsync(data);
+        if (FirestoreManager.Instance != null)
+            await FirestoreManager.Instance.SavePlayerDataAsync(data);
 
         PlayerDataManager.Instance.NotifyPlayerDataChanged();
         AnalyticsManager.Instance?.LogDailyReward();
@@ -73,32 +74,18 @@ public class DailyRewardManager : MonoBehaviour
 
     private static void GiveReward(int day)
     {
-        switch (day)
+        int index = day - 1;
+        if (index < 0 ||
+            index >= GameBalanceConfig.DailyRewardItemNames.Length ||
+            index >= GameBalanceConfig.DailyRewardAmounts.Length)
         {
-            case 1:
-                InventoryManager.Instance.AddItem("Gem", 100, false);
-                break;
-            case 2:
-                InventoryManager.Instance.AddItem("Gem", 200, false);
-                break;
-            case 3:
-                InventoryManager.Instance.AddItem("Gem", 300, false);
-                break;
-            case 4:
-                InventoryManager.Instance.AddItem("GachaTicket", 1, false);
-                break;
-            case 5:
-                InventoryManager.Instance.AddItem("Gem", 500, false);
-                break;
-            case 6:
-                InventoryManager.Instance.AddItem("GachaTicket", 3, false);
-                break;
-            case 7:
-                InventoryManager.Instance.AddItem("SSRTicket", 1, false);
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(day));
+            throw new ArgumentOutOfRangeException(nameof(day));
         }
+
+        InventoryManager.Instance.AddItem(
+            GameBalanceConfig.DailyRewardItemNames[index],
+            GameBalanceConfig.DailyRewardAmounts[index],
+            false);
 
         Debug.Log($"[DailyReward] Day {day} Reward Given");
     }

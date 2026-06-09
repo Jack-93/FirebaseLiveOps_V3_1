@@ -49,9 +49,12 @@ public interface IRewardedAdProvider
 
 public class MonetizationManager : MonoBehaviour
 {
-    public const int DailyRewardedAdLimit = 5;
-    public const int RewardedAdGemAmount = 100;
-    public const int RewardedAdCooldownSeconds = 60;
+    public const int DailyRewardedAdLimit =
+        GameBalanceConfig.RewardedAdDailyLimit;
+    public const int RewardedAdGemAmount =
+        GameBalanceConfig.RewardedAdGemAmount;
+    public const int RewardedAdCooldownSeconds =
+        GameBalanceConfig.RewardedAdCooldownSeconds;
 
     public static MonetizationManager Instance;
 
@@ -370,15 +373,18 @@ public class MonetizationManager : MonoBehaviour
         switch (product)
         {
             case RealMoneyProduct.StarterPack:
-                data.gold += 50000;
-                AddItem(data, "Gem", 1000);
-                AddItem(data, "GachaTicket", 10);
+                data.gold += GameBalanceConfig.StarterPackGold;
+                AddItem(data, "Gem", GameBalanceConfig.StarterPackGems);
+                AddItem(
+                    data,
+                    "GachaTicket",
+                    GameBalanceConfig.StarterPackTickets);
                 break;
             case RealMoneyProduct.GemPackSmall:
-                AddItem(data, "Gem", 1200);
+                AddItem(data, "Gem", GameBalanceConfig.SmallGemPackGems);
                 break;
             case RealMoneyProduct.GemPackLarge:
-                AddItem(data, "Gem", 6500);
+                AddItem(data, "Gem", GameBalanceConfig.LargeGemPackGems);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(product));

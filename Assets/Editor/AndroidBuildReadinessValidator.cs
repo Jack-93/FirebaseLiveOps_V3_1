@@ -19,6 +19,7 @@ public static class AndroidBuildReadinessValidator
         ValidateAndroidManifest();
         ValidateGradleTemplates();
         ValidateCredentialManagerConfig();
+        ValidateReleaseBalanceFlags();
 
         Debug.Log("[Validation] Android build readiness checks passed.");
     }
@@ -136,6 +137,30 @@ public static class AndroidBuildReadinessValidator
             dependencies.Contains(
                 "com.google.android.libraries.identity.googleid:googleid"),
             "Google ID dependency is missing.");
+    }
+
+    private static void ValidateReleaseBalanceFlags()
+    {
+        if (GameBalanceConfig.PrototypeMinimumGold > 0 ||
+            GameBalanceConfig.PrototypeMinimumGems > 0)
+        {
+            Debug.LogWarning(
+                "[Validation] PrototypeMinimumGold/Gems are enabled. " +
+                "Set them to 0 before release or closed testing with real economy.");
+        }
+
+        Require(
+            GameBalanceConfig.GachaSingleGemCost > 0 &&
+            GameBalanceConfig.GachaTenGemCost > 0,
+            "Gacha Gem costs must be positive.");
+        Require(
+            GameBalanceConfig.GachaTenGemCost <
+            GameBalanceConfig.GachaSingleGemCost * 10,
+            "Ten-pull Gem cost should preserve a bundle discount.");
+        Require(
+            GameBalanceConfig.RewardedAdDailyLimit > 0 &&
+            GameBalanceConfig.RewardedAdGemAmount > 0,
+            "Rewarded ad limits/rewards must be positive.");
     }
 
     private static string ReadRequired(string path)

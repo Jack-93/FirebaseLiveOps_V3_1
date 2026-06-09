@@ -34,7 +34,7 @@ public class MailboxManager : MonoBehaviour
             isClaimed = false
         });
 
-        await FirestoreManager.Instance.SavePlayerDataAsync(data);
+        await SaveAsync(data);
         PlayerDataManager.Instance.NotifyPlayerDataChanged();
 
         Debug.Log("[Mailbox] Test Mail Added");
@@ -69,7 +69,7 @@ public class MailboxManager : MonoBehaviour
         RememberClaimedMail(data, mail);
         data.mailbox.Remove(mail);
 
-        await FirestoreManager.Instance.SavePlayerDataAsync(data);
+        await SaveAsync(data);
         PlayerDataManager.Instance.NotifyPlayerDataChanged();
 
         Debug.Log($"[Mailbox] Claimed: {mail.title}");
@@ -117,7 +117,7 @@ public class MailboxManager : MonoBehaviour
             claimedCount++;
         }
 
-        await FirestoreManager.Instance.SavePlayerDataAsync(data);
+        await SaveAsync(data);
         PlayerDataManager.Instance.NotifyPlayerDataChanged();
 
         Debug.Log($"[Mailbox] Claim All Complete: {claimedCount}");
@@ -171,5 +171,11 @@ public class MailboxManager : MonoBehaviour
         {
             data.claimedMailIds.Add(mail.mailId);
         }
+    }
+
+    private static async Task SaveAsync(PlayerData data)
+    {
+        if (FirestoreManager.Instance != null)
+            await FirestoreManager.Instance.SavePlayerDataAsync(data);
     }
 }

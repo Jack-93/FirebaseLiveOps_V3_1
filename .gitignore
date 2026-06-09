@@ -200,6 +200,16 @@ Library/PackageCache/.tmp*/
 # Local planning and reference files
 /Making/
 
+# Unity scene recovery backups
+/Assets/_Recovery/
+/Assets/_Recovery.meta
+
 # Local Android SDK/emulator installs used by Codex QA
 /.android-sdk/
 /.android-sdk-emu/
+
+# Unity Performance Test run metadata
+/Assets/Resources/PerformanceTestRunInfo.json
+/Assets/Resources/PerformanceTestRunInfo.json.meta
+/Assets/Resources/PerformanceTestRunSettings.json
+/Assets/Resources/PerformanceTestRunSettings.json.meta

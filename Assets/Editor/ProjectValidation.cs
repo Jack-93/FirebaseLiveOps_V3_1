@@ -11,12 +11,42 @@ public static class ProjectValidation
         ValidatePlayerDataRoundTrip();
         ValidateLegacyMailCompatibility();
         ValidateCoreProgression();
+        ValidateBalanceConfiguration();
         ValidateGachaEconomy();
         ValidatePrototypeScene();
         ValidateCharacterPlaceholders();
         ValidateRuntimeComposition();
 
         Debug.Log("[Validation] Core data checks passed.");
+    }
+
+    private static void ValidateBalanceConfiguration()
+    {
+        Require(
+            GameBalanceConfig.DailyRewardItemNames.Length == 7 &&
+            GameBalanceConfig.DailyRewardAmounts.Length == 7,
+            "Daily reward configuration must contain seven days.");
+        Require(
+            GameBalanceConfig.GachaSingleGemCost > 0 &&
+            GameBalanceConfig.GachaTenGemCost > 0,
+            "Gacha costs must be positive.");
+        Require(
+            GameBalanceConfig.GachaTenGemCost <
+            GameBalanceConfig.GachaSingleGemCost * 10,
+            "Ten-pull cost must include a discount.");
+        Require(
+            GameBalanceConfig.GachaPityLimit > 0,
+            "Gacha pity limit must be positive.");
+        Require(
+            GameBalanceConfig.PlayerAbsoluteMinAttackInterval > 0f &&
+            GameBalanceConfig.PlayerAbsoluteMinAttackInterval <=
+            GameBalanceConfig.PlayerMinAttackInterval,
+            "Player attack interval limits are invalid.");
+        Require(
+            GameBalanceConfig.EventKillPoints +
+            GameBalanceConfig.EventGachaPoints >=
+            GameBalanceConfig.EventRewardPointTarget,
+            "Event missions cannot reach the reward target.");
     }
 
     private static void ValidatePlayerDataRoundTrip()
@@ -311,15 +341,15 @@ public static class ProjectValidation
             GameObject canvas = GameObject.Find("MainGameCanvas");
             Require(canvas != null,
                 "Main game canvas was not created.");
-            Transform portrait =
-                canvas.transform.Find("PortraitViewport");
-            Require(portrait != null,
-                "Portrait viewport was not created.");
-            Require(portrait.Find("BattlePanel") != null,
+            Transform safeArea =
+                canvas.transform.Find("SafeAreaRoot");
+            Require(safeArea != null,
+                "Safe area root was not created.");
+            Require(safeArea.Find("BattlePanel") != null,
                 "Battle panel was not created.");
-            Require(portrait.Find("GrowthPanel") != null,
+            Require(safeArea.Find("GrowthPanel") != null,
                 "Growth panel was not created.");
-            Require(portrait.Find("BottomNavigation") != null,
+            Require(safeArea.Find("BottomNavigation") != null,
                 "Bottom navigation was not created.");
 
             tutorial.BeginTutorial();

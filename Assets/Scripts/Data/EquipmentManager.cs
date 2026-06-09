@@ -59,7 +59,9 @@ public class EquipmentManager : MonoBehaviour
 
     public void TryGrantDrop(int stage, bool boss)
     {
-        if (!boss && UnityEngine.Random.value > 0.12f)
+        if (!boss &&
+            UnityEngine.Random.value >
+            GameBalanceConfig.NormalEquipmentDropChance)
             return;
 
         PlayerData data = PlayerDataManager.Instance?.playerData;
@@ -116,7 +118,10 @@ public class EquipmentManager : MonoBehaviour
         int tier = GetTier(data.equippedWeapon, Weapons);
         return tier < 0
             ? 0
-            : 4 + tier * 8 + data.weaponUpgradeLevel * 3;
+            : GameBalanceConfig.EquipmentWeaponBaseAttack +
+              tier * GameBalanceConfig.EquipmentWeaponAttackPerTier +
+              data.weaponUpgradeLevel *
+              GameBalanceConfig.EquipmentWeaponAttackPerLevel;
     }
 
     public static int GetArmorHealth(PlayerData data)
@@ -124,12 +129,18 @@ public class EquipmentManager : MonoBehaviour
         int tier = GetTier(data.equippedArmor, Armors);
         return tier < 0
             ? 0
-            : 20 + tier * 35 + data.armorUpgradeLevel * 12;
+            : GameBalanceConfig.EquipmentArmorBaseHealth +
+              tier * GameBalanceConfig.EquipmentArmorHealthPerTier +
+              data.armorUpgradeLevel *
+              GameBalanceConfig.EquipmentArmorHealthPerLevel;
     }
 
     public static int GetUpgradeCost(int currentLevel)
     {
-        return 150 + currentLevel * currentLevel * 75;
+        return GameBalanceConfig.EquipmentUpgradeBaseCost +
+            currentLevel *
+            currentLevel *
+            GameBalanceConfig.EquipmentUpgradeQuadraticCost;
     }
 
     private static void AutoEquip(

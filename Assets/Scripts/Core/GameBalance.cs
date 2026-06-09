@@ -3,9 +3,12 @@ using UnityEngine;
 
 public static class GameBalance
 {
-    public const int EnemiesPerStage = 5;
-    public const int MaxOfflineHours = 8;
-    public const float BossTimeLimit = 30f;
+    public const int EnemiesPerStage =
+        GameBalanceConfig.EnemiesPerStage;
+    public const int MaxOfflineHours =
+        GameBalanceConfig.MaxOfflineHours;
+    public const float BossTimeLimit =
+        GameBalanceConfig.BossTimeLimit;
 
     private static readonly string[] EnemyNames =
     {
@@ -26,7 +29,10 @@ public static class GameBalance
     public static int GetPlayerAttack(PlayerData data)
     {
         int baseAttack =
-            8 + data.level * 2 + data.attackLevel * 6 +
+            GameBalanceConfig.PlayerBaseAttack +
+            data.level * GameBalanceConfig.PlayerAttackPerLevel +
+            data.attackLevel *
+            GameBalanceConfig.PlayerAttackPerUpgrade +
             EquipmentManager.GetWeaponAttack(data);
         int bonusPercent = 0;
         if (data.equippedCompanionRarities != null)
@@ -73,7 +79,10 @@ public static class GameBalance
     public static int GetPlayerMaxHealth(PlayerData data)
     {
         int baseHealth =
-            90 + data.level * 10 + data.healthLevel * 30 +
+            GameBalanceConfig.PlayerBaseHealth +
+            data.level * GameBalanceConfig.PlayerHealthPerLevel +
+            data.healthLevel *
+            GameBalanceConfig.PlayerHealthPerUpgrade +
             EquipmentManager.GetArmorHealth(data);
         int synergyPercent =
             CompanionManager.Instance
@@ -86,51 +95,68 @@ public static class GameBalance
     public static float GetPlayerAttackInterval(PlayerData data)
     {
         float baseInterval = Mathf.Max(
-            0.25f,
-            1.2f - (data.attackSpeedLevel - 1) * 0.045f);
+            GameBalanceConfig.PlayerMinAttackInterval,
+            GameBalanceConfig.PlayerBaseAttackInterval -
+            (data.attackSpeedLevel - 1) *
+            GameBalanceConfig.PlayerAttackIntervalReduction);
         int synergyPercent =
             CompanionManager.Instance
                 ?.GetSynergyResult()
-                .AttackSpeedPercent ?? 0;
+            .AttackSpeedPercent ?? 0;
         return Mathf.Max(
-            0.2f,
+            GameBalanceConfig.PlayerAbsoluteMinAttackInterval,
             baseInterval / (1f + synergyPercent / 100f));
     }
 
     public static int GetEnemyMaxHealth(int stage, bool isBoss)
     {
-        double value = 42d * Math.Pow(1.17d, stage - 1);
-        value *= 1d + (Math.Max(1, stage) - 1) % 4 * 0.08d;
+        double value =
+            GameBalanceConfig.EnemyBaseHealth *
+            Math.Pow(GameBalanceConfig.EnemyHealthGrowth, stage - 1);
+        value *= 1d + (Math.Max(1, stage) - 1) %
+            4 * GameBalanceConfig.EnemyStageHealthCycleBonus;
         if (isBoss)
-            value *= 5d;
+            value *= GameBalanceConfig.BossHealthMultiplier;
 
         return ClampToInt(value);
     }
 
     public static int GetEnemyAttack(int stage, bool isBoss)
     {
-        double value = 5d * Math.Pow(1.11d, stage - 1);
-        value *= 1d + (Math.Max(1, stage) - 1) % 4 * 0.05d;
+        double value =
+            GameBalanceConfig.EnemyBaseAttack *
+            Math.Pow(GameBalanceConfig.EnemyAttackGrowth, stage - 1);
+        value *= 1d + (Math.Max(1, stage) - 1) %
+            4 * GameBalanceConfig.EnemyStageAttackCycleBonus;
         if (isBoss)
-            value *= 1.8d;
+            value *= GameBalanceConfig.BossAttackMultiplier;
 
         return Math.Max(1, ClampToInt(value));
     }
 
     public static int GetEnemyGold(int stage, bool isBoss)
     {
-        double value = 12d * Math.Pow(1.12d, stage - 1);
-        value *= 1d + (Math.Max(1, stage) - 1) % 4 * 0.06d;
+        double value =
+            GameBalanceConfig.EnemyBaseGold *
+            Math.Pow(GameBalanceConfig.EnemyGoldGrowth, stage - 1);
+        value *= 1d + (Math.Max(1, stage) - 1) %
+            4 * GameBalanceConfig.EnemyStageGoldCycleBonus;
         if (isBoss)
-            value *= 8d;
+            value *= GameBalanceConfig.BossGoldMultiplier;
 
         return Math.Max(1, ClampToInt(value));
     }
 
     public static int GetUpgradeCost(UpgradeType type, int currentLevel)
     {
-        int baseCost = type == UpgradeType.AttackSpeed ? 180 : 100;
-        return ClampToInt(baseCost * Math.Pow(1.34d, currentLevel - 1));
+        int baseCost = type == UpgradeType.AttackSpeed
+            ? GameBalanceConfig.AttackSpeedUpgradeBaseCost
+            : GameBalanceConfig.HeroUpgradeBaseCost;
+        return ClampToInt(
+            baseCost *
+            Math.Pow(
+                GameBalanceConfig.HeroUpgradeCostGrowth,
+                currentLevel - 1));
     }
 
     public static int GetCombatPower(PlayerData data)

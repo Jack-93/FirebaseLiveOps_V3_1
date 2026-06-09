@@ -7,23 +7,48 @@ using UnityEngine;
 
 public static class AndroidBuildRunner
 {
-    private const string OutputPath =
+    private const string DebugApkPath =
         "Builds/Android/FirebaseLiveOps-debug.apk";
+    private const string ReleaseBundlePath =
+        "Builds/Android/FirebaseLiveOps-release.aab";
 
     [MenuItem("Tools/Build Android Debug APK")]
     public static void BuildDebugApk()
+    {
+        BuildAndroid(
+            DebugApkPath,
+            false,
+            true,
+            BuildOptions.Development);
+    }
+
+    [MenuItem("Tools/Build Android Release AAB")]
+    public static void BuildReleaseAab()
+    {
+        BuildAndroid(
+            ReleaseBundlePath,
+            true,
+            false,
+            BuildOptions.None);
+    }
+
+    private static void BuildAndroid(
+        string outputPath,
+        bool appBundle,
+        bool development,
+        BuildOptions buildOptions)
     {
         AndroidBuildReadinessValidator.Run();
 
         EditorUserBuildSettings.SwitchActiveBuildTarget(
             BuildTargetGroup.Android,
             BuildTarget.Android);
-        EditorUserBuildSettings.buildAppBundle = false;
-        EditorUserBuildSettings.development = true;
+        EditorUserBuildSettings.buildAppBundle = appBundle;
+        EditorUserBuildSettings.development = development;
         EditorUserBuildSettings.androidBuildSystem =
             AndroidBuildSystem.Gradle;
 
-        string outputDirectory = Path.GetDirectoryName(OutputPath);
+        string outputDirectory = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(outputDirectory))
             Directory.CreateDirectory(outputDirectory);
 
@@ -35,9 +60,9 @@ public static class AndroidBuildRunner
         BuildPlayerOptions options = new BuildPlayerOptions
         {
             scenes = scenes,
-            locationPathName = OutputPath,
+            locationPathName = outputPath,
             target = BuildTarget.Android,
-            options = BuildOptions.Development
+            options = buildOptions
         };
 
         BuildReport report = BuildPipeline.BuildPlayer(options);
@@ -48,6 +73,7 @@ public static class AndroidBuildRunner
         }
 
         Debug.Log(
-            $"[Build] Android APK created: {Path.GetFullPath(OutputPath)}");
+            $"[Build] Android output created: " +
+            $"{Path.GetFullPath(outputPath)}");
     }
 }

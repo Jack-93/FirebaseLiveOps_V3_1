@@ -66,11 +66,11 @@ public class ShopManager : MonoBehaviour
         switch (product)
         {
             case ShopProduct.GoldPouch:
-                return 100;
+                return GameBalanceConfig.ShopGoldPouchGemCost;
             case ShopProduct.TicketBundle:
-                return 250;
+                return GameBalanceConfig.ShopTicketBundleGemCost;
             case ShopProduct.GrowthChest:
-                return 500;
+                return GameBalanceConfig.ShopGrowthChestGemCost;
             default:
                 throw new ArgumentOutOfRangeException(nameof(product));
         }
@@ -81,11 +81,13 @@ public class ShopManager : MonoBehaviour
         switch (product)
         {
             case ShopProduct.GoldPouch:
-                return "5,000 Gold";
+                return $"{GameBalanceConfig.ShopGoldPouchGold:N0} Gold";
             case ShopProduct.TicketBundle:
-                return "3 Gacha Tickets";
+                return
+                    $"{GameBalanceConfig.ShopTicketBundleTickets} " +
+                    "Gacha Tickets";
             case ShopProduct.GrowthChest:
-                return "30,000 Gold";
+                return $"{GameBalanceConfig.ShopGrowthChestGold:N0} Gold";
             default:
                 throw new ArgumentOutOfRangeException(nameof(product));
         }
@@ -96,16 +98,17 @@ public class ShopManager : MonoBehaviour
         switch (product)
         {
             case ShopProduct.GoldPouch:
-                data.gold += 5000;
+                data.gold += GameBalanceConfig.ShopGoldPouchGold;
                 break;
             case ShopProduct.TicketBundle:
                 SetItemCount(
                     data,
                     "GachaTicket",
-                    GachaEconomy.GetItemCount(data, "GachaTicket") + 3);
+                    GachaEconomy.GetItemCount(data, "GachaTicket") +
+                    GameBalanceConfig.ShopTicketBundleTickets);
                 break;
             case ShopProduct.GrowthChest:
-                data.gold += 30000;
+                data.gold += GameBalanceConfig.ShopGrowthChestGold;
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(product));

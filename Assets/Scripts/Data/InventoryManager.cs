@@ -27,11 +27,16 @@ public class InventoryManager : MonoBehaviour
         if (string.IsNullOrWhiteSpace(itemName) || amount <= 0)
             return;
 
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        if (data == null)
+        {
+            Debug.LogWarning("[Inventory] PlayerData is not ready.");
+            return;
+        }
+
+        data.EnsureInitialized();
         var inventory =
-            PlayerDataManager.Instance
-            .playerData
-            .inventory
-            .items;
+            data.inventory.items;
 
         if (inventory.ContainsKey(itemName))
         {
@@ -46,12 +51,11 @@ public class InventoryManager : MonoBehaviour
             $"[Inventory] {itemName} +{amount}"
         );
 
-        if (savePlayerData)
+        if (savePlayerData && FirestoreManager.Instance != null)
         {
             FirestoreManager.Instance
                 .SavePlayerData(
-                    PlayerDataManager.Instance.playerData
-                );
+                    data);
         }
 
         OnInventoryChanged?.Invoke();
@@ -65,11 +69,16 @@ public class InventoryManager : MonoBehaviour
         if (string.IsNullOrWhiteSpace(itemName) || amount <= 0)
             return;
 
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        if (data == null)
+        {
+            Debug.LogWarning("[Inventory] PlayerData is not ready.");
+            return;
+        }
+
+        data.EnsureInitialized();
         var inventory =
-            PlayerDataManager.Instance
-            .playerData
-            .inventory
-            .items;
+            data.inventory.items;
 
         if (!inventory.ContainsKey(itemName))
             return;
@@ -85,13 +94,11 @@ public class InventoryManager : MonoBehaviour
             $"[Inventory] {itemName} - {amount}"
         );
 
-        if (savePlayerData)
+        if (savePlayerData && FirestoreManager.Instance != null)
         {
             FirestoreManager.Instance
                 .SavePlayerData(
-                    PlayerDataManager.Instance
-                    .playerData
-                );
+                    data);
         }
 
         OnInventoryChanged?.Invoke();

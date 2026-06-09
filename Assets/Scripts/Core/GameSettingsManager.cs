@@ -81,6 +81,7 @@ public class GameSettingsManager : MonoBehaviour
 
         AudioListener.volume = soundEnabled ? 1f : 0f;
         Application.targetFrameRate = frameRate;
+        AudioManager.Instance?.ApplySettings();
     }
 
     private static void SaveAndApply()

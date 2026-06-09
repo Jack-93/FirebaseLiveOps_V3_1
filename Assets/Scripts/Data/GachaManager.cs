@@ -3,13 +3,13 @@ using UnityEngine;
 
 public class GachaManager : MonoBehaviour
 {
-    public const int PityLimit = 100;
+    public const int PityLimit =
+        GameBalanceConfig.GachaPityLimit;
 
     public CharacterDatabase database;
 
     public static GachaManager Instance;
 
-    // 媛??깃툒蹂?罹먮┃???
     private List<CharacterData> rCharacters = new List<CharacterData>();
     private List<CharacterData> srCharacters = new List<CharacterData>();
     private List<CharacterData> ssrCharacters = new List<CharacterData>();
@@ -27,34 +27,8 @@ public class GachaManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         InitializeCharacterPoolFromDatabase();
-
-        //initializeCharacterPool();
-        //// 罹먮┃??? 珥덇린??
-        //rCharacterPool.Add(new CharacterData("R_Character1", "R"));
-        //rCharacterPool.Add(new CharacterData("R_Character2", "R"));
-        //srCharacterPool.Add(new CharacterData("SR_Character1", "SR"));
-        //srCharacterPool.Add(new CharacterData("SR_Character2", "SR"));
-        //ssrCharacterPool.Add(new CharacterData("SSR_Character1", "SSR"));
-        //ssrCharacterPool.Add(new CharacterData("SSR_Character2", "SSR"));
     }
-    /*
-    private void initializeCharacterPool()
-    {
-        // ?ㅼ젣 寃뚯엫?먯꽌?????곗씠?곕? ?몃??먯꽌 遺덈윭?????덈룄濡??쒖옉
-        // 罹먮┃???곗씠???먯뀑 異붽? ScriptableObject
-         
-        rCharacters.Add(new CharacterData("R_Character1", "R"));
-        rCharacters.Add(new CharacterData("R_Character2", "R"));
 
-        srCharacters.Add(new CharacterData("SR_Character1", "SR"));
-        srCharacters.Add(new CharacterData("SR_Character2", "SR"));
-
-        ssrCharacters.Add(new CharacterData("Scarlet", "SSR"));
-        ssrCharacters.Add(new CharacterData("Modernia", "SSR"));
-    }
-    */
-
-    // 罹먮┃???곗씠???먯뀑 異붽? ScriptableObject
     private void InitializeCharacterPoolFromDatabase()
     {
         if (database == null)
@@ -101,7 +75,6 @@ public class GachaManager : MonoBehaviour
     }
 
 
-    // ?뺣쪧 -> RemoteConfig?먯꽌 ?섏튂 愿由?
     public CharacterData RollCharacter()
     {
         ValidateRollPools();
@@ -113,23 +86,19 @@ public class GachaManager : MonoBehaviour
 
         if (randomRoll <= GachaConfig.SSRRate)
         {
-            // return ssrCharacterPool[Random.Range(0, ssrCharacterPool.Count)];
             return GetRandomCharacter(ssrCharacters);
         }
         else if (randomRoll <=
             GachaConfig.SSRRate + GachaConfig.SRRate)
         {
-            //return srCharacterPool[Random.Range(0, srCharacterPool.Count)];
             return GetRandomCharacter(srCharacters);
         }
-        else // R 80%
+        else
         {
-            //return rCharacterPool[Random.Range(0, rCharacterPool.Count)];
             return GetRandomCharacter(rCharacters);
         }
     }
 
-    // 10?곗감 戮묎린 ?대옒??
     public List<CharacterData> RollTen()
     {
         ValidateRollPools();
@@ -181,7 +150,6 @@ public class GachaManager : MonoBehaviour
         return list[index];
     }
 
-    // 泥쒖옣 ?쒖뒪???대옒??
     public CharacterData RollCharacterWithPity()
     {
         ValidateRollPools();
