@@ -26,6 +26,7 @@ public class MainGameUI : MonoBehaviour
     private GameObject settingsPanel;
     private GameObject accountPanel;
     private GameObject tutorialPanel;
+    private GameObject storyIntroOverlay;
     private GameObject titleOverlay;
     private GameObject loadingOverlay;
     private GameObject offlineOverlay;
@@ -56,6 +57,11 @@ public class MainGameUI : MonoBehaviour
     private TMP_Text dailyRewardText;
     private TMP_Text objectiveTitleText;
     private TMP_Text titleStatusText;
+    private TMP_Text storyIntroCounterText;
+    private TMP_Text storyIntroTitleText;
+    private TMP_Text storyIntroBodyText;
+    private TMP_Text storyIntroArtText;
+    private TMP_Text storyIntroButtonText;
     private TMP_Text tutorialText;
     private TMP_Text tutorialButtonText;
     private TMP_Text loadingText;
@@ -73,6 +79,7 @@ public class MainGameUI : MonoBehaviour
     private RectTransform enemyDamagePopup;
     private RectTransform playerDamagePopup;
     private RectTransform rewardPopup;
+    private Image storyIntroArtImage;
     private Image enemyVisualImage;
     private Image playerVisualImage;
     private Image attackTrailImage;
@@ -155,6 +162,7 @@ public class MainGameUI : MonoBehaviour
         RefreshSettings();
         RefreshAccount();
         RefreshTutorial();
+        RefreshStoryIntro();
         LocalizationManager.ApplyTo(transform);
     }
 
@@ -259,6 +267,7 @@ public class MainGameUI : MonoBehaviour
         BuildOfflinePopup(portraitRoot);
         BuildToast(portraitRoot);
         BuildTitleScreen(portraitRoot);
+        BuildStoryIntro(portraitRoot);
         BuildLoadingOverlay(portraitRoot);
     }
 
@@ -1682,6 +1691,116 @@ public class MainGameUI : MonoBehaviour
             tutorialButton.GetComponentInChildren<TMP_Text>();
     }
 
+    private void BuildStoryIntro(RectTransform root)
+    {
+        RectTransform overlay = CreatePanel(
+            "StoryIntroOverlay",
+            root,
+            new Color32(8, 12, 22, 250),
+            Vector2.zero,
+            Vector2.one);
+        storyIntroOverlay = overlay.gameObject;
+
+        Button tapArea = storyIntroOverlay.AddComponent<Button>();
+        tapArea.targetGraphic = overlay.GetComponent<Image>();
+        tapArea.onClick.AddListener(HandleStoryIntroNext);
+
+        RectTransform artPanel = CreatePanel(
+            "StoryIntroArtPlaceholder",
+            overlay,
+            new Color32(135, 199, 255, 255),
+            new Vector2(0.06f, 0.36f),
+            new Vector2(0.94f, 0.9f));
+        storyIntroArtImage = artPanel.GetComponent<Image>();
+
+        CreatePanel(
+            "StoryIntroPixelFrame",
+            artPanel,
+            new Color32(255, 255, 255, 38),
+            new Vector2(0.03f, 0.04f),
+            new Vector2(0.97f, 0.96f));
+
+        storyIntroArtText = CreateText(
+            "StoryIntroArtText",
+            artPanel,
+            "(아트 필요)",
+            34,
+            new Vector2(0.08f, 0.34f),
+            new Vector2(0.92f, 0.66f),
+            TextAlignmentOptions.Center,
+            Color.white);
+
+        RectTransform dialoguePanel = CreatePanel(
+            "StoryIntroDialoguePanel",
+            overlay,
+            new Color32(28, 38, 60, 255),
+            new Vector2(0.06f, 0.08f),
+            new Vector2(0.94f, 0.33f));
+
+        storyIntroCounterText = CreateText(
+            "StoryIntroCounter",
+            dialoguePanel,
+            "1 / 7",
+            24,
+            new Vector2(0.05f, 0.74f),
+            new Vector2(0.24f, 0.94f),
+            TextAlignmentOptions.Left,
+            Gold);
+
+        storyIntroTitleText = CreateText(
+            "StoryIntroTitle",
+            dialoguePanel,
+            "전봇대 위의 세상",
+            36,
+            new Vector2(0.25f, 0.7f),
+            new Vector2(0.95f, 0.94f),
+            TextAlignmentOptions.Right,
+            Accent);
+
+        storyIntroBodyText = CreateText(
+            "StoryIntroBody",
+            dialoguePanel,
+            "대사는 추후 확정",
+            31,
+            new Vector2(0.05f, 0.26f),
+            new Vector2(0.95f, 0.68f),
+            TextAlignmentOptions.Left,
+            Color.white);
+
+        Button skipButton = CreateButton(
+            "StoryIntroSkipButton",
+            dialoguePanel,
+            "SKIP",
+            new Vector2(0.05f, 0.05f),
+            new Vector2(0.31f, 0.23f),
+            PanelLight,
+            HandleStoryIntroSkip);
+        skipButton.GetComponentInChildren<TMP_Text>().fontSizeMax = 21;
+
+        Button nextButton = CreateButton(
+            "StoryIntroNextButton",
+            dialoguePanel,
+            "NEXT",
+            new Vector2(0.64f, 0.05f),
+            new Vector2(0.95f, 0.23f),
+            Gold,
+            HandleStoryIntroNext);
+        storyIntroButtonText =
+            nextButton.GetComponentInChildren<TMP_Text>();
+
+        CreateText(
+            "StoryIntroTapHint",
+            dialoguePanel,
+            "화면을 눌러 다음 컷으로 이동",
+            20,
+            new Vector2(0.32f, 0.05f),
+            new Vector2(0.63f, 0.23f),
+            TextAlignmentOptions.Center,
+            MutedText);
+
+        storyIntroOverlay.SetActive(false);
+    }
+
     private void BuildOfflinePopup(RectTransform root)
     {
         RectTransform overlay = CreatePanel(
@@ -2530,6 +2649,13 @@ public class MainGameUI : MonoBehaviour
         if (tutorialManager == null)
             return;
 
+        RefreshStoryIntro();
+        if (tutorialManager.ShouldShowStoryIntro)
+        {
+            tutorialPanel.SetActive(false);
+            return;
+        }
+
         tutorialPanel.SetActive(!tutorialManager.IsComplete);
         if (tutorialManager.IsComplete)
             return;
@@ -2551,6 +2677,49 @@ public class MainGameUI : MonoBehaviour
             default:
                 tutorialButtonText.text = "BATTLE";
                 break;
+        }
+    }
+
+    private void RefreshStoryIntro()
+    {
+        if (storyIntroOverlay == null || tutorialManager == null)
+            return;
+
+        bool shouldShow = tutorialManager.ShouldShowStoryIntro;
+        storyIntroOverlay.SetActive(shouldShow);
+        if (!shouldShow)
+            return;
+
+        StoryIntroCut cut = tutorialManager.CurrentStoryCut;
+        IReadOnlyList<StoryIntroCut> cuts = tutorialManager.StoryCuts;
+        if (cut == null || cuts.Count == 0)
+        {
+            storyIntroOverlay.SetActive(false);
+            return;
+        }
+
+        storyIntroCounterText.text =
+            $"{cut.cutIndex} / {cuts.Count}";
+        storyIntroTitleText.text = cut.title;
+        storyIntroBodyText.text =
+            string.IsNullOrWhiteSpace(cut.body)
+                ? "대사는 추후 확정"
+                : cut.body;
+        storyIntroArtText.text =
+            string.IsNullOrWhiteSpace(cut.artDirection)
+                ? "(아트 필요)"
+                : cut.artDirection;
+
+        if (storyIntroArtImage != null)
+            storyIntroArtImage.color =
+                TryParseColor(cut.placeholderColorHex, PanelLight);
+
+        if (storyIntroButtonText != null)
+        {
+            storyIntroButtonText.text =
+                cut.cutIndex >= cuts.Count
+                    ? "작전 시작"
+                    : "다음";
         }
     }
 
@@ -2599,6 +2768,37 @@ public class MainGameUI : MonoBehaviour
                 ShowBattle();
                 break;
         }
+    }
+
+    private void HandleStoryIntroNext()
+    {
+        if (tutorialManager == null ||
+            !tutorialManager.ShouldShowStoryIntro)
+        {
+            return;
+        }
+
+        IReadOnlyList<StoryIntroCut> cuts = tutorialManager.StoryCuts;
+        bool isLastCut =
+            cuts.Count == 0 ||
+            tutorialManager.CurrentStoryCutIndex >= cuts.Count - 1;
+
+        tutorialManager.AdvanceStoryIntro();
+
+        if (isLastCut)
+        {
+            tutorialManager.BeginTutorial();
+            ShowGrowth();
+        }
+    }
+
+    private void HandleStoryIntroSkip()
+    {
+        if (tutorialManager == null)
+            return;
+
+        tutorialManager.SkipStoryIntro();
+        RefreshTutorial();
     }
 
     private void HandleSaveAction()
@@ -3534,6 +3734,18 @@ public class MainGameUI : MonoBehaviour
             Color.white);
 
         return button;
+    }
+
+    private static Color TryParseColor(string htmlColor, Color fallback)
+    {
+        if (string.IsNullOrWhiteSpace(htmlColor))
+            return fallback;
+
+        return ColorUtility.TryParseHtmlString(
+            htmlColor,
+            out Color parsed)
+            ? parsed
+            : fallback;
     }
 
     private static void SetButtonLabel(Button button, string value)

@@ -13,6 +13,7 @@ public static class ProjectValidation
         ValidateCoreProgression();
         ValidateBalanceConfiguration();
         ValidateGachaEconomy();
+        ValidateStoryIntro();
         ValidatePrototypeScene();
         ValidateCharacterPlaceholders();
         ValidateRuntimeComposition();
@@ -58,6 +59,8 @@ public static class ProjectValidation
             level = 7,
             gold = 1234,
             tutorialCompleted = true,
+            storyIntroCompleted = true,
+            storyIntroCutIndex = 6,
             pityCount = 42,
             lastLoginDate = "2026-06-06",
             lastRewardDate = "2026-06-05",
@@ -136,6 +139,9 @@ public static class ProjectValidation
             "Offline timestamp round trip failed.");
         Require(!decoded.autoAdvance,
             "Auto advance round trip failed.");
+        Require(decoded.storyIntroCompleted &&
+            decoded.storyIntroCutIndex == 6,
+            "Story intro round trip failed.");
         Require(decoded.weaponUpgradeLevel == 3 &&
             decoded.armorUpgradeLevel == 2,
             "Equipment round trip failed.");
@@ -280,6 +286,38 @@ public static class ProjectValidation
             "Gacha payment refund failed.");
     }
 
+    private static void ValidateStoryIntro()
+    {
+        IReadOnlyList<StoryIntroCut> cuts =
+            StoryIntroDatabase.GetCuts();
+
+        Require(cuts.Count >= 5 && cuts.Count <= 7,
+            "Story intro tutorial should contain five to seven cuts.");
+        Require(StoryIntroDatabase.PlayerRole == "참새 이등병",
+            "Player role story setting is invalid.");
+        Require(StoryIntroDatabase.EnemyFaction == "고양이",
+            "Enemy faction story setting is invalid.");
+        Require(StoryIntroDatabase.WarObjective == "전봇대",
+            "War objective story setting is invalid.");
+
+        for (int i = 0; i < cuts.Count; i++)
+        {
+            StoryIntroCut cut = cuts[i];
+            Require(cut != null,
+                "Story intro contains an empty cut.");
+            Require(cut.cutIndex == i + 1,
+                "Story intro cut index is not sequential.");
+            Require(!string.IsNullOrWhiteSpace(cut.title),
+                "Story intro cut title is missing.");
+            Require(!string.IsNullOrWhiteSpace(cut.body),
+                "Story intro cut body is missing.");
+            Require(!string.IsNullOrWhiteSpace(cut.artDirection),
+                "Story intro art direction is missing.");
+            Require(cut.artDirection.Contains("아트 필요"),
+                "Story intro cut must mark pending art clearly.");
+        }
+    }
+
     private static void ValidateRuntimeComposition()
     {
         GameObject playerObject =
@@ -353,6 +391,8 @@ public static class ProjectValidation
                 "Bottom navigation was not created.");
 
             tutorial.BeginTutorial();
+            Require(playerManager.playerData.storyIntroCompleted,
+                "Tutorial start should complete the story intro.");
             Require(playerManager.playerData.tutorialStep == 1,
                 "Tutorial start transition failed.");
 

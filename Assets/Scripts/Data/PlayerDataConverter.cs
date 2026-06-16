@@ -32,6 +32,8 @@ public static class PlayerDataConverter
             { "attackLevel", data.attackLevel },
             { "healthLevel", data.healthLevel },
             { "attackSpeedLevel", data.attackSpeedLevel },
+            { "storyIntroCompleted", data.storyIntroCompleted },
+            { "storyIntroCutIndex", data.storyIntroCutIndex },
             { "tutorialStep", data.tutorialStep },
             { "totalMonstersDefeated", data.totalMonstersDefeated },
             { "lastOnlineUnixTime", data.lastOnlineUnixTime },
@@ -117,6 +119,10 @@ public static class PlayerDataConverter
             attackLevel = GetInt(values, "attackLevel", 1),
             healthLevel = GetInt(values, "healthLevel", 1),
             attackSpeedLevel = GetInt(values, "attackSpeedLevel", 1),
+            storyIntroCompleted =
+                GetBool(values, "storyIntroCompleted", false),
+            storyIntroCutIndex =
+                GetInt(values, "storyIntroCutIndex", 0),
             tutorialStep = GetInt(values, "tutorialStep", 0),
             totalMonstersDefeated =
                 GetInt(values, "totalMonstersDefeated", 0),

@@ -33,6 +33,8 @@ public class PlayerData
     public int attackLevel;
     public int healthLevel;
     public int attackSpeedLevel;
+    public bool storyIntroCompleted;
+    public int storyIntroCutIndex;
     public int tutorialStep;
     public int totalMonstersDefeated;
     public long lastOnlineUnixTime;
@@ -92,6 +94,8 @@ public class PlayerData
         attackLevel = 1;
         healthLevel = 1;
         attackSpeedLevel = 1;
+        storyIntroCompleted = false;
+        storyIntroCutIndex = 0;
         tutorialStep = 0;
         totalMonstersDefeated = 0;
         lastOnlineUnixTime = 0;
@@ -158,6 +162,7 @@ public class PlayerData
         attackLevel = System.Math.Max(1, attackLevel);
         healthLevel = System.Math.Max(1, healthLevel);
         attackSpeedLevel = System.Math.Max(1, attackSpeedLevel);
+        storyIntroCutIndex = System.Math.Max(0, storyIntroCutIndex);
         tutorialStep = System.Math.Max(0, tutorialStep);
         totalMonstersDefeated =
             System.Math.Max(0, totalMonstersDefeated);

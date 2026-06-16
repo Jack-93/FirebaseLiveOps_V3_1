@@ -51,6 +51,8 @@ public static class LocalizationManager
         new Entry("SWITCH 30 / 60 FPS", "30 / 60 FPS 전환"),
         new Entry("SWITCH LANGUAGE", "언어 전환"),
         new Entry("START", "시작"),
+        new Entry("NEXT", "다음"),
+        new Entry("SKIP", "건너뛰기"),
         new Entry("COLLECT", "받기"),
         new Entry("RETRY", "다시 시도"),
         new Entry("AUTO BATTLE", "자동 전투"),
