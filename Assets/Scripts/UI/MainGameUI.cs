@@ -17,6 +17,7 @@ public class MainGameUI : MonoBehaviour
 
     private GameObject battlePanel;
     private GameObject growthPanel;
+    private GameObject gachaPanel;
     private GameObject morePanel;
     private GameObject collectionPanel;
     private GameObject equipmentPanel;
@@ -44,6 +45,10 @@ public class MainGameUI : MonoBehaviour
     private TMP_Text attackGrowthText;
     private TMP_Text healthGrowthText;
     private TMP_Text speedGrowthText;
+    private TMP_Text gachaCurrencyText;
+    private TMP_Text gachaPityText;
+    private TMP_Text gachaResultText;
+    private TMP_Text gachaStatusText;
     private TMP_Text inventoryText;
     private TMP_Text companionText;
     private TMP_Text characterDetailText;
@@ -83,10 +88,17 @@ public class MainGameUI : MonoBehaviour
     private Image enemyVisualImage;
     private Image playerVisualImage;
     private Image attackTrailImage;
+    private Image worldBackgroundImage;
+    private Image worldMidgroundImage;
+    private Image worldForegroundImage;
     private BattleActorView enemyActorView;
     private BattleActorView playerActorView;
     private readonly List<BattleActorView> companionActorViews =
         new List<BattleActorView>();
+    private readonly TMP_Text[] skillButtonTexts =
+        new TMP_Text[CompanionManager.PartySize];
+    private readonly Image[] skillButtonImages =
+        new Image[CompanionManager.PartySize];
     private Button tutorialButton;
     private Button retryButton;
     private Button googleLinkButton;
@@ -94,15 +106,19 @@ public class MainGameUI : MonoBehaviour
     private Button smallGemPackButton;
     private Button largeGemPackButton;
     private Button rewardedAdButton;
+    private Button gachaSingleButton;
+    private Button gachaTenButton;
     private Button battleNavButton;
     private Button growthNavButton;
     private Button gachaNavButton;
+    private Button collectionNavButton;
     private Button moreNavButton;
     private Button titleGoogleButton;
     private Button titleGuestButton;
     private readonly List<Button> companionSlotButtons =
         new List<Button>();
     private CharacterData selectedCharacter;
+    private bool isGachaRolling;
     private float toastTimer;
     private float enemyAnimationTimer;
     private float playerAnimationTimer;
@@ -111,9 +127,12 @@ public class MainGameUI : MonoBehaviour
     private float enemyDamagePopupTimer;
     private float playerDamagePopupTimer;
     private float rewardPopupTimer;
+    private int worldThemeIndex = -1;
 
     private static readonly Color Background =
         new Color32(20, 28, 45, 255);
+    private static readonly Color OverlayBackground =
+        new Color32(12, 18, 30, 218);
     private static readonly Color Panel =
         new Color32(37, 49, 73, 245);
     private static readonly Color PanelLight =
@@ -153,6 +172,7 @@ public class MainGameUI : MonoBehaviour
         RefreshTopBar();
         RefreshBattle();
         RefreshGrowth();
+        RefreshGacha();
         RefreshMore();
         RefreshCollection();
         RefreshEquipment();
@@ -251,9 +271,11 @@ public class MainGameUI : MonoBehaviour
                 "MainGameCanvas",
                 Background);
 
+        BuildWorldBackdrop(portraitRoot);
         BuildTopBar(portraitRoot);
         BuildBattlePanel(portraitRoot);
         BuildGrowthPanel(portraitRoot);
+        BuildGachaPanel(portraitRoot);
         BuildMorePanel(portraitRoot);
         BuildCollectionPanel(portraitRoot);
         BuildEquipmentPanel(portraitRoot);
@@ -271,12 +293,57 @@ public class MainGameUI : MonoBehaviour
         BuildLoadingOverlay(portraitRoot);
     }
 
+    private void BuildWorldBackdrop(RectTransform root)
+    {
+        Image rootImage = root.GetComponent<Image>();
+        rootImage.color = Color.clear;
+        rootImage.raycastTarget = false;
+
+        int stage = PlayerDataManager.Instance?.playerData?.currentStage ?? 1;
+        worldThemeIndex = PrototypeBattleArt.GetThemeIndex(stage);
+
+        worldBackgroundImage = CreateWorldLayer(
+            "WorldBackgroundLayer",
+            root,
+            PrototypeBattleArt.GetStageBackground(stage),
+            Background);
+        worldMidgroundImage = CreateWorldLayer(
+            "WorldMidgroundLayer",
+            root,
+            PrototypeBattleArt.GetStageMidground(stage),
+            Color.clear);
+        worldForegroundImage = CreateWorldLayer(
+            "WorldForegroundLayer",
+            root,
+            PrototypeBattleArt.GetStageForeground(stage),
+            Color.clear);
+    }
+
+    private static Image CreateWorldLayer(
+        string name,
+        RectTransform root,
+        Sprite sprite,
+        Color fallbackColor)
+    {
+        RectTransform layer = CreatePanel(
+            name,
+            root,
+            sprite == null ? fallbackColor : Color.white,
+            Vector2.zero,
+            Vector2.one);
+        Image image = layer.GetComponent<Image>();
+        image.sprite = sprite;
+        image.type = Image.Type.Simple;
+        image.raycastTarget = false;
+        return image;
+    }
+
     private void BuildTopBar(RectTransform root)
     {
         RectTransform top = CreatePanel(
             "TopBar",
             root,
-            Panel,
+            new Color32(24, 35, 58, 215),
             new Vector2(0f, 0.9f),
             Vector2.one);
 
@@ -312,10 +379,17 @@ public class MainGameUI : MonoBehaviour
             top,
             "Gold 0",
             38,
-            new Vector2(0.39f, 0.12f),
+            new Vector2(0.45f, 0.12f),
             new Vector2(0.68f, 0.88f),
             TextAlignmentOptions.Center,
             Gold);
+
+        CreateSpriteImage(
+            "GoldIcon",
+            top,
+            PrototypeUiArt.GoldIcon,
+            new Vector2(0.395f, 0.18f),
+            new Vector2(0.455f, 0.82f));
 
         powerText = CreateText(
             "PowerText",
@@ -332,7 +406,7 @@ public class MainGameUI : MonoBehaviour
         RectTransform panel = CreatePanel(
             "BattlePanel",
             root,
-            Background,
+            new Color32(0, 0, 0, 0),
             new Vector2(0f, 0.12f),
             new Vector2(1f, 0.9f));
         battlePanel = panel.gameObject;
@@ -340,18 +414,18 @@ public class MainGameUI : MonoBehaviour
         CreateText(
             "BattleTitle",
             panel,
-            "AUTO BATTLE",
-            48,
-            new Vector2(0.05f, 0.9f),
-            new Vector2(0.95f, 0.98f),
-            TextAlignmentOptions.Center,
+            "BATTLE",
+            30,
+            new Vector2(0.06f, 0.91f),
+            new Vector2(0.3f, 0.97f),
+            TextAlignmentOptions.Left,
             Accent);
 
         Button autoButton = CreateButton(
             "AutoAdvanceButton",
             panel,
             "AUTO ON",
-            new Vector2(0.72f, 0.9f),
+            new Vector2(0.75f, 0.91f),
             new Vector2(0.94f, 0.97f),
             PanelLight,
             ToggleAutoAdvance);
@@ -361,34 +435,33 @@ public class MainGameUI : MonoBehaviour
         RectTransform enemyCard = CreatePanel(
             "EnemyCard",
             panel,
-            Panel,
-            new Vector2(0.06f, 0.47f),
-            new Vector2(0.94f, 0.88f));
-
-        BuildBattleBackdrop(enemyCard);
+            new Color32(0, 0, 0, 0),
+            new Vector2(0.02f, 0.16f),
+            new Vector2(0.98f, 0.91f));
 
         enemyNameText = CreateText(
             "EnemyName",
             enemyCard,
             "Enemy",
-            48,
-            new Vector2(0.08f, 0.8f),
-            new Vector2(0.92f, 0.96f),
+            28,
+            new Vector2(0.66f, 0.84f),
+            new Vector2(0.96f, 0.92f),
             TextAlignmentOptions.Center);
 
+        Vector2 enemyAnchor = BattleLayoutConfig.EnemyAnchor;
         enemyVisual = CreatePanel(
             "EnemyVisual",
             enemyCard,
             Danger,
-            new Vector2(0.3f, 0.28f),
-            new Vector2(0.7f, 0.75f));
+            enemyAnchor - new Vector2(0.1f, 0.1f),
+            enemyAnchor + new Vector2(0.1f, 0.1f));
         enemyVisualImage = enemyVisual.GetComponent<Image>();
 
         TMP_Text enemyGlyph = CreateText(
             "EnemyGlyph",
             enemyVisual,
             "BOSS",
-            46,
+            30,
             new Vector2(0f, 0f),
             Vector2.one,
             TextAlignmentOptions.Center);
@@ -444,32 +517,32 @@ public class MainGameUI : MonoBehaviour
             enemyCard,
             "EnemyHealthBar",
             Danger,
-            new Vector2(0.08f, 0.12f),
-            new Vector2(0.92f, 0.22f));
+            new Vector2(0.7f, 0.64f),
+            new Vector2(0.96f, 0.68f));
 
         enemyHealthText = CreateText(
             "EnemyHealthText",
             enemyCard,
             "0 / 0",
-            28,
-            new Vector2(0.08f, 0.11f),
-            new Vector2(0.92f, 0.23f),
+            20,
+            new Vector2(0.7f, 0.635f),
+            new Vector2(0.96f, 0.685f),
             TextAlignmentOptions.Center);
 
         RectTransform playerCard = CreatePanel(
             "PlayerCard",
             panel,
-            Panel,
-            new Vector2(0.06f, 0.2f),
-            new Vector2(0.94f, 0.44f));
+            new Color32(0, 0, 0, 0),
+            new Vector2(0.02f, 0.16f),
+            new Vector2(0.98f, 0.91f));
 
         CreateText(
             "PlayerName",
             playerCard,
             "HERO",
-            42,
-            new Vector2(0.06f, 0.65f),
-            new Vector2(0.35f, 0.93f),
+            24,
+            new Vector2(0.03f, 0.35f),
+            new Vector2(0.24f, 0.4f),
             TextAlignmentOptions.Left,
             Accent);
 
@@ -477,15 +550,15 @@ public class MainGameUI : MonoBehaviour
             "PlayerVisual",
             playerCard,
             Accent,
-            new Vector2(0.06f, 0.55f),
-            new Vector2(0.18f, 0.92f));
+            BattleLayoutConfig.SupportSparrowAnchor - new Vector2(0.09f, 0.09f),
+            BattleLayoutConfig.SupportSparrowAnchor + new Vector2(0.09f, 0.09f));
         playerVisualImage = playerVisual.GetComponent<Image>();
 
         TMP_Text playerGlyph = CreateText(
             "PlayerGlyph",
             playerVisual,
             "HERO",
-            22,
+            18,
             Vector2.zero,
             Vector2.one,
             TextAlignmentOptions.Center);
@@ -497,8 +570,8 @@ public class MainGameUI : MonoBehaviour
             "PlayerDamagePopup",
             playerCard,
             new Color32(0, 0, 0, 0),
-            new Vector2(0.18f, 0.66f),
-            new Vector2(0.42f, 0.96f));
+            new Vector2(0.14f, 0.38f),
+            new Vector2(0.4f, 0.5f));
         playerDamageText = CreateText(
             "PlayerDamageText",
             playerDamagePopup,
@@ -514,36 +587,36 @@ public class MainGameUI : MonoBehaviour
             "CombatStatus",
             playerCard,
             "Preparing...",
-            31,
-            new Vector2(0.37f, 0.62f),
-            new Vector2(0.94f, 0.93f),
-            TextAlignmentOptions.Right);
+            22,
+            new Vector2(0.03f, 0.26f),
+            new Vector2(0.37f, 0.32f),
+            TextAlignmentOptions.Left);
 
         playerHealthFill = CreateHealthBar(
             playerCard,
             "PlayerHealthBar",
             Success,
-            new Vector2(0.06f, 0.34f),
-            new Vector2(0.94f, 0.51f));
+            new Vector2(0.03f, 0.2f),
+            new Vector2(0.32f, 0.235f));
 
         playerHealthText = CreateText(
             "PlayerHealthText",
             playerCard,
             "0 / 0",
-            28,
-            new Vector2(0.06f, 0.34f),
-            new Vector2(0.94f, 0.51f),
+            18,
+            new Vector2(0.03f, 0.195f),
+            new Vector2(0.32f, 0.24f),
             TextAlignmentOptions.Center);
 
         for (int slot = 0; slot < CompanionManager.PartySize; slot++)
         {
-            float minX = 0.06f + slot * 0.1f;
+            Vector2 anchor = BattleLayoutConfig.GetCompanionAnchor(slot);
             RectTransform companionVisual = CreatePanel(
                 $"CompanionVisual{slot + 1}",
-                playerCard,
-                PanelLight,
-                new Vector2(minX, 0.05f),
-                new Vector2(minX + 0.08f, 0.28f));
+                enemyCard,
+                new Color32(255, 255, 255, 0),
+                anchor - new Vector2(0.09f, 0.09f),
+                anchor + new Vector2(0.09f, 0.09f));
             TMP_Text companionGlyph = CreateText(
                 "Glyph",
                 companionVisual,
@@ -558,52 +631,70 @@ public class MainGameUI : MonoBehaviour
             companionActorViews.Add(actorView);
         }
 
-        CreateText(
-            "AutoNotice",
-            playerCard,
-            "Your hero attacks automatically.",
-            27,
-            new Vector2(0.39f, 0.05f),
-            new Vector2(0.94f, 0.27f),
-            TextAlignmentOptions.Center,
-            new Color32(190, 203, 225, 255));
-
         skillStatusText = CreateText(
             "SkillStatus",
             panel,
-            "Companion skills preparing...",
-            27,
-            new Vector2(0.06f, 0.08f),
-            new Vector2(0.94f, 0.16f),
-            TextAlignmentOptions.Center,
+            "AUTO SKILL",
+            21,
+            new Vector2(0.58f, 0.205f),
+            new Vector2(0.94f, 0.25f),
+            TextAlignmentOptions.Right,
             Gold);
-    }
+        skillStatusText.gameObject.SetActive(false);
 
-    private void BuildBattleBackdrop(RectTransform enemyCard)
-    {
-        CreatePanel(
-            "BattleSkyPlaceholder",
-            enemyCard,
-            new Color32(29, 43, 73, 255),
-            new Vector2(0.04f, 0.25f),
-            new Vector2(0.96f, 0.78f));
+        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
+        {
+            int capturedSlot = slot;
+            float left = 0.61f + slot * 0.115f;
+            Button skillButton = CreateButton(
+                $"CompanionSkillButton{slot + 1}",
+                panel,
+                $"S{slot + 1}",
+                new Vector2(left, 0.1f),
+                new Vector2(left + 0.1f, 0.2f),
+                PanelLight,
+                () => UseCompanionSkill(capturedSlot));
+            skillButtonTexts[slot] =
+                skillButton.GetComponentInChildren<TMP_Text>();
+            skillButtonImages[slot] =
+                skillButton.targetGraphic as Image;
+        }
 
-        CreatePanel(
-            "BattleGroundPlaceholder",
-            enemyCard,
-            new Color32(18, 25, 42, 255),
-            new Vector2(0.04f, 0.23f),
-            new Vector2(0.96f, 0.36f));
+        CreateButton(
+            "QuestQuickButton",
+            panel,
+            "QUEST",
+            new Vector2(0.02f, 0.82f),
+            new Vector2(0.19f, 0.89f),
+            new Color32(24, 35, 58, 210),
+            ShowQuests);
 
-        CreateText(
-            "BattleArtNeeded",
-            enemyCard,
-            "ART NEEDED / STAGE BACKGROUND",
-            20,
-            new Vector2(0.06f, 0.25f),
-            new Vector2(0.44f, 0.34f),
-            TextAlignmentOptions.Left,
-            MutedText);
+        CreateButton(
+            "EventQuickButton",
+            panel,
+            "EVENT",
+            new Vector2(0.81f, 0.82f),
+            new Vector2(0.98f, 0.89f),
+            new Color32(24, 35, 58, 210),
+            ShowEvent);
+
+        CreateButton(
+            "ShopQuickButton",
+            panel,
+            "SHOP",
+            new Vector2(0.02f, 0.74f),
+            new Vector2(0.19f, 0.81f),
+            new Color32(24, 35, 58, 210),
+            ShowShop);
+
+        CreateButton(
+            "EquipmentQuickButton",
+            panel,
+            "EQUIPMENT",
+            new Vector2(0.81f, 0.74f),
+            new Vector2(0.98f, 0.81f),
+            new Color32(24, 35, 58, 210),
+            ShowEquipment);
     }
 
     private void BuildGrowthPanel(RectTransform root)
@@ -611,7 +702,7 @@ public class MainGameUI : MonoBehaviour
         RectTransform panel = CreatePanel(
             "GrowthPanel",
             root,
-            Background,
+            OverlayBackground,
             new Vector2(0f, 0.12f),
             new Vector2(1f, 0.9f));
         growthPanel = panel.gameObject;
@@ -656,6 +747,127 @@ public class MainGameUI : MonoBehaviour
             "Attack more frequently",
             new Vector2(0.06f, 0.11f),
             UpgradeAttackSpeed);
+    }
+
+    private void BuildGachaPanel(RectTransform root)
+    {
+        RectTransform panel = CreatePanel(
+            "GachaPanel",
+            root,
+            OverlayBackground,
+            new Vector2(0f, 0.12f),
+            new Vector2(1f, 0.9f));
+        gachaPanel = panel.gameObject;
+
+        CreateText(
+            "GachaTitle",
+            panel,
+            "RECRUIT",
+            48,
+            new Vector2(0.05f, 0.91f),
+            new Vector2(0.95f, 0.98f),
+            TextAlignmentOptions.Center,
+            Accent);
+
+        gachaCurrencyText = CreateText(
+            "GachaCurrency",
+            panel,
+            "Gem 0  Ticket 0",
+            28,
+            new Vector2(0.06f, 0.85f),
+            new Vector2(0.66f, 0.91f),
+            TextAlignmentOptions.Left,
+            Gold);
+
+        gachaPityText = CreateText(
+            "GachaPity",
+            panel,
+            "SSR in 100",
+            27,
+            new Vector2(0.67f, 0.85f),
+            new Vector2(0.94f, 0.91f),
+            TextAlignmentOptions.Right);
+
+        RectTransform banner = CreatePanel(
+            "GachaBannerCard",
+            panel,
+            Panel,
+            new Vector2(0.06f, 0.52f),
+            new Vector2(0.94f, 0.84f));
+
+        CreateSpriteImage(
+            "GachaEmblem",
+            banner,
+            PrototypeUiArt.GetButtonIcon("GachaNav"),
+            new Vector2(0.36f, 0.39f),
+            new Vector2(0.64f, 0.9f));
+
+        CreateText(
+            "GachaBannerName",
+            banner,
+            "STANDARD RECRUITMENT",
+            31,
+            new Vector2(0.08f, 0.24f),
+            new Vector2(0.92f, 0.4f),
+            TextAlignmentOptions.Center,
+            Gold);
+
+        CreateText(
+            "GachaRates",
+            banner,
+            $"SSR {GachaConfig.SSRRate}%   " +
+            $"SR {GachaConfig.SRRate}%   " +
+            $"R {100 - GachaConfig.SSRRate - GachaConfig.SRRate}%\n" +
+            "10 recruits: SR+ guaranteed / SSR within 100",
+            23,
+            new Vector2(0.07f, 0.04f),
+            new Vector2(0.93f, 0.24f),
+            TextAlignmentOptions.Center,
+            MutedText);
+
+        RectTransform resultCard = CreatePanel(
+            "GachaResultCard",
+            panel,
+            Panel,
+            new Vector2(0.06f, 0.22f),
+            new Vector2(0.94f, 0.49f));
+
+        gachaResultText = CreateText(
+            "GachaResultText",
+            resultCard,
+            "Recruit companions to see results.",
+            27,
+            new Vector2(0.06f, 0.08f),
+            new Vector2(0.94f, 0.92f),
+            TextAlignmentOptions.Center);
+
+        gachaStatusText = CreateText(
+            "GachaStatus",
+            panel,
+            "Tickets are used before Gems.",
+            24,
+            new Vector2(0.08f, 0.16f),
+            new Vector2(0.92f, 0.21f),
+            TextAlignmentOptions.Center,
+            MutedText);
+
+        gachaSingleButton = CreateButton(
+            "RecruitSingleButton",
+            panel,
+            $"RECRUIT 1\nTicket 1 / Gem {GachaEconomy.SingleGemCost}",
+            new Vector2(0.06f, 0.045f),
+            new Vector2(0.46f, 0.15f),
+            PanelLight,
+            () => RollGacha(1));
+
+        gachaTenButton = CreateButton(
+            "RecruitTenButton",
+            panel,
+            $"RECRUIT 10\nTicket 10 / Gem {GachaEconomy.TenGemCost}",
+            new Vector2(0.54f, 0.045f),
+            new Vector2(0.94f, 0.15f),
+            Accent,
+            () => RollGacha(10));
     }
 
     private TMP_Text CreateUpgradeRow(
@@ -709,7 +921,7 @@ public class MainGameUI : MonoBehaviour
         RectTransform panel = CreatePanel(
             "MorePanel",
             root,
-            Background,
+            OverlayBackground,
             new Vector2(0f, 0.12f),
             new Vector2(1f, 0.9f));
         morePanel = panel.gameObject;
@@ -917,7 +1129,7 @@ public class MainGameUI : MonoBehaviour
         RectTransform panel = CreatePanel(
             "CollectionPanel",
             root,
-            Background,
+            OverlayBackground,
             new Vector2(0f, 0.12f),
             new Vector2(1f, 0.9f));
         collectionPanel = panel.gameObject;
@@ -1027,7 +1239,7 @@ public class MainGameUI : MonoBehaviour
         RectTransform panel = CreatePanel(
             "EquipmentPanel",
             root,
-            Background,
+            OverlayBackground,
             new Vector2(0f, 0.12f),
             new Vector2(1f, 0.9f));
         equipmentPanel = panel.gameObject;
@@ -1111,7 +1323,7 @@ public class MainGameUI : MonoBehaviour
         RectTransform panel = CreatePanel(
             "QuestPanel",
             root,
-            Background,
+            OverlayBackground,
             new Vector2(0f, 0.12f),
             new Vector2(1f, 0.9f));
         questPanel = panel.gameObject;
@@ -1195,7 +1407,7 @@ public class MainGameUI : MonoBehaviour
         RectTransform panel = CreatePanel(
             "ShopPanel",
             root,
-            Background,
+            OverlayBackground,
             new Vector2(0f, 0.12f),
             new Vector2(1f, 0.9f));
         shopPanel = panel.gameObject;
@@ -1327,7 +1539,7 @@ public class MainGameUI : MonoBehaviour
         RectTransform panel = CreatePanel(
             "EventPanel",
             root,
-            Background,
+            OverlayBackground,
             new Vector2(0f, 0.12f),
             new Vector2(1f, 0.9f));
         eventPanel = panel.gameObject;
@@ -1402,7 +1614,7 @@ public class MainGameUI : MonoBehaviour
         RectTransform panel = CreatePanel(
             "SettingsPanel",
             root,
-            Background,
+            OverlayBackground,
             new Vector2(0f, 0.12f),
             new Vector2(1f, 0.9f));
         settingsPanel = panel.gameObject;
@@ -1513,7 +1725,7 @@ public class MainGameUI : MonoBehaviour
         RectTransform panel = CreatePanel(
             "AccountPanel",
             root,
-            Background,
+            OverlayBackground,
             new Vector2(0f, 0.12f),
             new Vector2(1f, 0.9f));
         accountPanel = panel.gameObject;
@@ -1608,16 +1820,16 @@ public class MainGameUI : MonoBehaviour
         RectTransform bottom = CreatePanel(
             "BottomNavigation",
             root,
-            Panel,
+            new Color32(24, 35, 58, 210),
             Vector2.zero,
-            new Vector2(1f, 0.12f));
+            new Vector2(1f, 0.105f));
 
         battleNavButton = CreateButton(
             "BattleNav",
             bottom,
             "BATTLE",
-            new Vector2(0.02f, 0.12f),
-            new Vector2(0.24f, 0.88f),
+            new Vector2(0.015f, 0.08f),
+            new Vector2(0.185f, 0.92f),
             PanelLight,
             ShowBattle);
 
@@ -1625,8 +1837,8 @@ public class MainGameUI : MonoBehaviour
             "GrowthNav",
             bottom,
             "GROWTH",
-            new Vector2(0.26f, 0.12f),
-            new Vector2(0.48f, 0.88f),
+            new Vector2(0.21f, 0.08f),
+            new Vector2(0.38f, 0.92f),
             PanelLight,
             ShowGrowth);
 
@@ -1634,17 +1846,26 @@ public class MainGameUI : MonoBehaviour
             "GachaNav",
             bottom,
             "GACHA",
-            new Vector2(0.5f, 0.12f),
-            new Vector2(0.72f, 0.88f),
+            new Vector2(0.405f, 0.08f),
+            new Vector2(0.575f, 0.92f),
             Accent,
             HandleGachaAction);
+
+        collectionNavButton = CreateButton(
+            "CollectionNav",
+            bottom,
+            "COMPANIONS",
+            new Vector2(0.6f, 0.08f),
+            new Vector2(0.77f, 0.92f),
+            PanelLight,
+            ShowCollection);
 
         moreNavButton = CreateButton(
             "MoreNav",
             bottom,
             "MORE",
-            new Vector2(0.74f, 0.12f),
-            new Vector2(0.98f, 0.88f),
+            new Vector2(0.795f, 0.08f),
+            new Vector2(0.985f, 0.92f),
             PanelLight,
             ShowMore);
     }
@@ -2061,6 +2282,7 @@ public class MainGameUI : MonoBehaviour
             return;
 
         PlayerData data = PlayerDataManager.Instance.playerData;
+        RefreshWorldBackdrop(data.currentStage);
         enemyNameText.text =
             battleManager.IsBoss
                 ? $"{battleManager.EnemyName}  " +
@@ -2104,6 +2326,39 @@ public class MainGameUI : MonoBehaviour
         RefreshBattleVisuals();
     }
 
+    private void RefreshWorldBackdrop(int stage)
+    {
+        int themeIndex = PrototypeBattleArt.GetThemeIndex(stage);
+        if (themeIndex == worldThemeIndex)
+            return;
+
+        worldThemeIndex = themeIndex;
+        SetWorldLayer(
+            worldBackgroundImage,
+            PrototypeBattleArt.GetStageBackground(stage),
+            Background);
+        SetWorldLayer(
+            worldMidgroundImage,
+            PrototypeBattleArt.GetStageMidground(stage),
+            Color.clear);
+        SetWorldLayer(
+            worldForegroundImage,
+            PrototypeBattleArt.GetStageForeground(stage),
+            Color.clear);
+    }
+
+    private static void SetWorldLayer(
+        Image image,
+        Sprite sprite,
+        Color fallbackColor)
+    {
+        if (image == null)
+            return;
+
+        image.sprite = sprite;
+        image.color = sprite == null ? fallbackColor : Color.white;
+    }
+
     private void RefreshBattleVisuals()
     {
         PlayerData data = PlayerDataManager.Instance?.playerData;
@@ -2112,7 +2367,7 @@ public class MainGameUI : MonoBehaviour
 
         BattleVisualProfile hero = BattleVisualResolver.GetHero();
         playerActorView?.SetVisual(
-            hero?.sprite,
+            hero?.sprite ?? PrototypeBattleArt.GetSupportHeroSprite(),
             hero?.animatorController);
 
         BattleVisualProfile enemy =
@@ -2120,7 +2375,9 @@ public class MainGameUI : MonoBehaviour
                 data.currentStage,
                 battleManager.IsBoss);
         enemyActorView?.SetVisual(
-            enemy?.sprite,
+            enemy?.sprite ?? PrototypeBattleArt.GetEnemySprite(
+                data.currentStage,
+                battleManager.IsBoss),
             enemy?.animatorController);
 
         for (int slot = 0;
@@ -2129,10 +2386,12 @@ public class MainGameUI : MonoBehaviour
         {
             CharacterData character =
                 companionManager?.GetEquippedAtSlot(slot);
+            Sprite sprite = character == null
+                ? null
+                : character.battleSprite ??
+                  character.icon;
             companionActorViews[slot].SetVisual(
-                character == null
-                    ? null
-                    : character.battleSprite ?? character.icon,
+                sprite,
                 character?.battleAnimator);
         }
     }
@@ -2141,6 +2400,8 @@ public class MainGameUI : MonoBehaviour
     {
         if (skillStatusText == null || companionManager == null)
             return;
+
+        RefreshSkillButtons();
 
         StringBuilder builder = new StringBuilder();
         for (int slot = 0; slot < CompanionManager.PartySize; slot++)
@@ -2169,6 +2430,47 @@ public class MainGameUI : MonoBehaviour
             : LocalizationManager.Text(
                 "No companion skills equipped.",
                 "장착한 동료 스킬이 없습니다.");
+    }
+
+    private void RefreshSkillButtons()
+    {
+        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
+        {
+            CharacterData character =
+                companionManager.GetEquippedAtSlot(slot);
+            float cooldown =
+                slot < battleManager.SkillCooldowns.Count
+                    ? battleManager.SkillCooldowns[slot]
+                    : 0f;
+
+            if (skillButtonTexts[slot] != null)
+            {
+                skillButtonTexts[slot].text = character == null
+                    ? "EMPTY"
+                    : cooldown <= 0f
+                        ? $"{character.characterName}\nREADY"
+                        : $"{character.characterName}\n{cooldown:0.0}s";
+            }
+
+            if (skillButtonImages[slot] != null)
+            {
+                skillButtonImages[slot].color =
+                    character != null && cooldown <= 0f
+                        ? Accent
+                        : PanelLight;
+            }
+        }
+    }
+
+    private void UseCompanionSkill(int slot)
+    {
+        if (battleManager != null &&
+            battleManager.TryUseCompanionSkill(slot))
+        {
+            return;
+        }
+
+        ShowToast("Skill is not ready.");
     }
 
     private void RefreshGrowth()
@@ -2200,6 +2502,27 @@ public class MainGameUI : MonoBehaviour
             $"{GameBalance.GetPlayerAttackInterval(data):0.00}s\n" +
             $"{LocalizationManager.Text("Cost", "비용")} " +
             $"{growthManager.GetCost(UpgradeType.AttackSpeed):N0}";
+    }
+
+    private void RefreshGacha()
+    {
+        if (gachaCurrencyText == null || gachaPityText == null)
+            return;
+
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        if (data == null)
+            return;
+
+        gachaCurrencyText.text =
+            $"{LocalizationManager.Text("Gem", "젬")} " +
+            $"{GachaEconomy.GetItemCount(data, "Gem"):N0}   " +
+            $"{LocalizationManager.Text("Ticket", "티켓")} " +
+            $"{GachaEconomy.GetItemCount(data, "GachaTicket"):N0}";
+        int remaining = Mathf.Max(
+            1,
+            GachaManager.PityLimit - data.pityCount);
+        gachaPityText.text =
+            $"{LocalizationManager.Text("SSR in", "SSR까지")} {remaining}";
     }
 
     private void RefreshMore()
@@ -2842,7 +3165,142 @@ public class MainGameUI : MonoBehaviour
 
     private void HandleGachaAction()
     {
-        bootstrap?.OpenGacha();
+        ShowGacha();
+    }
+
+    private async void RollGacha(int count)
+    {
+        if (isGachaRolling)
+            return;
+
+        if (GachaManager.Instance == null ||
+            PlayerDataManager.Instance?.playerData == null ||
+            InventoryManager.Instance == null)
+        {
+            gachaStatusText.text = LocalizationManager.Text(
+                "Game data is not ready.",
+                "게임 정보를 아직 불러오지 못했습니다.");
+            return;
+        }
+
+        PlayerData data = PlayerDataManager.Instance.playerData;
+        if (!GachaEconomy.TrySpend(
+                data,
+                count,
+                out GachaPayment payment))
+        {
+            gachaStatusText.text = count == 1
+                ? LocalizationManager.Text(
+                    "Need 1 Ticket or 100 Gems.",
+                    $"티켓 1개 또는 젬 {GachaEconomy.SingleGemCost}개가 필요합니다.")
+                : LocalizationManager.Text(
+                    "Need 10 Tickets or 900 Gems.",
+                    $"티켓 10개 또는 젬 {GachaEconomy.TenGemCost}개가 필요합니다.");
+            return;
+        }
+
+        isGachaRolling = true;
+        SetGachaButtonsInteractable(false);
+
+        try
+        {
+            List<CharacterData> results = count == 1
+                ? new List<CharacterData>
+                {
+                    GachaManager.Instance.RollCharacterWithPity()
+                }
+                : GachaManager.Instance.RollTen();
+
+            StringBuilder builder = new StringBuilder();
+            int ssrCount = 0;
+            int srCount = 0;
+            foreach (CharacterData character in results)
+            {
+                InventoryManager.Instance.AddItem(
+                    character.characterName,
+                    1,
+                    false);
+                builder.AppendLine(FormatGachaResult(character));
+                AnalyticsManager.Instance?.LogGachaRoll(character);
+
+                if (character.rarity == "SSR")
+                {
+                    ssrCount++;
+                    AnalyticsManager.Instance?.LogSSR(character);
+                }
+                else if (character.rarity == "SR")
+                {
+                    srCount++;
+                }
+            }
+
+            string summary = count == 10
+                ? $"\nSSR {ssrCount}   SR {srCount}   " +
+                  $"R {count - ssrCount - srCount}"
+                : "";
+            gachaResultText.text =
+                builder.ToString().TrimEnd() + summary;
+            gachaStatusText.text = payment.UsedTickets
+                ? $"{LocalizationManager.Text("Used", "사용")} " +
+                  $"{payment.Amount} " +
+                  $"{LocalizationManager.Text("ticket(s).", "티켓")}"
+                : $"{LocalizationManager.Text("Used", "사용")} " +
+                  $"{payment.Amount:N0} " +
+                  $"{LocalizationManager.Text("Gems.", "젬")}";
+
+            QuestManager.Instance?.ReportGacha(results.Count);
+            EventMissionManager.Instance?.ReportGacha(results.Count);
+
+            if (FirestoreManager.Instance != null)
+            {
+                await FirestoreManager.Instance.SavePlayerDataAsync(data);
+            }
+
+            PlayerDataManager.Instance.NotifyPlayerDataChanged();
+            RefreshGacha();
+        }
+        catch (Exception exception)
+        {
+            GachaEconomy.Refund(data, payment);
+            gachaStatusText.text = LocalizationManager.Text(
+                "Recruitment failed. Cost refunded.",
+                "모집에 실패했습니다. 비용을 돌려받았습니다.");
+            Debug.LogException(exception);
+        }
+        finally
+        {
+            isGachaRolling = false;
+            SetGachaButtonsInteractable(true);
+        }
+    }
+
+    private static string FormatGachaResult(CharacterData character)
+    {
+        string color;
+        switch (character.rarity)
+        {
+            case "SSR":
+                color = "#FFD34D";
+                break;
+            case "SR":
+                color = "#B68CFF";
+                break;
+            default:
+                color = "#B9CCE8";
+                break;
+        }
+
+        return
+            $"<color={color}>[{character.rarity}] " +
+            $"{character.characterName}</color>";
+    }
+
+    private void SetGachaButtonsInteractable(bool interactable)
+    {
+        if (gachaSingleButton != null)
+            gachaSingleButton.interactable = interactable;
+        if (gachaTenButton != null)
+            gachaTenButton.interactable = interactable;
     }
 
     private void HandleRetryAction()
@@ -3491,6 +3949,13 @@ public class MainGameUI : MonoBehaviour
         RefreshGrowth();
     }
 
+    private void ShowGacha()
+    {
+        SetActiveView(gachaPanel);
+        SetActiveNavigation(gachaNavButton);
+        RefreshGacha();
+    }
+
     private void ShowMore()
     {
         SetActiveView(morePanel);
@@ -3501,7 +3966,7 @@ public class MainGameUI : MonoBehaviour
     private void ShowCollection()
     {
         SetActiveView(collectionPanel);
-        SetActiveNavigation(moreNavButton);
+        SetActiveNavigation(collectionNavButton);
         RefreshCollection();
     }
 
@@ -3550,9 +4015,11 @@ public class MainGameUI : MonoBehaviour
     private void SetActiveView(GameObject active)
     {
         if (battlePanel != null)
-            battlePanel.SetActive(active == battlePanel);
+            battlePanel.SetActive(active != null);
         if (growthPanel != null)
             growthPanel.SetActive(active == growthPanel);
+        if (gachaPanel != null)
+            gachaPanel.SetActive(active == gachaPanel);
         if (morePanel != null)
             morePanel.SetActive(active == morePanel);
         if (collectionPanel != null)
@@ -3576,6 +4043,9 @@ public class MainGameUI : MonoBehaviour
         SetNavigationColor(battleNavButton, active == battleNavButton);
         SetNavigationColor(growthNavButton, active == growthNavButton);
         SetNavigationColor(gachaNavButton, active == gachaNavButton);
+        SetNavigationColor(
+            collectionNavButton,
+            active == collectionNavButton);
         SetNavigationColor(moreNavButton, active == moreNavButton);
     }
 
@@ -3584,8 +4054,15 @@ public class MainGameUI : MonoBehaviour
         if (button == null || button.targetGraphic == null)
             return;
 
-        Color color = isActive ? Accent : PanelLight;
-        button.targetGraphic.color = color;
+        Transform artTransform = button.transform.Find("ButtonArt");
+        if (artTransform != null &&
+            artTransform.TryGetComponent(out Image artImage))
+        {
+            artImage.sprite = isActive
+                ? PrototypeUiArt.ButtonSelected
+                : PrototypeUiArt.ButtonNormal;
+            artImage.color = Color.white;
+        }
 
         TMP_Text label = button.GetComponentInChildren<TMP_Text>();
         if (label != null)
@@ -3648,7 +4125,46 @@ public class MainGameUI : MonoBehaviour
         rect.offsetMax = Vector2.zero;
 
         panel.GetComponent<Image>().color = color;
+
+        if (PrototypeUiArt.ShouldDecoratePanel(name))
+        {
+            Image frame = CreateSpriteImage(
+                "PanelArt",
+                rect,
+                PrototypeUiArt.PanelFrame,
+                Vector2.zero,
+                Vector2.one);
+            frame.type = Image.Type.Sliced;
+            frame.preserveAspect = false;
+        }
         return rect;
+    }
+
+    private static Image CreateSpriteImage(
+        string name,
+        Transform parent,
+        Sprite sprite,
+        Vector2 anchorMin,
+        Vector2 anchorMax)
+    {
+        GameObject imageObject = new GameObject(
+            name,
+            typeof(RectTransform),
+            typeof(Image));
+        imageObject.transform.SetParent(parent, false);
+
+        RectTransform rect = imageObject.GetComponent<RectTransform>();
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        Image image = imageObject.GetComponent<Image>();
+        image.sprite = sprite;
+        image.color = sprite == null ? Color.clear : Color.white;
+        image.preserveAspect = true;
+        image.raycastTarget = false;
+        return image;
     }
 
     private static TMP_Text CreateText(
@@ -3714,22 +4230,48 @@ public class MainGameUI : MonoBehaviour
         button.onClick.AddListener(action);
 
         ColorBlock colors = button.colors;
-        colors.highlightedColor = Color.Lerp(color, Color.white, 0.15f);
-        colors.pressedColor = Color.Lerp(color, Color.black, 0.2f);
-        colors.disabledColor = new Color(
-            color.r,
-            color.g,
-            color.b,
-            0.4f);
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color32(235, 245, 255, 255);
+        colors.pressedColor = new Color32(180, 190, 205, 255);
+        colors.disabledColor = new Color32(125, 125, 125, 170);
         button.colors = colors;
+
+        bool isSkillButton = PrototypeUiArt.IsSkillButton(name);
+        Image buttonArt = CreateSpriteImage(
+            "ButtonArt",
+            rect,
+            isSkillButton
+                ? PrototypeUiArt.SkillFrame
+                : PrototypeUiArt.ButtonNormal,
+            Vector2.zero,
+            Vector2.one);
+        buttonArt.type = isSkillButton
+            ? Image.Type.Simple
+            : Image.Type.Sliced;
+        buttonArt.preserveAspect = isSkillButton;
+        rect.GetComponent<Image>().color = Color.clear;
+        button.targetGraphic = buttonArt;
+
+        Sprite iconSprite = PrototypeUiArt.GetButtonIcon(name);
+        if (iconSprite != null)
+        {
+            CreateSpriteImage(
+                "Icon",
+                rect,
+                iconSprite,
+                new Vector2(0.25f, 0.31f),
+                new Vector2(0.75f, 0.96f));
+        }
 
         CreateText(
             "Label",
             rect,
             LocalizationManager.Translate(label),
             27,
-            new Vector2(0.05f, 0.07f),
-            new Vector2(0.95f, 0.93f),
+            new Vector2(0.05f, 0.04f),
+            iconSprite == null
+                ? new Vector2(0.95f, 0.93f)
+                : new Vector2(0.95f, 0.34f),
             TextAlignmentOptions.Center,
             Color.white);
 

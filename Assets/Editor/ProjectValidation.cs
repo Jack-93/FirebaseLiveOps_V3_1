@@ -12,6 +12,7 @@ public static class ProjectValidation
         ValidateLegacyMailCompatibility();
         ValidateCoreProgression();
         ValidateBalanceConfiguration();
+        ValidateBattleLayout();
         ValidateGachaEconomy();
         ValidateStoryIntro();
         ValidatePrototypeScene();
@@ -48,6 +49,33 @@ public static class ProjectValidation
             GameBalanceConfig.EventGachaPoints >=
             GameBalanceConfig.EventRewardPointTarget,
             "Event missions cannot reach the reward target.");
+    }
+
+    private static void ValidateBattleLayout()
+    {
+        Require(
+            Resources.Load<Sprite>(
+                "PrototypeArt/Backgrounds/StageSunset") != null,
+            "Prototype battle background is missing.");
+
+        Require(
+            BattleLayoutConfig.CompanionAnchors.Length ==
+            CompanionManager.PartySize,
+            "Battle layout must define one anchor per party slot.");
+        Require(
+            BattleLayoutConfig.SupportSparrowAnchor.x <
+            BattleLayoutConfig.CompanionAnchors[0].x,
+            "Support sparrow must remain behind companions.");
+        Require(
+            BattleLayoutConfig.CompanionAnchors[0].y >
+            BattleLayoutConfig.CompanionAnchors[1].y &&
+            BattleLayoutConfig.CompanionAnchors[1].y >
+            BattleLayoutConfig.CompanionAnchors[2].y,
+            "Companion slots must keep the fixed top-to-bottom order.");
+        Require(
+            BattleLayoutConfig.EnemyAnchor.x >
+            BattleLayoutConfig.CompanionAnchors[2].x,
+            "Enemy must remain on the right side of the party.");
     }
 
     private static void ValidatePlayerDataRoundTrip()
@@ -465,6 +493,19 @@ public static class ProjectValidation
             hasR |= character.rarity == "R";
             hasSR |= character.rarity == "SR";
             hasSSR |= character.rarity == "SSR";
+        }
+
+        string[] artReadyCharacters = { "Pip", "Nib", "Taro" };
+        foreach (string characterName in artReadyCharacters)
+        {
+            CharacterData character = database.characters.Find(
+                item => item != null &&
+                    item.characterName == characterName);
+            Require(
+                character != null &&
+                character.icon != null &&
+                character.battleSprite != null,
+                characterName + " prototype art is not connected.");
         }
 
         Require(hasR && hasSR && hasSSR,

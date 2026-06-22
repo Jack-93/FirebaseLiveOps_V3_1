@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CharacterData
   characterName: Pip
   rarity: R
-  icon: {fileID: 0}
-  battleSprite: {fileID: 0}
+  icon: {fileID: 21300000, guid: 11b0c80dc8ee1fb41b808e09dc969231, type: 3}
+  battleSprite: {fileID: 21300000, guid: 11b0c80dc8ee1fb41b808e09dc969231, type: 3}
   battleAnimator: {fileID: 0}
   element: 5
   role: 3

@@ -269,6 +269,24 @@ public class BattleManager : MonoBehaviour
         }
     }
 
+    public bool TryUseCompanionSkill(int slot)
+    {
+        if (!IsRunning || isRecovering || EnemyHealth <= 0 ||
+            slot < 0 || slot >= skillCooldowns.Length ||
+            skillCooldowns[slot] > 0f)
+        {
+            return false;
+        }
+
+        CharacterData character =
+            CompanionManager.Instance?.GetEquippedAtSlot(slot);
+        if (character == null)
+            return false;
+
+        UseCompanionSkill(slot, character);
+        return true;
+    }
+
     private void UseCompanionSkill(int slot, CharacterData character)
     {
         int damage = Math.Max(

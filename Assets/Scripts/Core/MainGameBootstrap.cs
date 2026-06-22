@@ -32,6 +32,7 @@ public class MainGameBootstrap : MonoBehaviour
         EnsurePersistentManager<PushNotificationManager>(
             "PushNotificationManager");
         EnsurePersistentManager<InventoryManager>("InventoryManager");
+        EnsurePersistentManager<GachaManager>("GachaManager");
         EnsurePersistentManager<MailboxManager>("MailboxManager");
         EnsurePersistentManager<DailyRewardManager>("DailyRewardManager");
         EnsurePersistentManager<AnalyticsManager>("AnalyticsManager");

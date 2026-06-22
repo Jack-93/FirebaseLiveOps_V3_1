@@ -55,6 +55,20 @@ public class VerticalGachaUI : MonoBehaviour
                 "VerticalGachaCanvas",
                 Background);
 
+        Image backgroundImage = portrait.GetComponent<Image>();
+        backgroundImage.sprite = PrototypeBattleArt.GetStageBackground();
+        backgroundImage.type = Image.Type.Simple;
+        backgroundImage.color = backgroundImage.sprite == null
+            ? Background
+            : Color.white;
+
+        CreatePanel(
+            "GachaBackgroundShade",
+            portrait,
+            new Color32(8, 13, 24, 185),
+            Vector2.zero,
+            Vector2.one);
+
         CreateText(
             "Title",
             portrait,
@@ -417,7 +431,46 @@ public class VerticalGachaUI : MonoBehaviour
         rect.offsetMin = Vector2.zero;
         rect.offsetMax = Vector2.zero;
         panel.GetComponent<Image>().color = color;
+
+        if (PrototypeUiArt.ShouldDecoratePanel(name))
+        {
+            Image frame = CreateSpriteImage(
+                "PanelArt",
+                rect,
+                PrototypeUiArt.PanelFrame,
+                Vector2.zero,
+                Vector2.one);
+            frame.type = Image.Type.Sliced;
+            frame.preserveAspect = false;
+        }
         return rect;
+    }
+
+    private static Image CreateSpriteImage(
+        string name,
+        Transform parent,
+        Sprite sprite,
+        Vector2 anchorMin,
+        Vector2 anchorMax)
+    {
+        GameObject imageObject = new GameObject(
+            name,
+            typeof(RectTransform),
+            typeof(Image));
+        imageObject.transform.SetParent(parent, false);
+
+        RectTransform rect = imageObject.GetComponent<RectTransform>();
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        Image image = imageObject.GetComponent<Image>();
+        image.sprite = sprite;
+        image.color = sprite == null ? Color.clear : Color.white;
+        image.preserveAspect = true;
+        image.raycastTarget = false;
+        return image;
     }
 
     private static TMP_Text CreateText(
@@ -481,14 +534,22 @@ public class VerticalGachaUI : MonoBehaviour
         button.onClick.AddListener(action);
 
         ColorBlock colors = button.colors;
-        colors.highlightedColor = Color.Lerp(color, Color.white, 0.15f);
-        colors.pressedColor = Color.Lerp(color, Color.black, 0.2f);
-        colors.disabledColor = new Color(
-            color.r,
-            color.g,
-            color.b,
-            0.4f);
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color32(235, 245, 255, 255);
+        colors.pressedColor = new Color32(180, 190, 205, 255);
+        colors.disabledColor = new Color32(125, 125, 125, 170);
         button.colors = colors;
+
+        Image buttonArt = CreateSpriteImage(
+            "ButtonArt",
+            rect,
+            PrototypeUiArt.ButtonNormal,
+            Vector2.zero,
+            Vector2.one);
+        buttonArt.type = Image.Type.Sliced;
+        buttonArt.preserveAspect = false;
+        rect.GetComponent<Image>().color = Color.clear;
+        button.targetGraphic = buttonArt;
 
         CreateText(
             "Label",

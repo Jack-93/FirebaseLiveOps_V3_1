@@ -26,6 +26,9 @@ public class GachaManager : MonoBehaviour
 
         DontDestroyOnLoad(gameObject);
 
+        if (database == null)
+            database = Resources.Load<CharacterDatabase>("CharacterDatabase");
+
         InitializeCharacterPoolFromDatabase();
     }
 
