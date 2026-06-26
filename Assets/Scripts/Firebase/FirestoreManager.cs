@@ -35,28 +35,46 @@ public class FirestoreManager : MonoBehaviour
         if (user == null)
             return null;
 
-        DocumentReference docRef =
-            db.Collection("users").Document(user.UserId);
-        DocumentSnapshot snapshot = await docRef.GetSnapshotAsync();
-
-        if (!snapshot.Exists)
+        try
         {
-            PlayerData newData = new PlayerData
+            DocumentReference docRef =
+                db.Collection("users").Document(user.UserId);
+            DocumentSnapshot snapshot = await docRef.GetSnapshotAsync();
+
+            if (!snapshot.Exists)
             {
-                uid = user.UserId
-            };
+                PlayerData newData = new PlayerData
+                {
+                    uid = user.UserId
+                };
 
-            await SavePlayerDataAsync(newData);
-            Debug.Log("[Firestore] New User Data Created");
-            return newData;
+                await SavePlayerDataAsync(newData);
+                PlayerDataLocalCache.Save(newData);
+                Debug.Log("[Firestore] New User Data Created");
+                return newData;
+            }
+
+            PlayerData data =
+                PlayerDataConverter.FromDictionary(snapshot.ToDictionary());
+            data.uid = user.UserId;
+            PlayerDataLocalCache.Save(data);
+
+            Debug.Log("[Firestore] Data Loaded");
+            return data;
         }
+        catch (Exception exception)
+        {
+            if (PlayerDataLocalCache.TryLoad(user.UserId, out PlayerData data))
+            {
+                data.uid = user.UserId;
+                Debug.LogWarning(
+                    "[Firestore] Loaded local cache after server load failed: " +
+                    exception.Message);
+                return data;
+            }
 
-        PlayerData data =
-            PlayerDataConverter.FromDictionary(snapshot.ToDictionary());
-        data.uid = user.UserId;
-
-        Debug.Log("[Firestore] Data Loaded");
-        return data;
+            throw;
+        }
     }
 
     public async Task SavePlayerDataAsync(PlayerData data)
@@ -78,6 +96,7 @@ public class FirestoreManager : MonoBehaviour
 
             HasPendingSave = true;
             data.uid = user.UserId;
+            PlayerDataLocalCache.Save(data);
 
             DocumentReference docRef =
                 db.Collection("users").Document(user.UserId);
@@ -92,6 +111,7 @@ public class FirestoreManager : MonoBehaviour
 
                     HasPendingSave = false;
                     LastSaveError = "";
+                    PlayerDataLocalCache.Save(data);
                     Debug.Log("[Firestore] Save Success");
                     return;
                 }

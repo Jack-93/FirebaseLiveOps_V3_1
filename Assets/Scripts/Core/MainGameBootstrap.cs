@@ -272,11 +272,15 @@ public class MainGameBootstrap : MonoBehaviour
     public async Task SaveNowAsync()
     {
         PlayerData data = PlayerDataManager.Instance?.playerData;
-        if (data == null || FirestoreManager.Instance == null)
+        if (data == null)
             return;
 
         data.lastOnlineUnixTime =
             DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        PlayerDataLocalCache.Save(data);
+        if (FirestoreManager.Instance == null)
+            return;
+
         await FirestoreManager.Instance.SavePlayerDataAsync(data);
     }
 
@@ -340,17 +344,28 @@ public class MainGameBootstrap : MonoBehaviour
     private void OnApplicationPause(bool paused)
     {
         if (paused && IsReady)
+        {
+            SaveLocalSnapshot();
             _ = SaveInBackgroundAsync();
+        }
     }
 
     private void OnApplicationQuit()
     {
+        SaveLocalSnapshot();
+        if (IsReady)
+            _ = SaveInBackgroundAsync();
+    }
+
+    private static void SaveLocalSnapshot()
+    {
         PlayerData data = PlayerDataManager.Instance?.playerData;
-        if (data != null)
-        {
-            data.lastOnlineUnixTime =
-                DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        }
+        if (data == null)
+            return;
+
+        data.lastOnlineUnixTime =
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        PlayerDataLocalCache.Save(data);
     }
 
     private async Task SaveInBackgroundAsync()
