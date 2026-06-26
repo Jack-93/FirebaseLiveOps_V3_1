@@ -89,7 +89,7 @@ public sealed class EquipmentPanelUI
         equipmentText = RuntimeUiFactory.CreateText(
             "EquipmentText",
             card,
-            "No equipment.",
+            EquipmentPanelFormatter.NoEquipment,
             31,
             new Vector2(0.07f, 0.45f),
             new Vector2(0.93f, 0.82f),
@@ -106,13 +106,13 @@ public sealed class EquipmentPanelUI
             TextAlignmentOptions.Left,
             MutedText);
 
-        weaponUpgradeFill = CreateHealthBar(
+        weaponUpgradeFill = RuntimeProgressBar.Create(
             card,
             "WeaponUpgradeProgressBar",
             Accent,
             new Vector2(0.07f, 0.31f),
             new Vector2(0.93f, 0.35f));
-        armorUpgradeFill = CreateHealthBar(
+        armorUpgradeFill = RuntimeProgressBar.Create(
             card,
             "ArmorUpgradeProgressBar",
             Success,
@@ -142,87 +142,24 @@ public sealed class EquipmentPanelUI
     {
         if (data == null)
         {
-            equipmentText.text = LocalizationManager.Text(
-                "No equipment.",
-                "No equipment.");
+            equipmentText.text = EquipmentPanelFormatter.NoEquipment;
             equipmentPowerText.text = string.Empty;
-            SetBar(weaponUpgradeFill, 0, 20);
-            SetBar(armorUpgradeFill, 0, 20);
+            RuntimeProgressBar.Set(weaponUpgradeFill, 0, 20);
+            RuntimeProgressBar.Set(armorUpgradeFill, 0, 20);
             return;
         }
 
-        string weapon = string.IsNullOrEmpty(data.equippedWeapon)
-            ? LocalizationManager.Text("None", "없음")
-            : data.equippedWeapon;
-        string armor = string.IsNullOrEmpty(data.equippedArmor)
-            ? LocalizationManager.Text("None", "없음")
-            : data.equippedArmor;
-        bool hasWeapon = !string.IsNullOrEmpty(data.equippedWeapon);
-        bool hasArmor = !string.IsNullOrEmpty(data.equippedArmor);
-
-        equipmentText.text =
-            $"{LocalizationManager.Text("WEAPON", "무기")}\n" +
-            $"{weapon}  Lv.{data.weaponUpgradeLevel}\n" +
-            $"{LocalizationManager.Text("Attack", "공격력")} " +
-            $"+{EquipmentManager.GetWeaponAttack(data)}\n" +
-            $"{LocalizationManager.Text("Next cost", "다음 비용")} " +
-            $"{(hasWeapon ? EquipmentManager.GetUpgradeCost(data.weaponUpgradeLevel).ToString("N0") : "-")}\n\n" +
-            $"{LocalizationManager.Text("ARMOR", "방어구")}\n" +
-            $"{armor}  Lv.{data.armorUpgradeLevel}\n" +
-            $"{LocalizationManager.Text("Health", "체력")} " +
-            $"+{EquipmentManager.GetArmorHealth(data)}\n" +
-            $"{LocalizationManager.Text("Next cost", "다음 비용")} " +
-            $"{(hasArmor ? EquipmentManager.GetUpgradeCost(data.armorUpgradeLevel).ToString("N0") : "-")}";
-
+        equipmentText.text = EquipmentPanelFormatter.FormatLoadout(data);
         equipmentPowerText.text =
-            $"{LocalizationManager.Text("Power", "전투력")} " +
-            $"{GameBalance.GetCombatPower(data):N0}   " +
-            $"{LocalizationManager.Text("Gold", "골드")} " +
-            $"{data.gold:N0}";
+            EquipmentPanelFormatter.FormatPowerSummary(data);
 
-        SetBar(
+        RuntimeProgressBar.Set(
             weaponUpgradeFill,
-            Mathf.Clamp(data.weaponUpgradeLevel, 0, 20),
+            data.weaponUpgradeLevel,
             20);
-        SetBar(
+        RuntimeProgressBar.Set(
             armorUpgradeFill,
-            Mathf.Clamp(data.armorUpgradeLevel, 0, 20),
+            data.armorUpgradeLevel,
             20);
-    }
-
-    private static RectTransform CreateHealthBar(
-        RectTransform parent,
-        string name,
-        Color fillColor,
-        Vector2 anchorMin,
-        Vector2 anchorMax)
-    {
-        RectTransform background = RuntimeUiFactory.CreatePanel(
-            name,
-            parent,
-            new Color32(12, 18, 30, 255),
-            anchorMin,
-            anchorMax);
-
-        return RuntimeUiFactory.CreatePanel(
-            "Fill",
-            background,
-            fillColor,
-            Vector2.zero,
-            Vector2.one);
-    }
-
-    private static void SetBar(
-        RectTransform fill,
-        int current,
-        int maximum)
-    {
-        if (fill == null)
-            return;
-
-        float ratio = maximum <= 0
-            ? 0f
-            : Mathf.Clamp01(current / (float)maximum);
-        fill.anchorMax = new Vector2(ratio, 1f);
     }
 }

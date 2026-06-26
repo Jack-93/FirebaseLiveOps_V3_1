@@ -107,19 +107,19 @@ public sealed class EventPanelUI
             new Vector2(0.93f, 0.48f),
             TextAlignmentOptions.Left,
             MutedText);
-        killFill = CreateHealthBar(
+        killFill = RuntimeProgressBar.Create(
             card,
             "EventKillProgressBar",
             Danger,
             new Vector2(0.07f, 0.36f),
             new Vector2(0.93f, 0.4f));
-        gachaFill = CreateHealthBar(
+        gachaFill = RuntimeProgressBar.Create(
             card,
             "EventGachaProgressBar",
             Accent,
             new Vector2(0.07f, 0.3f),
             new Vector2(0.93f, 0.34f));
-        pointFill = CreateHealthBar(
+        pointFill = RuntimeProgressBar.Create(
             card,
             "EventPointProgressBar",
             Success,
@@ -140,9 +140,7 @@ public sealed class EventPanelUI
     {
         if (eventManager == null)
         {
-            eventText.text = LocalizationManager.Text(
-                "Event data unavailable.",
-                "Event data unavailable.");
+            eventText.text = EventPanelFormatter.DataUnavailable;
             SetEmptyProgress();
             return;
         }
@@ -159,66 +157,27 @@ public sealed class EventPanelUI
             return;
         }
 
-        SetBar(killFill, data.eventKillCount, EventMissionManager.KillTarget);
-        SetBar(gachaFill, data.eventGachaCount, EventMissionManager.GachaTarget);
-        SetBar(
+        RuntimeProgressBar.Set(
+            killFill,
+            data.eventKillCount,
+            EventMissionManager.KillTarget);
+        RuntimeProgressBar.Set(
+            gachaFill,
+            data.eventGachaCount,
+            EventMissionManager.GachaTarget);
+        RuntimeProgressBar.Set(
             pointFill,
             data.eventMissionPoints,
             EventMissionManager.RewardPointTarget);
 
-        progressText.text =
-            $"{LocalizationManager.Text("Kills", "Kills")} " +
-            $"{Mathf.Min(data.eventKillCount, EventMissionManager.KillTarget)}/" +
-            $"{EventMissionManager.KillTarget}   " +
-            $"{LocalizationManager.Text("Gacha", "Gacha")} " +
-            $"{Mathf.Min(data.eventGachaCount, EventMissionManager.GachaTarget)}/" +
-            $"{EventMissionManager.GachaTarget}   " +
-            $"{LocalizationManager.Text("Points", "Points")} " +
-            $"{Mathf.Min(data.eventMissionPoints, EventMissionManager.RewardPointTarget)}/" +
-            $"{EventMissionManager.RewardPointTarget}";
+        progressText.text = EventPanelFormatter.FormatProgress(data);
     }
 
     private void SetEmptyProgress()
     {
-        SetBar(killFill, 0, 1);
-        SetBar(gachaFill, 0, 1);
-        SetBar(pointFill, 0, 1);
-        progressText.text = "0 / 0";
-    }
-
-    private static RectTransform CreateHealthBar(
-        RectTransform parent,
-        string name,
-        Color fillColor,
-        Vector2 anchorMin,
-        Vector2 anchorMax)
-    {
-        RectTransform background = RuntimeUiFactory.CreatePanel(
-            name,
-            parent,
-            new Color32(12, 18, 30, 255),
-            anchorMin,
-            anchorMax);
-
-        return RuntimeUiFactory.CreatePanel(
-            "Fill",
-            background,
-            fillColor,
-            Vector2.zero,
-            Vector2.one);
-    }
-
-    private static void SetBar(
-        RectTransform fill,
-        int current,
-        int maximum)
-    {
-        if (fill == null)
-            return;
-
-        float ratio = maximum <= 0
-            ? 0f
-            : Mathf.Clamp01(current / (float)maximum);
-        fill.anchorMax = new Vector2(ratio, 1f);
+        RuntimeProgressBar.Set(killFill, 0, 1);
+        RuntimeProgressBar.Set(gachaFill, 0, 1);
+        RuntimeProgressBar.Set(pointFill, 0, 1);
+        progressText.text = EventPanelFormatter.EmptyProgress;
     }
 }

@@ -159,27 +159,28 @@ public sealed class SettingsPanelUI
     {
         if (settings == null)
         {
-            settingsText.text = "Settings unavailable.";
+            settingsText.text =
+                LocalizationManager.Translate("Settings unavailable.");
             summaryText.text = string.Empty;
             return;
         }
 
-        string on = LocalizationManager.Text("ON", "ON");
-        string off = LocalizationManager.Text("OFF", "OFF");
+        string on = LocalizationManager.Translate("ON");
+        string off = LocalizationManager.Translate("OFF");
         string language = GameSettingsManager.IsKoreanLanguage
             ? "한국어"
             : "English";
 
         settingsText.text =
-            $"{LocalizationManager.Text("Sound", "Sound")}   " +
+            $"{LocalizationManager.Translate("Sound")}   " +
             $"{(settings.SoundEnabled ? on : off)}\n" +
-            $"{LocalizationManager.Text("Vibration", "Vibration")}   " +
+            $"{LocalizationManager.Translate("Vibration")}   " +
             $"{(settings.VibrationEnabled ? on : off)}\n" +
-            $"{LocalizationManager.Text("Notifications", "Notifications")}   " +
+            $"{LocalizationManager.Translate("Notifications")}   " +
             $"{(settings.NotificationsEnabled ? on : off)}\n" +
-            $"{LocalizationManager.Text("Frame Rate", "Frame Rate")}   " +
+            $"{LocalizationManager.Translate("Frame Rate")}   " +
             $"{settings.TargetFrameRate} FPS\n" +
-            $"{LocalizationManager.Text("Language", "Language")}   " +
+            $"{LocalizationManager.Translate("Language")}   " +
             $"{language}";
 
         summaryText.text =

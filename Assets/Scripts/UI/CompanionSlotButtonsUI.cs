@@ -94,20 +94,20 @@ public sealed class CompanionSlotButtonsUI
         bool selectedInSlot)
     {
         string slotLabel =
-            $"{LocalizationManager.Text("SLOT", "SLOT")} {slot + 1}\n";
+            $"{LocalizationManager.Translate("SLOT")} {slot + 1}\n";
 
         if (selectedInSlot)
-            return slotLabel + LocalizationManager.Text("REMOVE", "REMOVE");
+            return slotLabel + LocalizationManager.Translate("REMOVE");
 
         if (!selectedOwned)
         {
             return equipped == null
-                ? slotLabel + LocalizationManager.Text("EMPTY", "EMPTY")
+                ? slotLabel + LocalizationManager.Translate("EMPTY")
                 : slotLabel + equipped.characterName;
         }
 
         string target = equipped == null
-            ? LocalizationManager.Text("EQUIP", "EQUIP")
+            ? LocalizationManager.Translate("EQUIP")
             : $"{equipped.characterName} > " +
               $"{selectedCharacter.characterName}";
         return slotLabel + target;

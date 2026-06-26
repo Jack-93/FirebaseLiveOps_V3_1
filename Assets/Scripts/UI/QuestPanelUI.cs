@@ -1,7 +1,6 @@
 using System;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public sealed class QuestPanelUI
 {
@@ -96,7 +95,7 @@ public sealed class QuestPanelUI
             TextAlignmentOptions.TopLeft,
             Color.white);
 
-        progressFill = CreateHealthBar(
+        progressFill = RuntimeProgressBar.Create(
             card,
             "QuestProgressBar",
             Success,
@@ -135,10 +134,8 @@ public sealed class QuestPanelUI
     {
         if (questManager == null)
         {
-            questText.text = LocalizationManager.Text(
-                "Quest data unavailable.",
-                "Quest data unavailable.");
-            SetProgress(0, 1, 0);
+            questText.text = QuestPanelFormatter.DataUnavailable;
+            SetProgress(QuestPanelFormatter.BuildProgress(null));
             return;
         }
 
@@ -150,64 +147,19 @@ public sealed class QuestPanelUI
     {
         if (data == null || QuestManager.QuestCount <= 0)
         {
-            SetProgress(0, 1, 0);
+            SetProgress(QuestPanelFormatter.BuildProgress(null));
             return;
         }
 
-        int questIndex = Mathf.Clamp(
-            data.sequentialQuestIndex,
-            0,
-            QuestManager.QuestCount - 1);
-        int target = QuestManager.GetTargetForIndex(questIndex);
-        int progress = Mathf.Clamp(
-            data.sequentialQuestProgress,
-            0,
-            target);
-        SetProgress(progress, target, questIndex);
+        SetProgress(QuestPanelFormatter.BuildProgress(data));
     }
 
-    private void SetProgress(int progress, int target, int questIndex)
+    private void SetProgress(QuestProgressView progress)
     {
-        SetBar(progressFill, progress, target);
-        progressText.text =
-            $"{LocalizationManager.Text("Quest", "Quest")} " +
-            $"{questIndex + 1}/{QuestManager.QuestCount}   " +
-            $"{progress}/{target}";
-    }
-
-    private static RectTransform CreateHealthBar(
-        RectTransform parent,
-        string name,
-        Color fillColor,
-        Vector2 anchorMin,
-        Vector2 anchorMax)
-    {
-        RectTransform background = RuntimeUiFactory.CreatePanel(
-            name,
-            parent,
-            new Color32(12, 18, 30, 255),
-            anchorMin,
-            anchorMax);
-
-        return RuntimeUiFactory.CreatePanel(
-            "Fill",
-            background,
-            fillColor,
-            Vector2.zero,
-            Vector2.one);
-    }
-
-    private static void SetBar(
-        RectTransform fill,
-        int current,
-        int maximum)
-    {
-        if (fill == null)
-            return;
-
-        float ratio = maximum <= 0
-            ? 0f
-            : Mathf.Clamp01(current / (float)maximum);
-        fill.anchorMax = new Vector2(ratio, 1f);
+        RuntimeProgressBar.Set(
+            progressFill,
+            progress.Progress,
+            progress.Target);
+        progressText.text = progress.Text;
     }
 }

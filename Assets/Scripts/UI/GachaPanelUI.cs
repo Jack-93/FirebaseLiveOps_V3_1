@@ -117,13 +117,13 @@ public sealed class GachaPanelUI
             return;
 
         currencyText.text =
-            $"{LocalizationManager.Text("Gem", "Gem")} " +
+            $"{LocalizationManager.Translate("Gem")} " +
             $"{GachaEconomy.GetItemCount(data, "Gem"):N0}   " +
-            $"{LocalizationManager.Text("Ticket", "Ticket")} " +
+            $"{LocalizationManager.Translate("Ticket")} " +
             $"{GachaEconomy.GetItemCount(data, "GachaTicket"):N0}";
         int remaining = Mathf.Max(1, GachaManager.PityLimit - data.pityCount);
         pityText.text =
-            $"{LocalizationManager.Text("SSR in", "SSR in")} {remaining}";
+            $"{LocalizationManager.Translate("SSR in")} {remaining}";
         resultUI?.SetPoint(data.pityCount);
     }
 

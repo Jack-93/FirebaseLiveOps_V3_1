@@ -134,7 +134,7 @@ public sealed class BattleSkillControlsUI
         if (powerChargeButtonText != null)
         {
             powerChargeButtonText.text =
-                $"{LocalizationManager.Text("CHARGE POWER", "CHARGE POWER")}\n" +
+                $"{LocalizationManager.Translate("CHARGE POWER")}\n" +
                 "+12";
         }
 
@@ -166,7 +166,7 @@ public sealed class BattleSkillControlsUI
             builder.Append(
                 cooldown <= 0f
                     ? $"{character.characterName}: " +
-                      LocalizationManager.Text("READY", "READY")
+                      LocalizationManager.Translate("READY")
                     : $"{character.characterName}: {cooldown:0.0}s");
         }
 
@@ -174,8 +174,7 @@ public sealed class BattleSkillControlsUI
         skillStatusText.gameObject.SetActive(hasSkillStatus);
         skillStatusText.text = hasSkillStatus
             ? builder.ToString()
-            : LocalizationManager.Text(
-                "No companion skills equipped.",
+            : LocalizationManager.Translate(
                 "No companion skills equipped.");
     }
 
@@ -265,15 +264,13 @@ public sealed class BattleSkillControlsUI
             BattleManager.CompanionSkillPowerCost)
         {
             showToast?.Invoke(
-                LocalizationManager.Text(
-                    "Not enough power charge.",
+                LocalizationManager.Translate(
                     "Not enough power charge."));
             return;
         }
 
         showToast?.Invoke(
-            LocalizationManager.Text(
-                "Skill is not ready.",
+            LocalizationManager.Translate(
                 "Skill is not ready."));
     }
 
@@ -282,8 +279,7 @@ public sealed class BattleSkillControlsUI
         if (battleManager == null || !battleManager.ChargePower())
         {
             showToast?.Invoke(
-                LocalizationManager.Text(
-                    "Power charger is not ready.",
+                LocalizationManager.Translate(
                     "Power charger is not ready."));
             return;
         }

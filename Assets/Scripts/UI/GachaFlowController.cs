@@ -31,9 +31,7 @@ public sealed class GachaFlowController
             InventoryManager.Instance == null)
         {
             panel?.SetStatus(
-                LocalizationManager.Text(
-                    "Game data is not ready.",
-                    "Game data is not ready."));
+                LocalizationManager.Translate("Game data is not ready."));
             return;
         }
 
@@ -45,12 +43,10 @@ public sealed class GachaFlowController
         {
             panel?.SetStatus(
                 count == 1
-                    ? LocalizationManager.Text(
-                        "Need 1 Ticket or 100 Gems.",
-                        $"Need 1 Ticket or {GachaEconomy.SingleGemCost} Gems.")
-                    : LocalizationManager.Text(
-                        "Need 10 Tickets or 900 Gems.",
-                        $"Need 10 Tickets or {GachaEconomy.TenGemCost} Gems."));
+                    ? LocalizationManager.Translate(
+                        "Need 1 Ticket or 100 Gems.")
+                    : LocalizationManager.Translate(
+                        "Need 10 Tickets or 900 Gems."));
             return;
         }
 
@@ -83,12 +79,12 @@ public sealed class GachaFlowController
             SetResultMode(panel?.IsResultVisible == true);
             panel?.SetStatus(
                 payment.UsedTickets
-                    ? $"{LocalizationManager.Text("Used", "Used")} " +
+                    ? $"{LocalizationManager.Translate("Used")} " +
                       $"{payment.Amount} " +
-                      $"{LocalizationManager.Text("ticket(s).", "ticket(s).")}"
-                    : $"{LocalizationManager.Text("Used", "Used")} " +
+                      $"{LocalizationManager.Translate("ticket(s).")}"
+                    : $"{LocalizationManager.Translate("Used")} " +
                       $"{payment.Amount:N0} " +
-                      $"{LocalizationManager.Text("Gems.", "Gems.")}");
+                      $"{LocalizationManager.Translate("Gems.")}");
 
             QuestManager.Instance?.ReportGacha(results.Count);
             EventMissionManager.Instance?.ReportGacha(results.Count);
@@ -103,8 +99,7 @@ public sealed class GachaFlowController
         {
             GachaEconomy.Refund(data, payment);
             panel?.SetStatus(
-                LocalizationManager.Text(
-                    "Recruitment failed. Cost refunded.",
+                LocalizationManager.Translate(
                     "Recruitment failed. Cost refunded."));
             Debug.LogException(exception);
         }
@@ -119,8 +114,7 @@ public sealed class GachaFlowController
     {
         SetResultMode(false);
         panel?.ClearResult(
-            LocalizationManager.Text(
-                "Tickets are used before Gems.",
+            LocalizationManager.Translate(
                 "Tickets are used before Gems."));
     }
 

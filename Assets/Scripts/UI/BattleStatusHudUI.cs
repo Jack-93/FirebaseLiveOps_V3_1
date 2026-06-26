@@ -118,7 +118,7 @@ public sealed class BattleStatusHudUI
             $"{battleManager.PlayerHealth:N0} / " +
             $"{battleManager.PlayerMaxHealth:N0}";
         powerChargeText.text =
-            $"{LocalizationManager.Text("Power Charge", "Power Charge")} " +
+            $"{LocalizationManager.Translate("Power Charge")} " +
             $"{battleManager.PowerCharge:0} / " +
             $"{battleManager.PowerChargeMax:0}";
 
@@ -136,10 +136,10 @@ public sealed class BattleStatusHudUI
             battleManager.PowerChargeMax);
 
         combatStatusText.text = !battleManager.IsRunning
-            ? LocalizationManager.Text("Paused", "Paused")
-            : $"{LocalizationManager.Text("Companion DMG", "Companion DMG")} " +
+            ? LocalizationManager.Translate("Paused")
+            : $"{LocalizationManager.Translate("Companion DMG")} " +
               $"{battleManager.LastPlayerDamage:N0}  " +
-              $"{LocalizationManager.Text("Charge", "Charge")} " +
+              $"{LocalizationManager.Translate("Charge")} " +
               $"{battleManager.PowerCharge:0}%";
     }
 

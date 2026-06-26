@@ -195,8 +195,8 @@ public sealed class BattleHudUI
             return;
 
         autoAdvanceText.text = data.autoAdvance
-            ? LocalizationManager.Text("AUTO ON", "AUTO ON")
-            : LocalizationManager.Text("REPEAT", "REPEAT");
+            ? LocalizationManager.Translate("AUTO ON")
+            : LocalizationManager.Translate("REPEAT");
     }
 
     public void RefreshVisuals()
@@ -323,7 +323,7 @@ public sealed class BattleHudUI
     public void HandleBossChallengeFailed()
     {
         enemyAnimationTimer = 0.4f;
-        ShowBossWarning(LocalizationManager.Text("BOSS FAILED", "BOSS FAILED"));
+        ShowBossWarning(LocalizationManager.Translate("BOSS FAILED"));
         showToast?.Invoke("Boss time expired. Retrying.");
     }
 
@@ -335,7 +335,7 @@ public sealed class BattleHudUI
         playerAnimationTimer = 0.3f;
         StartBattleFlash(Danger, 0.2f);
         ShowBossWarning(
-            $"{LocalizationManager.Text("BOSS SKILL", "BOSS SKILL")}  " +
+            $"{LocalizationManager.Translate("BOSS SKILL")}  " +
             $"{pattern.patternName}");
         ShowPlayerDamage(damage);
         enemyActorView?.Play(BattleAnimationCue.Skill);

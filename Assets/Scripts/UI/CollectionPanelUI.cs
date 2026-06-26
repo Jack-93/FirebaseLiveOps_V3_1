@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,8 +10,6 @@ public sealed class CollectionPanelUI
     private readonly TMP_Text characterDetailText;
     private readonly Image characterDetailPortraitImage;
     private readonly CompanionSlotButtonsUI slotButtons;
-    private readonly List<Button> companionSlotButtons =
-        new List<Button>();
 
     public GameObject GameObject => panel.gameObject;
 
@@ -97,7 +94,7 @@ public sealed class CollectionPanelUI
         characterDetailText = RuntimeUiFactory.CreateText(
             "CharacterDetailText",
             detailCard,
-            "Select a companion.",
+            CollectionDetailFormatter.SelectionPrompt,
             25,
             new Vector2(0.05f, 0.29f),
             new Vector2(0.67f, 0.8f),
@@ -136,81 +133,16 @@ public sealed class CollectionPanelUI
     {
         if (selectedCharacter == null || companionManager == null)
         {
-            characterDetailText.text = LocalizationManager.Text(
-                "Select a companion.",
-                "동료를 선택하세요.");
+            characterDetailText.text =
+                CollectionDetailFormatter.SelectionPrompt;
             SetPortrait(null);
             slotButtons.Refresh(null, companionManager);
             return;
         }
 
-        int owned = companionManager.GetOwnedCount(
-            selectedCharacter.characterName);
-        int stars =
-            companionManager.GetStars(selectedCharacter.characterName);
-        int bonus =
-            CompanionManager.GetAttackBonusPercent(
-                selectedCharacter.rarity,
-                stars);
-        int promotionCost =
-            companionManager.GetPromotionCost(
-                selectedCharacter.characterName);
-        bool equippedSelected = IsCharacterEquipped(
+        characterDetailText.text = CollectionDetailFormatter.Format(
             selectedCharacter,
             companionManager);
-        bool canPromote =
-            owned > 0 &&
-            stars < 5 &&
-            owned - 1 >= promotionCost &&
-            promotionCost > 0;
-
-        StringBuilder builder = new StringBuilder();
-        builder.AppendLine(
-            $"[{selectedCharacter.rarity}] " +
-            $"{selectedCharacter.characterName}");
-        builder.AppendLine(
-            owned > 0
-                ? $"{LocalizationManager.Text("Owned", "보유")} x{owned}  |  " +
-                  (equippedSelected
-                      ? LocalizationManager.Text("EQUIPPED", "장착 중")
-                      : LocalizationManager.Text("READY", "준비됨"))
-                : LocalizationManager.Text(
-                    "LOCKED - recruit from Gacha",
-                    "잠김 - 뽑기에서 획득하세요"));
-        builder.AppendLine(
-            $"{LocalizationManager.Text("Stars", "별")} {stars}/5  |  " +
-            $"{LocalizationManager.Text("Attack", "공격력")} +{bonus}%");
-        builder.AppendLine(
-            $"{selectedCharacter.element} / {selectedCharacter.role}");
-        if (owned > 0 && stars < 5)
-        {
-            builder.AppendLine(
-                canPromote
-                    ? LocalizationManager.Text(
-                        "Promotion ready.",
-                        "승급 가능.")
-                    : $"{LocalizationManager.Text("Promotion needs", "승급 필요")} " +
-                      $"{promotionCost} " +
-                      $"{LocalizationManager.Text("duplicate(s)", "중복 캐릭터")}");
-        }
-        builder.AppendLine(selectedCharacter.description);
-        builder.Append(
-            LocalizationManager.Text("Party", "파티") + ": ");
-
-        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
-        {
-            if (slot > 0)
-                builder.Append("  |  ");
-
-            CharacterData equipped =
-                companionManager.GetEquippedAtSlot(slot);
-            string equippedName = equipped == null
-                ? LocalizationManager.Text("Empty", "비어 있음")
-                : equipped.characterName;
-            builder.Append($"{slot + 1}. {equippedName}");
-        }
-
-        characterDetailText.text = builder.ToString();
         SetPortrait(
             selectedCharacter.icon ??
             selectedCharacter.battleSprite);
@@ -269,108 +201,11 @@ public sealed class CollectionPanelUI
         }
     }
 
-    private void RefreshCompanionSlotButtons(
-        CharacterData selectedCharacter,
-        CompanionManager companionManager)
-    {
-        for (int slot = 0;
-             slot < companionSlotButtons.Count;
-             slot++)
-        {
-            Button button = companionSlotButtons[slot];
-            CharacterData equipped =
-                companionManager?.GetEquippedAtSlot(slot);
-            bool selectedOwned =
-                selectedCharacter != null &&
-                companionManager != null &&
-                companionManager.GetOwnedCount(
-                    selectedCharacter.characterName) > 0;
-            bool selectedInSlot =
-                selectedCharacter != null &&
-                equipped != null &&
-                equipped.characterName ==
-                selectedCharacter.characterName;
-
-            string label = equipped == null
-                ? $"{LocalizationManager.Text("SLOT", "슬롯")} {slot + 1}\n" +
-                  LocalizationManager.Text("EMPTY", "비어 있음")
-                : $"{LocalizationManager.Text("SLOT", "슬롯")} {slot + 1}\n" +
-                  equipped.characterName;
-
-            if (selectedInSlot)
-            {
-                label =
-                    $"{LocalizationManager.Text("SLOT", "슬롯")} {slot + 1}\n" +
-                    LocalizationManager.Text("REMOVE", "해제");
-            }
-            else if (selectedOwned)
-            {
-                string target = equipped == null
-                    ? LocalizationManager.Text("EQUIP", "장착")
-                    : $"{equipped.characterName} > " +
-                      $"{selectedCharacter.characterName}";
-                label =
-                    $"{LocalizationManager.Text("SLOT", "슬롯")} {slot + 1}\n" +
-                    target;
-            }
-
-            SetButtonLabel(button, label);
-            button.interactable =
-                selectedCharacter != null &&
-                (selectedOwned || selectedInSlot);
-
-            if (button.targetGraphic == null)
-                continue;
-
-            button.targetGraphic.color = selectedInSlot
-                ? Success
-                : selectedOwned
-                    ? Accent
-                    : equipped != null
-                        ? Gold
-                        : PanelLight;
-        }
-    }
-
     private void SetPortrait(Sprite portrait)
     {
         characterDetailPortraitImage.sprite = portrait;
         characterDetailPortraitImage.color =
             portrait == null ? Color.clear : Color.white;
-    }
-
-    private static bool IsCharacterEquipped(
-        CharacterData character,
-        CompanionManager companionManager)
-    {
-        if (character == null || companionManager == null)
-            return false;
-
-        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
-        {
-            CharacterData equipped =
-                companionManager.GetEquippedAtSlot(slot);
-            if (equipped == null)
-                continue;
-
-            if (equipped == character ||
-                equipped.characterName == character.characterName)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static void SetButtonLabel(Button button, string value)
-    {
-        if (button == null)
-            return;
-
-        TMP_Text label = button.GetComponentInChildren<TMP_Text>();
-        if (label != null)
-            label.text = LocalizationManager.Translate(value);
     }
 
     private static Color GetRarityColor(string rarity)
