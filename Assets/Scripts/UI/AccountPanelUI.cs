@@ -146,6 +146,8 @@ public sealed class AccountPanelUI
 
         accountDetailText.text =
             accounts.GetAccountSummary() + "\n\n" +
+            SaveStatusFormatter.FormatDetailed(FirestoreManager.Instance) +
+            "\n\n" +
             GoogleCredentialTokenProvider.GetSetupStatus() + "\n" +
             FirebaseManager.GetDiagnosticsStatus() + "\n" +
             (PushNotificationManager.Instance != null

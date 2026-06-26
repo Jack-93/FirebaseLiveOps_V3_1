@@ -14,6 +14,7 @@ public class MainGameBootstrap : MonoBehaviour
     private MainGameUI mainGameUI;
     private CompanionManager companionManager;
     private bool isInitializing;
+    private bool isQuitting;
     private float autosaveTimer;
 
     private void Awake()
@@ -259,13 +260,16 @@ public class MainGameBootstrap : MonoBehaviour
         try
         {
             await SaveNowAsync();
-            mainGameUI.ShowToast("Progress saved.");
+            mainGameUI.RefreshAll();
+            mainGameUI.ShowToast(
+                SaveStatusFormatter.FormatManualSaveToast(
+                    FirestoreManager.Instance));
         }
         catch (Exception exception)
         {
             Debug.LogException(exception);
-            mainGameUI.ShowToast(
-                "Save failed. Progress will retry automatically.");
+            mainGameUI.RefreshAll();
+            mainGameUI.ShowToast(SaveStatusFormatter.FormatDeferredSaveToast());
         }
     }
 
@@ -348,10 +352,18 @@ public class MainGameBootstrap : MonoBehaviour
             SaveLocalSnapshot();
             _ = SaveInBackgroundAsync();
         }
+        else if (!paused &&
+            IsReady &&
+            FirestoreManager.Instance != null &&
+            FirestoreManager.Instance.HasPendingSave)
+        {
+            _ = SaveInBackgroundAsync();
+        }
     }
 
     private void OnApplicationQuit()
     {
+        isQuitting = true;
         SaveLocalSnapshot();
         if (IsReady)
             _ = SaveInBackgroundAsync();
@@ -379,6 +391,11 @@ public class MainGameBootstrap : MonoBehaviour
             Debug.LogWarning(
                 $"[MainGame] Background save deferred: " +
                 exception.Message);
+        }
+        finally
+        {
+            if (!isQuitting)
+                mainGameUI?.RefreshAll();
         }
     }
 

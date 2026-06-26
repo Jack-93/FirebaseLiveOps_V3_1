@@ -83,7 +83,8 @@ public static class MorePanelSummaryFormatter
         return
             $"{accountType}  |  " +
             $"{LocalizationManager.Translate("Highest")} " +
-            $"{data.highestStage}";
+            $"{data.highestStage}\n" +
+            SaveStatusFormatter.FormatShort(FirestoreManager.Instance);
     }
 
     public static string FormatDailyReward(DailyRewardManager dailyRewards)
