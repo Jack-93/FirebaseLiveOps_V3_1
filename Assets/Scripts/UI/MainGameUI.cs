@@ -1,11 +1,8 @@
 using System;
-using System.Collections.Generic;
-using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
-using UnityEngine.UI;
 
 public class MainGameUI : MonoBehaviour
 {
@@ -14,6 +11,7 @@ public class MainGameUI : MonoBehaviour
     private GrowthManager growthManager;
     private TutorialManager tutorialManager;
     private CompanionManager companionManager;
+    private MainGameEventSubscriptions eventSubscriptions;
 
     private GameObject battlePanel;
     private GameObject growthPanel;
@@ -26,127 +24,44 @@ public class MainGameUI : MonoBehaviour
     private GameObject eventPanel;
     private GameObject settingsPanel;
     private GameObject accountPanel;
-    private GameObject tutorialPanel;
-    private GameObject storyIntroOverlay;
-    private GameObject titleOverlay;
-    private GameObject loadingOverlay;
-    private GameObject offlineOverlay;
-    private GameObject toastPanel;
-
-    private TMP_Text goldText;
-    private TMP_Text stageText;
-    private TMP_Text powerText;
-    private TMP_Text enemyNameText;
-    private TMP_Text enemyHealthText;
-    private TMP_Text playerHealthText;
-    private TMP_Text combatStatusText;
-    private TMP_Text skillStatusText;
     private TMP_Text autoAdvanceText;
-    private TMP_Text attackGrowthText;
-    private TMP_Text healthGrowthText;
-    private TMP_Text speedGrowthText;
-    private TMP_Text gachaCurrencyText;
-    private TMP_Text gachaPityText;
-    private TMP_Text gachaResultText;
-    private TMP_Text gachaStatusText;
-    private TMP_Text inventoryText;
-    private TMP_Text companionText;
-    private TMP_Text characterDetailText;
-    private TMP_Text equipmentText;
-    private TMP_Text questText;
-    private TMP_Text shopText;
-    private TMP_Text eventText;
-    private TMP_Text settingsText;
-    private TMP_Text accountText;
-    private TMP_Text accountDetailText;
-    private TMP_Text dailyRewardText;
-    private TMP_Text objectiveTitleText;
-    private TMP_Text titleStatusText;
-    private TMP_Text storyIntroCounterText;
-    private TMP_Text storyIntroTitleText;
-    private TMP_Text storyIntroBodyText;
-    private TMP_Text storyIntroArtText;
-    private TMP_Text storyIntroButtonText;
-    private TMP_Text tutorialText;
-    private TMP_Text tutorialButtonText;
-    private TMP_Text loadingText;
-    private TMP_Text offlineText;
-    private TMP_Text toastText;
-    private TMP_Text enemyDamageText;
-    private TMP_Text playerDamageText;
-    private TMP_Text rewardPopupText;
-
-    private RectTransform enemyHealthFill;
-    private RectTransform playerHealthFill;
-    private RectTransform enemyVisual;
-    private RectTransform playerVisual;
-    private RectTransform attackTrail;
-    private RectTransform enemyDamagePopup;
-    private RectTransform playerDamagePopup;
-    private RectTransform rewardPopup;
-    private Image storyIntroArtImage;
-    private Image enemyVisualImage;
-    private Image playerVisualImage;
-    private Image attackTrailImage;
-    private Image worldBackgroundImage;
-    private Image worldMidgroundImage;
-    private Image worldForegroundImage;
-    private BattleActorView enemyActorView;
-    private BattleActorView playerActorView;
-    private readonly List<BattleActorView> companionActorViews =
-        new List<BattleActorView>();
-    private readonly TMP_Text[] skillButtonTexts =
-        new TMP_Text[CompanionManager.PartySize];
-    private readonly Image[] skillButtonImages =
-        new Image[CompanionManager.PartySize];
-    private Button tutorialButton;
-    private Button retryButton;
-    private Button googleLinkButton;
-    private Button starterPackButton;
-    private Button smallGemPackButton;
-    private Button largeGemPackButton;
-    private Button rewardedAdButton;
-    private Button gachaSingleButton;
-    private Button gachaTenButton;
-    private Button battleNavButton;
-    private Button growthNavButton;
-    private Button gachaNavButton;
-    private Button collectionNavButton;
-    private Button moreNavButton;
-    private Button titleGoogleButton;
-    private Button titleGuestButton;
-    private readonly List<Button> companionSlotButtons =
-        new List<Button>();
-    private CharacterData selectedCharacter;
-    private bool isGachaRolling;
-    private float toastTimer;
-    private float enemyAnimationTimer;
-    private float playerAnimationTimer;
-    private float playerDefeatTimer;
-    private float attackTrailTimer;
-    private float enemyDamagePopupTimer;
-    private float playerDamagePopupTimer;
-    private float rewardPopupTimer;
-    private int worldThemeIndex = -1;
+    private BattleHudUI battleHud;
+    private BattleActionController battleActions;
+    private GrowthActionController growthActions;
+    private TopBarUI topBarUI;
+    private ToastUI toastUI;
+    private WorldBackdropUI worldBackdropUI;
+    private BottomNavigationUI bottomNavigationUI;
+    private MainGameNavigationController navigation;
+    private SessionActionController sessionActions;
+    private OfflineRewardUI offlineRewardUI;
+    private TitleScreenUI titleScreenUI;
+    private LoadingOverlayUI loadingOverlayUI;
+    private TutorialPanelUI tutorialPanelUI;
+    private TutorialFlowController tutorialFlow;
+    private StoryIntroUI storyIntroUI;
+    private GrowthPanelUI growthPanelUI;
+    private GachaPanelUI gachaPanelUI;
+    private GachaFlowController gachaFlow;
+    private CollectionPanelUI collectionPanelUI;
+    private CompanionActionController companionActions;
+    private QuestPanelUI questPanelUI;
+    private EquipmentPanelUI equipmentPanelUI;
+    private EquipmentActionController equipmentActions;
+    private MorePanelUI morePanelUI;
+    private ShopPanelUI shopPanelUI;
+    private ShopActionController shopActions;
+    private EventPanelUI eventPanelUI;
+    private SettingsPanelUI settingsPanelUI;
+    private SettingsActionController settingsActions;
+    private AccountPanelUI accountPanelUI;
+    private AccountActionController accountActions;
+    private RewardActionController rewardActions;
+    private readonly NotificationBadgeController notificationBadges =
+        new NotificationBadgeController();
 
     private static readonly Color Background =
         new Color32(20, 28, 45, 255);
-    private static readonly Color OverlayBackground =
-        new Color32(12, 18, 30, 218);
-    private static readonly Color Panel =
-        new Color32(37, 49, 73, 245);
-    private static readonly Color PanelLight =
-        new Color32(52, 68, 96, 255);
-    private static readonly Color Accent =
-        new Color32(82, 188, 255, 255);
-    private static readonly Color Gold =
-        new Color32(255, 201, 77, 255);
-    private static readonly Color Danger =
-        new Color32(238, 91, 103, 255);
-    private static readonly Color Success =
-        new Color32(76, 205, 145, 255);
-    private static readonly Color MutedText =
-        new Color32(190, 203, 225, 255);
 
     public void Configure(
         MainGameBootstrap sessionBootstrap,
@@ -160,6 +75,7 @@ public class MainGameUI : MonoBehaviour
         growthManager = growth;
         tutorialManager = tutorial;
         companionManager = companion;
+        sessionActions = new SessionActionController(bootstrap);
 
         BuildInterface();
         BindEvents();
@@ -184,82 +100,48 @@ public class MainGameUI : MonoBehaviour
         RefreshTutorial();
         RefreshStoryIntro();
         LocalizationManager.ApplyTo(transform);
+        RefreshNotificationBadges();
     }
 
     public void SetLoading(bool visible, string message)
     {
-        if (loadingOverlay == null)
-            return;
-
-        loadingOverlay.SetActive(visible);
-        if (loadingText != null)
-            loadingText.text = message;
-
-        if (retryButton != null)
-            retryButton.gameObject.SetActive(false);
+        loadingOverlayUI?.SetLoading(visible, message);
     }
 
     public void ShowInitializationError(string message)
     {
-        loadingOverlay.SetActive(true);
-        loadingText.text =
-            "Connection failed\n\n" + message;
-        retryButton.gameObject.SetActive(true);
+        loadingOverlayUI?.ShowError(message);
     }
 
     public void ShowTitleScreen(string status)
     {
-        if (titleOverlay == null)
-            return;
-
-        titleOverlay.SetActive(true);
-        SetTitleBusy(false, status);
+        titleScreenUI?.Show(status);
     }
 
     public void HideTitleScreen()
     {
-        if (titleOverlay != null)
-            titleOverlay.SetActive(false);
+        titleScreenUI?.Hide();
     }
 
     public void SetTitleBusy(bool busy, string status)
     {
-        if (titleStatusText != null)
-            titleStatusText.text = string.IsNullOrWhiteSpace(status)
-                ? "Android build uses Google login or guest play."
-                : status;
-
-        if (titleGoogleButton != null)
-            titleGoogleButton.interactable = !busy;
-        if (titleGuestButton != null)
-            titleGuestButton.interactable = !busy;
+        titleScreenUI?.SetBusy(busy, status);
     }
 
     public void ShowOfflineReward(long seconds, int gold)
     {
-        long minutes = Math.Max(1, seconds / 60);
-        offlineText.text =
-            $"Welcome back!\n\nAway: {minutes} min\nGold earned: {gold:N0}";
-        offlineOverlay.SetActive(true);
+        offlineRewardUI?.Show(seconds, gold);
     }
 
     public void ShowToast(string message)
     {
-        toastText.text = message;
-        toastPanel.SetActive(true);
-        toastTimer = 2f;
+        toastUI?.Show(message);
     }
 
     private void Update()
     {
-        if (toastTimer > 0f)
-        {
-            toastTimer -= Time.unscaledDeltaTime;
-            if (toastTimer <= 0f && toastPanel != null)
-                toastPanel.SetActive(false);
-        }
-
-        UpdateBattleAnimations(Time.unscaledDeltaTime);
+        toastUI?.Update(Time.unscaledDeltaTime);
+        battleHud?.UpdateAnimations(Time.unscaledDeltaTime);
     }
 
     private void BuildInterface()
@@ -295,1985 +177,291 @@ public class MainGameUI : MonoBehaviour
 
     private void BuildWorldBackdrop(RectTransform root)
     {
-        Image rootImage = root.GetComponent<Image>();
-        rootImage.color = Color.clear;
-        rootImage.raycastTarget = false;
-
         int stage = PlayerDataManager.Instance?.playerData?.currentStage ?? 1;
-        worldThemeIndex = PrototypeBattleArt.GetThemeIndex(stage);
-
-        worldBackgroundImage = CreateWorldLayer(
-            "WorldBackgroundLayer",
-            root,
-            PrototypeBattleArt.GetStageBackground(stage),
-            Background);
-        worldMidgroundImage = CreateWorldLayer(
-            "WorldMidgroundLayer",
-            root,
-            PrototypeBattleArt.GetStageMidground(stage),
-            Color.clear);
-        worldForegroundImage = CreateWorldLayer(
-            "WorldForegroundLayer",
-            root,
-            PrototypeBattleArt.GetStageForeground(stage),
-            Color.clear);
-    }
-
-    private static Image CreateWorldLayer(
-        string name,
-        RectTransform root,
-        Sprite sprite,
-        Color fallbackColor)
-    {
-        RectTransform layer = CreatePanel(
-            name,
-            root,
-            sprite == null ? fallbackColor : Color.white,
-            Vector2.zero,
-            Vector2.one);
-        Image image = layer.GetComponent<Image>();
-        image.sprite = sprite;
-        image.type = Image.Type.Simple;
-        image.raycastTarget = false;
-        return image;
+        worldBackdropUI = new WorldBackdropUI(root, stage);
     }
 
     private void BuildTopBar(RectTransform root)
     {
-        RectTransform top = CreatePanel(
-            "TopBar",
+        battleActions = new BattleActionController(
+            battleManager,
+            bootstrap,
+            ShowToast);
+        topBarUI = new TopBarUI(
             root,
-            new Color32(24, 35, 58, 215),
-            new Vector2(0f, 0.9f),
-            Vector2.one);
-
-        stageText = CreateText(
-            "StageText",
-            top,
-            "Stage 1",
-            38,
-            new Vector2(0.075f, 0.12f),
-            new Vector2(0.315f, 0.88f),
-            TextAlignmentOptions.Center);
-
-        CreateButton(
-            "PreviousStageButton",
-            top,
-            "<",
-            new Vector2(0.012f, 0.22f),
-            new Vector2(0.065f, 0.78f),
-            PanelLight,
-            () => ChangeStage(-1));
-
-        CreateButton(
-            "NextStageButton",
-            top,
-            ">",
-            new Vector2(0.325f, 0.22f),
-            new Vector2(0.378f, 0.78f),
-            PanelLight,
+            () => ChangeStage(-1),
             () => ChangeStage(1));
-
-        goldText = CreateText(
-            "GoldText",
-            top,
-            "Gold 0",
-            38,
-            new Vector2(0.45f, 0.12f),
-            new Vector2(0.68f, 0.88f),
-            TextAlignmentOptions.Center,
-            Gold);
-
-        CreateSpriteImage(
-            "GoldIcon",
-            top,
-            PrototypeUiArt.GoldIcon,
-            new Vector2(0.395f, 0.18f),
-            new Vector2(0.455f, 0.82f));
-
-        powerText = CreateText(
-            "PowerText",
-            top,
-            "Power 0",
-            36,
-            new Vector2(0.7f, 0.12f),
-            new Vector2(0.96f, 0.88f),
-            TextAlignmentOptions.Right);
     }
 
     private void BuildBattlePanel(RectTransform root)
     {
-        RectTransform panel = CreatePanel(
-            "BattlePanel",
-            root,
-            new Color32(0, 0, 0, 0),
-            new Vector2(0f, 0.12f),
-            new Vector2(1f, 0.9f));
-        battlePanel = panel.gameObject;
-
-        CreateText(
-            "BattleTitle",
-            panel,
-            "BATTLE",
-            30,
-            new Vector2(0.06f, 0.91f),
-            new Vector2(0.3f, 0.97f),
-            TextAlignmentOptions.Left,
-            Accent);
-
-        Button autoButton = CreateButton(
-            "AutoAdvanceButton",
-            panel,
-            "AUTO ON",
-            new Vector2(0.75f, 0.91f),
-            new Vector2(0.94f, 0.97f),
-            PanelLight,
-            ToggleAutoAdvance);
-        autoAdvanceText =
-            autoButton.GetComponentInChildren<TMP_Text>();
-
-        RectTransform enemyCard = CreatePanel(
-            "EnemyCard",
-            panel,
-            new Color32(0, 0, 0, 0),
-            new Vector2(0.02f, 0.16f),
-            new Vector2(0.98f, 0.91f));
-
-        enemyNameText = CreateText(
-            "EnemyName",
-            enemyCard,
-            "Enemy",
-            28,
-            new Vector2(0.66f, 0.84f),
-            new Vector2(0.96f, 0.92f),
-            TextAlignmentOptions.Center);
-
-        Vector2 enemyAnchor = BattleLayoutConfig.EnemyAnchor;
-        enemyVisual = CreatePanel(
-            "EnemyVisual",
-            enemyCard,
-            Danger,
-            enemyAnchor - new Vector2(0.1f, 0.1f),
-            enemyAnchor + new Vector2(0.1f, 0.1f));
-        enemyVisualImage = enemyVisual.GetComponent<Image>();
-
-        TMP_Text enemyGlyph = CreateText(
-            "EnemyGlyph",
-            enemyVisual,
-            "BOSS",
-            30,
-            new Vector2(0f, 0f),
-            Vector2.one,
-            TextAlignmentOptions.Center);
-        enemyActorView =
-            enemyVisual.gameObject.AddComponent<BattleActorView>();
-        enemyActorView.Initialize(enemyGlyph, Danger);
-
-        enemyDamagePopup = CreatePanel(
-            "EnemyDamagePopup",
-            enemyCard,
-            new Color32(0, 0, 0, 0),
-            new Vector2(0.52f, 0.56f),
-            new Vector2(0.94f, 0.78f));
-        enemyDamageText = CreateText(
-            "EnemyDamageText",
-            enemyDamagePopup,
-            "",
-            44,
-            Vector2.zero,
-            Vector2.one,
-            TextAlignmentOptions.Center,
-            Gold);
-        enemyDamagePopup.gameObject.SetActive(false);
-
-        rewardPopup = CreatePanel(
-            "RewardPopup",
-            enemyCard,
-            new Color32(0, 0, 0, 0),
-            new Vector2(0.1f, 0.58f),
-            new Vector2(0.48f, 0.76f));
-        rewardPopupText = CreateText(
-            "RewardPopupText",
-            rewardPopup,
-            "",
-            35,
-            Vector2.zero,
-            Vector2.one,
-            TextAlignmentOptions.Center,
-            Success);
-        rewardPopup.gameObject.SetActive(false);
-
-        attackTrail = CreatePanel(
-            "AttackTrail",
-            enemyCard,
-            new Color32(255, 255, 255, 0),
-            new Vector2(0.2f, 0.48f),
-            new Vector2(0.8f, 0.52f));
-        attackTrailImage = attackTrail.GetComponent<Image>();
-        attackTrail.localRotation = Quaternion.Euler(0f, 0f, -10f);
-        attackTrail.gameObject.SetActive(false);
-
-        enemyHealthFill = CreateHealthBar(
-            enemyCard,
-            "EnemyHealthBar",
-            Danger,
-            new Vector2(0.7f, 0.64f),
-            new Vector2(0.96f, 0.68f));
-
-        enemyHealthText = CreateText(
-            "EnemyHealthText",
-            enemyCard,
-            "0 / 0",
-            20,
-            new Vector2(0.7f, 0.635f),
-            new Vector2(0.96f, 0.685f),
-            TextAlignmentOptions.Center);
-
-        RectTransform playerCard = CreatePanel(
-            "PlayerCard",
-            panel,
-            new Color32(0, 0, 0, 0),
-            new Vector2(0.02f, 0.16f),
-            new Vector2(0.98f, 0.91f));
-
-        CreateText(
-            "PlayerName",
-            playerCard,
-            "HERO",
-            24,
-            new Vector2(0.03f, 0.35f),
-            new Vector2(0.24f, 0.4f),
-            TextAlignmentOptions.Left,
-            Accent);
-
-        playerVisual = CreatePanel(
-            "PlayerVisual",
-            playerCard,
-            Accent,
-            BattleLayoutConfig.SupportSparrowAnchor - new Vector2(0.09f, 0.09f),
-            BattleLayoutConfig.SupportSparrowAnchor + new Vector2(0.09f, 0.09f));
-        playerVisualImage = playerVisual.GetComponent<Image>();
-
-        TMP_Text playerGlyph = CreateText(
-            "PlayerGlyph",
-            playerVisual,
-            "HERO",
-            18,
-            Vector2.zero,
-            Vector2.one,
-            TextAlignmentOptions.Center);
-        playerActorView =
-            playerVisual.gameObject.AddComponent<BattleActorView>();
-        playerActorView.Initialize(playerGlyph, Accent);
-
-        playerDamagePopup = CreatePanel(
-            "PlayerDamagePopup",
-            playerCard,
-            new Color32(0, 0, 0, 0),
-            new Vector2(0.14f, 0.38f),
-            new Vector2(0.4f, 0.5f));
-        playerDamageText = CreateText(
-            "PlayerDamageText",
-            playerDamagePopup,
-            "",
-            30,
-            Vector2.zero,
-            Vector2.one,
-            TextAlignmentOptions.Center,
-            Danger);
-        playerDamagePopup.gameObject.SetActive(false);
-
-        combatStatusText = CreateText(
-            "CombatStatus",
-            playerCard,
-            "Preparing...",
-            22,
-            new Vector2(0.03f, 0.26f),
-            new Vector2(0.37f, 0.32f),
-            TextAlignmentOptions.Left);
-
-        playerHealthFill = CreateHealthBar(
-            playerCard,
-            "PlayerHealthBar",
-            Success,
-            new Vector2(0.03f, 0.2f),
-            new Vector2(0.32f, 0.235f));
-
-        playerHealthText = CreateText(
-            "PlayerHealthText",
-            playerCard,
-            "0 / 0",
-            18,
-            new Vector2(0.03f, 0.195f),
-            new Vector2(0.32f, 0.24f),
-            TextAlignmentOptions.Center);
-
-        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
-        {
-            Vector2 anchor = BattleLayoutConfig.GetCompanionAnchor(slot);
-            RectTransform companionVisual = CreatePanel(
-                $"CompanionVisual{slot + 1}",
-                enemyCard,
-                new Color32(255, 255, 255, 0),
-                anchor - new Vector2(0.09f, 0.09f),
-                anchor + new Vector2(0.09f, 0.09f));
-            TMP_Text companionGlyph = CreateText(
-                "Glyph",
-                companionVisual,
-                (slot + 1).ToString(),
-                20,
-                Vector2.zero,
-                Vector2.one,
-                TextAlignmentOptions.Center);
-            BattleActorView actorView =
-                companionVisual.gameObject.AddComponent<BattleActorView>();
-            actorView.Initialize(companionGlyph, PanelLight);
-            companionActorViews.Add(actorView);
-        }
-
-        skillStatusText = CreateText(
-            "SkillStatus",
-            panel,
-            "AUTO SKILL",
-            21,
-            new Vector2(0.58f, 0.205f),
-            new Vector2(0.94f, 0.25f),
-            TextAlignmentOptions.Right,
-            Gold);
-        skillStatusText.gameObject.SetActive(false);
-
-        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
-        {
-            int capturedSlot = slot;
-            float left = 0.61f + slot * 0.115f;
-            Button skillButton = CreateButton(
-                $"CompanionSkillButton{slot + 1}",
-                panel,
-                $"S{slot + 1}",
-                new Vector2(left, 0.1f),
-                new Vector2(left + 0.1f, 0.2f),
-                PanelLight,
-                () => UseCompanionSkill(capturedSlot));
-            skillButtonTexts[slot] =
-                skillButton.GetComponentInChildren<TMP_Text>();
-            skillButtonImages[slot] =
-                skillButton.targetGraphic as Image;
-        }
-
-        CreateButton(
-            "QuestQuickButton",
-            panel,
-            "QUEST",
-            new Vector2(0.02f, 0.82f),
-            new Vector2(0.19f, 0.89f),
-            new Color32(24, 35, 58, 210),
-            ShowQuests);
-
-        CreateButton(
-            "EventQuickButton",
-            panel,
-            "EVENT",
-            new Vector2(0.81f, 0.82f),
-            new Vector2(0.98f, 0.89f),
-            new Color32(24, 35, 58, 210),
-            ShowEvent);
-
-        CreateButton(
-            "ShopQuickButton",
-            panel,
-            "SHOP",
-            new Vector2(0.02f, 0.74f),
-            new Vector2(0.19f, 0.81f),
-            new Color32(24, 35, 58, 210),
-            ShowShop);
-
-        CreateButton(
-            "EquipmentQuickButton",
-            panel,
-            "EQUIPMENT",
-            new Vector2(0.81f, 0.74f),
-            new Vector2(0.98f, 0.81f),
-            new Color32(24, 35, 58, 210),
-            ShowEquipment);
+        battleHud = new BattleHudUI(
+            battleManager,
+            companionManager,
+            ToggleAutoAdvance,
+            ShowQuests,
+            ShowEvent,
+            ShowShop,
+            ShowEquipment,
+            ShowToast);
+        battlePanel = battleHud.Build(root).gameObject;
+        autoAdvanceText = battleHud.AutoAdvanceText;
+        notificationBadges.RegisterBattleHud(battleHud);
     }
 
     private void BuildGrowthPanel(RectTransform root)
     {
-        RectTransform panel = CreatePanel(
-            "GrowthPanel",
+        growthActions = new GrowthActionController(
+            growthManager,
+            ShowToast,
+            RefreshGrowth,
+            RefreshBattle,
+            RefreshTopBar);
+        growthPanelUI = new GrowthPanelUI(
             root,
-            OverlayBackground,
-            new Vector2(0f, 0.12f),
-            new Vector2(1f, 0.9f));
-        growthPanel = panel.gameObject;
-
-        CreateText(
-            "GrowthTitle",
-            panel,
-            "GROWTH",
-            48,
-            new Vector2(0.05f, 0.88f),
-            new Vector2(0.95f, 0.97f),
-            TextAlignmentOptions.Center,
-            Accent);
-
-        CreateText(
-            "GrowthSubtitle",
-            panel,
-            "Spend Gold to strengthen your hero.",
-            27,
-            new Vector2(0.06f, 0.82f),
-            new Vector2(0.94f, 0.88f),
-            TextAlignmentOptions.Center,
-            MutedText);
-
-        attackGrowthText = CreateUpgradeRow(
-            panel,
-            "Attack",
-            "Increase damage",
-            new Vector2(0.06f, 0.59f),
-            UpgradeAttack);
-
-        healthGrowthText = CreateUpgradeRow(
-            panel,
-            "Health",
-            "Increase maximum HP",
-            new Vector2(0.06f, 0.35f),
-            UpgradeHealth);
-
-        speedGrowthText = CreateUpgradeRow(
-            panel,
-            "Attack Speed",
-            "Attack more frequently",
-            new Vector2(0.06f, 0.11f),
-            UpgradeAttackSpeed);
+            () => growthActions?.Upgrade(UpgradeType.Attack),
+            () => growthActions?.Upgrade(UpgradeType.Health),
+            () => growthActions?.Upgrade(UpgradeType.AttackSpeed));
+        growthPanel = growthPanelUI.GameObject;
     }
 
     private void BuildGachaPanel(RectTransform root)
     {
-        RectTransform panel = CreatePanel(
-            "GachaPanel",
+        gachaPanelUI = new GachaPanelUI(
             root,
-            OverlayBackground,
-            new Vector2(0f, 0.12f),
-            new Vector2(1f, 0.9f));
-        gachaPanel = panel.gameObject;
-
-        CreateText(
-            "GachaTitle",
-            panel,
-            "RECRUIT",
-            48,
-            new Vector2(0.05f, 0.91f),
-            new Vector2(0.95f, 0.98f),
-            TextAlignmentOptions.Center,
-            Accent);
-
-        gachaCurrencyText = CreateText(
-            "GachaCurrency",
-            panel,
-            "Gem 0  Ticket 0",
-            28,
-            new Vector2(0.06f, 0.85f),
-            new Vector2(0.66f, 0.91f),
-            TextAlignmentOptions.Left,
-            Gold);
-
-        gachaPityText = CreateText(
-            "GachaPity",
-            panel,
-            "SSR in 100",
-            27,
-            new Vector2(0.67f, 0.85f),
-            new Vector2(0.94f, 0.91f),
-            TextAlignmentOptions.Right);
-
-        RectTransform banner = CreatePanel(
-            "GachaBannerCard",
-            panel,
-            Panel,
-            new Vector2(0.06f, 0.52f),
-            new Vector2(0.94f, 0.84f));
-
-        CreateSpriteImage(
-            "GachaEmblem",
-            banner,
-            PrototypeUiArt.GetButtonIcon("GachaNav"),
-            new Vector2(0.36f, 0.39f),
-            new Vector2(0.64f, 0.9f));
-
-        CreateText(
-            "GachaBannerName",
-            banner,
-            "STANDARD RECRUITMENT",
-            31,
-            new Vector2(0.08f, 0.24f),
-            new Vector2(0.92f, 0.4f),
-            TextAlignmentOptions.Center,
-            Gold);
-
-        CreateText(
-            "GachaRates",
-            banner,
-            $"SSR {GachaConfig.SSRRate}%   " +
-            $"SR {GachaConfig.SRRate}%   " +
-            $"R {100 - GachaConfig.SSRRate - GachaConfig.SRRate}%\n" +
-            "10 recruits: SR+ guaranteed / SSR within 100",
-            23,
-            new Vector2(0.07f, 0.04f),
-            new Vector2(0.93f, 0.24f),
-            TextAlignmentOptions.Center,
-            MutedText);
-
-        RectTransform resultCard = CreatePanel(
-            "GachaResultCard",
-            panel,
-            Panel,
-            new Vector2(0.06f, 0.22f),
-            new Vector2(0.94f, 0.49f));
-
-        gachaResultText = CreateText(
-            "GachaResultText",
-            resultCard,
-            "Recruit companions to see results.",
-            27,
-            new Vector2(0.06f, 0.08f),
-            new Vector2(0.94f, 0.92f),
-            TextAlignmentOptions.Center);
-
-        gachaStatusText = CreateText(
-            "GachaStatus",
-            panel,
-            "Tickets are used before Gems.",
-            24,
-            new Vector2(0.08f, 0.16f),
-            new Vector2(0.92f, 0.21f),
-            TextAlignmentOptions.Center,
-            MutedText);
-
-        gachaSingleButton = CreateButton(
-            "RecruitSingleButton",
-            panel,
-            $"RECRUIT 1\nTicket 1 / Gem {GachaEconomy.SingleGemCost}",
-            new Vector2(0.06f, 0.045f),
-            new Vector2(0.46f, 0.15f),
-            PanelLight,
-            () => RollGacha(1));
-
-        gachaTenButton = CreateButton(
-            "RecruitTenButton",
-            panel,
-            $"RECRUIT 10\nTicket 10 / Gem {GachaEconomy.TenGemCost}",
-            new Vector2(0.54f, 0.045f),
-            new Vector2(0.94f, 0.15f),
-            Accent,
-            () => RollGacha(10));
-    }
-
-    private TMP_Text CreateUpgradeRow(
-        RectTransform parent,
-        string title,
-        string description,
-        Vector2 anchorMin,
-        UnityEngine.Events.UnityAction action)
-    {
-        RectTransform row = CreatePanel(
-            title + "Row",
-            parent,
-            Panel,
-            anchorMin,
-            new Vector2(0.94f, anchorMin.y + 0.2f));
-
-        TMP_Text info = CreateText(
-            title + "Info",
-            row,
-            title,
-            29,
-            new Vector2(0.05f, 0.34f),
-            new Vector2(0.66f, 0.9f),
-            TextAlignmentOptions.Left,
-            Gold);
-
-        CreateText(
-            title + "Description",
-            row,
-            description,
-            22,
-            new Vector2(0.05f, 0.08f),
-            new Vector2(0.66f, 0.32f),
-            TextAlignmentOptions.Left,
-            new Color32(180, 194, 218, 255));
-
-        CreateButton(
-            title + "Button",
-            row,
-            "UPGRADE",
-            new Vector2(0.68f, 0.16f),
-            new Vector2(0.95f, 0.84f),
-            Accent,
-            action);
-
-        return info;
+            count => gachaFlow?.Roll(count),
+            () => gachaFlow?.ClearResult());
+        gachaPanel = gachaPanelUI.GameObject;
+        gachaFlow = new GachaFlowController(
+            gachaPanelUI,
+            companionManager,
+            RefreshGacha);
     }
 
     private void BuildMorePanel(RectTransform root)
     {
-        RectTransform panel = CreatePanel(
-            "MorePanel",
+        rewardActions = new RewardActionController(
+            ShowToast,
+            RefreshTopBar,
+            RefreshMore,
+            RefreshQuests,
+            RefreshEvent);
+        morePanelUI = new MorePanelUI(
             root,
-            OverlayBackground,
-            new Vector2(0f, 0.12f),
-            new Vector2(1f, 0.9f));
-        morePanel = panel.gameObject;
-
-        CreateText(
-            "MoreTitle",
-            panel,
-            "PLAYER HUB",
-            48,
-            new Vector2(0.05f, 0.9f),
-            new Vector2(0.95f, 0.98f),
-            TextAlignmentOptions.Center,
-            Accent);
-
-        CreateText(
-            "MoreSubtitle",
-            panel,
-            "Inventory, companions, rewards, and account.",
-            25,
-            new Vector2(0.06f, 0.85f),
-            new Vector2(0.94f, 0.9f),
-            TextAlignmentOptions.Center,
-            MutedText);
-
-        RectTransform inventoryCard = CreatePanel(
-            "InventoryCard",
-            panel,
-            Panel,
-            new Vector2(0.05f, 0.62f),
-            new Vector2(0.95f, 0.84f));
-
-        CreateText(
-            "InventoryTitle",
-            inventoryCard,
-            "RESOURCES",
-            27,
-            new Vector2(0.05f, 0.74f),
-            new Vector2(0.68f, 0.94f),
-            TextAlignmentOptions.Left,
-            Gold);
-
-        inventoryText = CreateText(
-            "InventoryText",
-            inventoryCard,
-            "Inventory",
-            27,
-            new Vector2(0.05f, 0.08f),
-            new Vector2(0.68f, 0.72f),
-            TextAlignmentOptions.TopLeft);
-
-        CreateButton(
-            "ClaimMailButton",
-            inventoryCard,
-            "MAIL",
-            new Vector2(0.71f, 0.54f),
-            new Vector2(0.95f, 0.88f),
-            Gold,
-            ClaimAllMail);
-
-        CreateButton(
-            "EquipmentButton",
-            inventoryCard,
-            "EQUIPMENT",
-            new Vector2(0.71f, 0.12f),
-            new Vector2(0.95f, 0.47f),
-            PanelLight,
-            ShowEquipment);
-
-        RectTransform companionCard = CreatePanel(
-            "CompanionCard",
-            panel,
-            Panel,
-            new Vector2(0.05f, 0.39f),
-            new Vector2(0.95f, 0.59f));
-
-        CreateText(
-            "CompanionTitle",
-            companionCard,
-            "COMPANIONS",
-            27,
-            new Vector2(0.05f, 0.72f),
-            new Vector2(0.68f, 0.94f),
-            TextAlignmentOptions.Left,
-            Gold);
-
-        companionText = CreateText(
-            "CompanionText",
-            companionCard,
-            "Companion",
-            25,
-            new Vector2(0.05f, 0.08f),
-            new Vector2(0.68f, 0.7f),
-            TextAlignmentOptions.TopLeft);
-
-        CreateButton(
-            "CollectionButton",
-            companionCard,
-            "COLLECTION",
-            new Vector2(0.71f, 0.53f),
-            new Vector2(0.95f, 0.88f),
-            PanelLight,
-            ShowCollection);
-
-        CreateButton(
-            "BestCompanionButton",
-            companionCard,
-            "BEST",
-            new Vector2(0.71f, 0.12f),
-            new Vector2(0.95f, 0.47f),
-            Accent,
-            HandleAutoEquip);
-
-        RectTransform rewardCard = CreatePanel(
-            "RewardCard",
-            panel,
-            Panel,
-            new Vector2(0.05f, 0.23f),
-            new Vector2(0.95f, 0.36f));
-
-        dailyRewardText = CreateText(
-            "DailyRewardText",
-            rewardCard,
-            "Daily reward",
-            29,
-            new Vector2(0.05f, 0.45f),
-            new Vector2(0.64f, 0.9f),
-            TextAlignmentOptions.Left);
-
-        CreateButton(
-            "DailyRewardButton",
-            rewardCard,
-            "CLAIM",
-            new Vector2(0.69f, 0.2f),
-            new Vector2(0.95f, 0.8f),
-            Success,
-            ClaimDailyReward);
-
-        accountText = CreateText(
-            "AccountText",
-            rewardCard,
-            "Account",
-            22,
-            new Vector2(0.05f, 0.05f),
-            new Vector2(0.64f, 0.4f),
-            TextAlignmentOptions.Left,
-            new Color32(174, 189, 214, 255));
-
-        CreateButton(
-            "QuestButton",
-            panel,
-            "QUESTS",
-            new Vector2(0.06f, 0.13f),
-            new Vector2(0.31f, 0.21f),
-            Gold,
-            ShowQuests);
-
-        CreateButton(
-            "EventButton",
-            panel,
-            "EVENT",
-            new Vector2(0.36f, 0.13f),
-            new Vector2(0.64f, 0.21f),
-            Success,
-            ShowEvent);
-
-        CreateButton(
-            "ShopButton",
-            panel,
-            "SHOP",
-            new Vector2(0.69f, 0.13f),
-            new Vector2(0.94f, 0.21f),
-            Accent,
-            ShowShop);
-
-        CreateButton(
-            "SaveButton",
-            panel,
-            "SAVE",
-            new Vector2(0.06f, 0.03f),
-            new Vector2(0.31f, 0.12f),
-            PanelLight,
-            HandleSaveAction);
-
-        CreateButton(
-            "SettingsButton",
-            panel,
-            "SETTINGS",
-            new Vector2(0.36f, 0.03f),
-            new Vector2(0.64f, 0.12f),
-            PanelLight,
-            ShowSettings);
-
-        CreateButton(
-            "AccountButton",
-            panel,
-            "ACCOUNT",
-            new Vector2(0.69f, 0.03f),
-            new Vector2(0.94f, 0.12f),
-            Accent,
+            rewardActions.ClaimAllMail,
+            ShowEquipment,
+            ShowCollection,
+            () => companionActions?.AutoEquip(),
+            rewardActions.ClaimDailyReward,
+            ShowQuests,
+            ShowEvent,
+            ShowShop,
+            sessionActions.SaveNow,
+            ShowSettings,
             ShowAccount);
+        morePanel = morePanelUI.GameObject;
+        notificationBadges.RegisterMorePanel(morePanelUI);
     }
 
     private void BuildCollectionPanel(RectTransform root)
     {
-        RectTransform panel = CreatePanel(
-            "CollectionPanel",
+        companionActions = new CompanionActionController(
+            companionManager,
+            battleManager,
+            bootstrap,
+            ShowToast,
+            RefreshCollection,
+            RefreshBattle);
+        collectionPanelUI = new CollectionPanelUI(
             root,
-            OverlayBackground,
-            new Vector2(0f, 0.12f),
-            new Vector2(1f, 0.9f));
-        collectionPanel = panel.gameObject;
-
-        CreateButton(
-            "CollectionBackButton",
-            panel,
-            "BACK",
-            new Vector2(0.04f, 0.9f),
-            new Vector2(0.22f, 0.97f),
-            PanelLight,
-            ShowMore);
-
-        CreateText(
-            "CollectionTitle",
-            panel,
-            "COMPANIONS",
-            46,
-            new Vector2(0.24f, 0.9f),
-            new Vector2(0.96f, 0.98f),
-            TextAlignmentOptions.Center,
-            Accent);
-
-        CreateText(
-            "CollectionSubtitle",
-            panel,
-            "Select a companion, then equip it to a party slot.",
-            24,
-            new Vector2(0.24f, 0.86f),
-            new Vector2(0.96f, 0.9f),
-            TextAlignmentOptions.Center,
-            MutedText);
-
-        List<CharacterData> characters =
-            companionManager.GetAllCharacters();
-        for (int index = 0; index < characters.Count; index++)
-        {
-            CharacterData character = characters[index];
-            int column = index % 3;
-            int row = index / 3;
-            float xMin = 0.04f + column * 0.32f;
-            float yMax = 0.83f - row * 0.115f;
-
-            CreateButton(
-                "Character_" + character.characterName,
-                panel,
-                $"[{character.rarity}]\n{character.characterName}",
-                new Vector2(xMin, yMax - 0.09f),
-                new Vector2(xMin + 0.28f, yMax),
-                GetRarityColor(character.rarity),
-                () => SelectCharacter(character));
-        }
-
-        RectTransform detailCard = CreatePanel(
-            "CharacterDetailCard",
-            panel,
-            Panel,
-            new Vector2(0.04f, 0.05f),
-            new Vector2(0.96f, 0.34f));
-
-        CreateText(
-            "CharacterDetailTitle",
-            detailCard,
-            "DETAIL / PARTY SLOTS",
-            25,
-            new Vector2(0.05f, 0.82f),
-            new Vector2(0.67f, 0.95f),
-            TextAlignmentOptions.Left,
-            Gold);
-
-        characterDetailText = CreateText(
-            "CharacterDetailText",
-            detailCard,
-            "Select a companion.",
-            25,
-            new Vector2(0.05f, 0.29f),
-            new Vector2(0.67f, 0.8f),
-            TextAlignmentOptions.TopLeft);
-
-        CreateButton(
-            "PromoteButton",
-            detailCard,
-            "PROMOTE",
-            new Vector2(0.7f, 0.55f),
-            new Vector2(0.95f, 0.88f),
-            Gold,
-            PromoteSelectedCharacter);
-
-        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
-        {
-            int capturedSlot = slot;
-            float xMin = 0.05f + slot * 0.32f;
-            Button slotButton = CreateButton(
-                "EquipSlot" + (slot + 1),
-                detailCard,
-                "SLOT " + (slot + 1),
-                new Vector2(xMin, 0.05f),
-                new Vector2(xMin + 0.27f, 0.23f),
-                Accent,
-                () => ToggleSelectedCharacterSlot(capturedSlot));
-            companionSlotButtons.Add(slotButton);
-        }
+            companionManager,
+            ShowMore,
+            companionActions.Select,
+            companionActions.PromoteSelected,
+            companionActions.ToggleSelectedSlot);
+        collectionPanel = collectionPanelUI.GameObject;
     }
 
     private void BuildEquipmentPanel(RectTransform root)
     {
-        RectTransform panel = CreatePanel(
-            "EquipmentPanel",
+        equipmentActions = new EquipmentActionController(
+            battleManager,
+            ShowToast,
+            RefreshEquipment);
+        equipmentPanelUI = new EquipmentPanelUI(
             root,
-            OverlayBackground,
-            new Vector2(0f, 0.12f),
-            new Vector2(1f, 0.9f));
-        equipmentPanel = panel.gameObject;
-
-        CreateButton(
-            "EquipmentBackButton",
-            panel,
-            "BACK",
-            new Vector2(0.04f, 0.9f),
-            new Vector2(0.22f, 0.97f),
-            PanelLight,
-            ShowMore);
-
-        CreateText(
-            "EquipmentTitle",
-            panel,
-            "EQUIPMENT",
-            46,
-            new Vector2(0.24f, 0.9f),
-            new Vector2(0.96f, 0.98f),
-            TextAlignmentOptions.Center,
-            Accent);
-
-        CreateText(
-            "EquipmentSubtitle",
-            panel,
-            "Upgrade equipped gear to raise combat power.",
-            24,
-            new Vector2(0.24f, 0.86f),
-            new Vector2(0.96f, 0.9f),
-            TextAlignmentOptions.Center,
-            MutedText);
-
-        RectTransform card = CreatePanel(
-            "EquipmentCard",
-            panel,
-            Panel,
-            new Vector2(0.06f, 0.28f),
-            new Vector2(0.94f, 0.84f));
-
-        CreateText(
-            "EquipmentCardTitle",
-            card,
-            "CURRENT LOADOUT",
-            27,
-            new Vector2(0.07f, 0.84f),
-            new Vector2(0.93f, 0.95f),
-            TextAlignmentOptions.Left,
-            Gold);
-
-        equipmentText = CreateText(
-            "EquipmentText",
-            card,
-            "No equipment.",
-            31,
-            new Vector2(0.07f, 0.32f),
-            new Vector2(0.93f, 0.82f),
-            TextAlignmentOptions.TopLeft);
-
-        CreateButton(
-            "UpgradeWeaponButton",
-            card,
-            "UPGRADE WEAPON",
-            new Vector2(0.07f, 0.08f),
-            new Vector2(0.47f, 0.27f),
-            Accent,
-            UpgradeWeapon);
-
-        CreateButton(
-            "UpgradeArmorButton",
-            card,
-            "UPGRADE ARMOR",
-            new Vector2(0.53f, 0.08f),
-            new Vector2(0.93f, 0.27f),
-            Success,
-            UpgradeArmor);
+            ShowMore,
+            () => equipmentActions?.Upgrade(EquipmentSlot.Weapon),
+            () => equipmentActions?.Upgrade(EquipmentSlot.Armor));
+        equipmentPanel = equipmentPanelUI.GameObject;
     }
 
     private void BuildQuestPanel(RectTransform root)
     {
-        RectTransform panel = CreatePanel(
-            "QuestPanel",
+        questPanelUI = new QuestPanelUI(
             root,
-            OverlayBackground,
-            new Vector2(0f, 0.12f),
-            new Vector2(1f, 0.9f));
-        questPanel = panel.gameObject;
-
-        CreateButton(
-            "QuestBackButton",
-            panel,
-            "BACK",
-            new Vector2(0.04f, 0.9f),
-            new Vector2(0.22f, 0.97f),
-            PanelLight,
-            ShowMore);
-
-        CreateText(
-            "QuestTitle",
-            panel,
-            "MAIN QUEST",
-            46,
-            new Vector2(0.24f, 0.9f),
-            new Vector2(0.96f, 0.98f),
-            TextAlignmentOptions.Center,
-            Accent);
-
-        CreateText(
-            "QuestSubtitle",
-            panel,
-            "Complete one objective to unlock the next.",
-            24,
-            new Vector2(0.24f, 0.86f),
-            new Vector2(0.96f, 0.9f),
-            TextAlignmentOptions.Center,
-            MutedText);
-
-        RectTransform card = CreatePanel(
-            "QuestCard",
-            panel,
-            Panel,
-            new Vector2(0.06f, 0.31f),
-            new Vector2(0.94f, 0.84f));
-
-        CreateText(
-            "QuestCardTitle",
-            card,
-            "CURRENT OBJECTIVE",
-            27,
-            new Vector2(0.07f, 0.84f),
-            new Vector2(0.93f, 0.95f),
-            TextAlignmentOptions.Left,
-            Gold);
-
-        questText = CreateText(
-            "QuestText",
-            card,
-            "Quest data unavailable.",
-            32,
-            new Vector2(0.07f, 0.32f),
-            new Vector2(0.93f, 0.82f),
-            TextAlignmentOptions.TopLeft);
-
-        CreateButton(
-            "ClaimQuestButton",
-            card,
-            "CLAIM QUEST",
-            new Vector2(0.07f, 0.08f),
-            new Vector2(0.47f, 0.27f),
-            Success,
-            ClaimCurrentQuest);
-
-        CreateButton(
-            "ClaimAchievementButton",
-            card,
-            "CLAIM ACHIEVEMENTS",
-            new Vector2(0.53f, 0.08f),
-            new Vector2(0.93f, 0.27f),
-            Gold,
-            ClaimAchievements);
+            ShowMore,
+            () => rewardActions?.ClaimCurrentQuest(),
+            () => rewardActions?.ClaimAchievements());
+        questPanel = questPanelUI.GameObject;
     }
-
     private void BuildShopPanel(RectTransform root)
     {
-        RectTransform panel = CreatePanel(
-            "ShopPanel",
+        shopActions = new ShopActionController(
+            ShowToast,
+            RefreshTopBar,
+            RefreshMore,
+            RefreshShop);
+        shopPanelUI = new ShopPanelUI(
             root,
-            OverlayBackground,
-            new Vector2(0f, 0.12f),
-            new Vector2(1f, 0.9f));
-        shopPanel = panel.gameObject;
-
-        CreateButton(
-            "ShopBackButton",
-            panel,
-            "BACK",
-            new Vector2(0.05f, 0.9f),
-            new Vector2(0.25f, 0.98f),
-            PanelLight,
-            ShowMore);
-
-        CreateText(
-            "ShopTitle",
-            panel,
-            "SHOP",
-            48,
-            new Vector2(0.3f, 0.9f),
-            new Vector2(0.7f, 0.98f),
-            TextAlignmentOptions.Center,
-            Accent);
-
-        CreateText(
-            "ShopSubtitle",
-            panel,
-            "Store and rewarded ad placeholders.",
-            24,
-            new Vector2(0.12f, 0.86f),
-            new Vector2(0.88f, 0.9f),
-            TextAlignmentOptions.Center,
-            MutedText);
-
-        RectTransform card = CreatePanel(
-            "ShopCard",
-            panel,
-            Panel,
-            new Vector2(0.06f, 0.18f),
-            new Vector2(0.94f, 0.84f));
-
-        CreateText(
-            "ShopCardTitle",
-            card,
-            "PRODUCTS",
-            27,
-            new Vector2(0.07f, 0.9f),
-            new Vector2(0.93f, 0.98f),
-            TextAlignmentOptions.Left,
-            Gold);
-
-        shopText = CreateText(
-            "ShopText",
-            card,
-            "Shop data unavailable.",
-            24,
-            new Vector2(0.07f, 0.78f),
-            new Vector2(0.93f, 0.89f),
-            TextAlignmentOptions.TopLeft);
-
-        starterPackButton = CreateButton(
-            "StarterPackButton",
-            card,
-            "STARTER PACK",
-            new Vector2(0.07f, 0.62f),
-            new Vector2(0.93f, 0.75f),
-            Gold,
-            BuyStarterPack);
-
-        smallGemPackButton = CreateButton(
-            "SmallGemPackButton",
-            card,
-            $"{GameBalanceConfig.SmallGemPackGems:N0} GEMS",
-            new Vector2(0.07f, 0.47f),
-            new Vector2(0.93f, 0.59f),
-            Accent,
-            BuySmallGemPack);
-
-        largeGemPackButton = CreateButton(
-            "LargeGemPackButton",
-            card,
-            $"{GameBalanceConfig.LargeGemPackGems:N0} GEMS",
-            new Vector2(0.07f, 0.32f),
-            new Vector2(0.93f, 0.44f),
-            Success,
-            BuyLargeGemPack);
-
-        rewardedAdButton = CreateButton(
-            "RewardedAdButton",
-            card,
-            $"WATCH AD  +{GameBalanceConfig.RewardedAdGemAmount} GEMS",
-            new Vector2(0.07f, 0.18f),
-            new Vector2(0.93f, 0.29f),
-            PanelLight,
-            WatchRewardedAd);
-
-        CreateButton(
-            "BuyGoldPouchButton",
-            card,
-            $"{FormatCompact(GameBalanceConfig.ShopGoldPouchGold)} GOLD\n" +
-            $"{GameBalanceConfig.ShopGoldPouchGemCost} GEM",
-            new Vector2(0.03f, 0.02f),
-            new Vector2(0.32f, 0.14f),
-            Gold,
-            BuyGoldPouch);
-
-        CreateButton(
-            "BuyTicketBundleButton",
-            card,
-            $"{GameBalanceConfig.ShopTicketBundleTickets} TICKETS\n" +
-            $"{GameBalanceConfig.ShopTicketBundleGemCost} GEM",
-            new Vector2(0.35f, 0.02f),
-            new Vector2(0.65f, 0.14f),
-            Accent,
-            BuyTicketBundle);
-
-        CreateButton(
-            "BuyGrowthChestButton",
-            card,
-            $"{FormatCompact(GameBalanceConfig.ShopGrowthChestGold)} GOLD\n" +
-            $"{GameBalanceConfig.ShopGrowthChestGemCost} GEM",
-            new Vector2(0.68f, 0.02f),
-            new Vector2(0.97f, 0.14f),
-            Success,
-            BuyGrowthChest);
+            ShowMore,
+            () => shopActions?.BuyRealMoneyProduct(
+                RealMoneyProduct.StarterPack),
+            () => shopActions?.BuyRealMoneyProduct(
+                RealMoneyProduct.GemPackSmall),
+            () => shopActions?.BuyRealMoneyProduct(
+                RealMoneyProduct.GemPackLarge),
+            shopActions.WatchRewardedAd,
+            () => shopActions?.BuyShopProduct(ShopProduct.GoldPouch),
+            () => shopActions?.BuyShopProduct(ShopProduct.TicketBundle),
+            () => shopActions?.BuyShopProduct(ShopProduct.GrowthChest));
+        shopPanel = shopPanelUI.GameObject;
     }
 
     private void BuildEventPanel(RectTransform root)
     {
-        RectTransform panel = CreatePanel(
-            "EventPanel",
+        eventPanelUI = new EventPanelUI(
             root,
-            OverlayBackground,
-            new Vector2(0f, 0.12f),
-            new Vector2(1f, 0.9f));
-        eventPanel = panel.gameObject;
-
-        CreateButton(
-            "EventBackButton",
-            panel,
-            "BACK",
-            new Vector2(0.05f, 0.9f),
-            new Vector2(0.25f, 0.98f),
-            PanelLight,
-            ShowMore);
-
-        CreateText(
-            "EventTitle",
-            panel,
-            "EVENT",
-            48,
-            new Vector2(0.3f, 0.9f),
-            new Vector2(0.7f, 0.98f),
-            TextAlignmentOptions.Center,
-            Success);
-
-        CreateText(
-            "EventSubtitle",
-            panel,
-            "Limited-time mission and reward placeholder.",
-            24,
-            new Vector2(0.18f, 0.85f),
-            new Vector2(0.82f, 0.9f),
-            TextAlignmentOptions.Center,
-            MutedText);
-
-        RectTransform card = CreatePanel(
-            "EventCard",
-            panel,
-            Panel,
-            new Vector2(0.06f, 0.31f),
-            new Vector2(0.94f, 0.84f));
-
-        CreateText(
-            "EventCardTitle",
-            card,
-            "ACTIVE EVENT",
-            28,
-            new Vector2(0.07f, 0.84f),
-            new Vector2(0.93f, 0.96f),
-            TextAlignmentOptions.Left,
-            Gold);
-
-        eventText = CreateText(
-            "EventText",
-            card,
-            "Event data unavailable.",
-            31,
-            new Vector2(0.07f, 0.29f),
-            new Vector2(0.93f, 0.8f),
-            TextAlignmentOptions.TopLeft);
-
-        CreateButton(
-            "ClaimEventRewardButton",
-            card,
-            "CLAIM EVENT REWARD",
-            new Vector2(0.07f, 0.06f),
-            new Vector2(0.93f, 0.24f),
-            Success,
-            ClaimEventReward);
+            ShowMore,
+            () => rewardActions?.ClaimEventReward());
+        eventPanel = eventPanelUI.GameObject;
     }
-
     private void BuildSettingsPanel(RectTransform root)
     {
-        RectTransform panel = CreatePanel(
-            "SettingsPanel",
+        settingsActions = new SettingsActionController(
+            RefreshSettings,
+            RefreshAll,
+            ShowToast);
+        settingsPanelUI = new SettingsPanelUI(
             root,
-            OverlayBackground,
-            new Vector2(0f, 0.12f),
-            new Vector2(1f, 0.9f));
-        settingsPanel = panel.gameObject;
-
-        CreateButton(
-            "SettingsBackButton",
-            panel,
-            "BACK",
-            new Vector2(0.05f, 0.9f),
-            new Vector2(0.25f, 0.98f),
-            PanelLight,
-            ShowMore);
-
-        CreateText(
-            "SettingsTitle",
-            panel,
-            "SETTINGS",
-            48,
-            new Vector2(0.3f, 0.9f),
-            new Vector2(0.7f, 0.98f),
-            TextAlignmentOptions.Center,
-            Accent);
-
-        CreateText(
-            "SettingsSubtitle",
-            panel,
-            "Device, notification, language and frame-rate options.",
-            24,
-            new Vector2(0.15f, 0.85f),
-            new Vector2(0.85f, 0.9f),
-            TextAlignmentOptions.Center,
-            MutedText);
-
-        RectTransform card = CreatePanel(
-            "SettingsCard",
-            panel,
-            Panel,
-            new Vector2(0.06f, 0.27f),
-            new Vector2(0.94f, 0.84f));
-
-        CreateText(
-            "SettingsCardTitle",
-            card,
-            "PREFERENCES",
-            28,
-            new Vector2(0.08f, 0.86f),
-            new Vector2(0.92f, 0.96f),
-            TextAlignmentOptions.Left,
-            Gold);
-
-        settingsText = CreateText(
-            "SettingsText",
-            card,
-            "Settings unavailable.",
-            32,
-            new Vector2(0.08f, 0.72f),
-            new Vector2(0.92f, 0.84f),
-            TextAlignmentOptions.TopLeft);
-
-        CreateButton(
-            "ToggleSoundButton",
-            card,
-            "TOGGLE SOUND",
-            new Vector2(0.08f, 0.58f),
-            new Vector2(0.92f, 0.7f),
-            Accent,
-            ToggleSound);
-
-        CreateButton(
-            "ToggleVibrationButton",
-            card,
-            "TOGGLE VIBRATION",
-            new Vector2(0.08f, 0.43f),
-            new Vector2(0.92f, 0.55f),
-            Success,
-            ToggleVibration);
-
-        CreateButton(
-            "ToggleNotificationsButton",
-            card,
-            "TOGGLE NOTIFICATIONS",
-            new Vector2(0.08f, 0.28f),
-            new Vector2(0.92f, 0.4f),
-            PanelLight,
-            ToggleNotifications);
-
-        CreateButton(
-            "ToggleFrameRateButton",
-            card,
-            "SWITCH 30 / 60 FPS",
-            new Vector2(0.08f, 0.13f),
-            new Vector2(0.92f, 0.25f),
-            Gold,
-            ToggleFrameRate);
-
-        CreateButton(
-            "ToggleLanguageButton",
-            card,
-            "SWITCH LANGUAGE",
-            new Vector2(0.08f, 0.01f),
-            new Vector2(0.92f, 0.1f),
-            Danger,
-            ToggleLanguage);
+            ShowMore,
+            settingsActions.ToggleSound,
+            settingsActions.ToggleVibration,
+            settingsActions.ToggleNotifications,
+            settingsActions.ToggleFrameRate,
+            settingsActions.ToggleLanguage);
+        settingsPanel = settingsPanelUI.GameObject;
     }
-
     private void BuildAccountPanel(RectTransform root)
     {
-        RectTransform panel = CreatePanel(
-            "AccountPanel",
+        accountActions = new AccountActionController(
+            bootstrap,
+            RefreshAccount,
+            RefreshMore,
+            ShowToast);
+        accountPanelUI = new AccountPanelUI(
             root,
-            OverlayBackground,
-            new Vector2(0f, 0.12f),
-            new Vector2(1f, 0.9f));
-        accountPanel = panel.gameObject;
-
-        CreateButton(
-            "AccountBackButton",
-            panel,
-            "BACK",
-            new Vector2(0.05f, 0.9f),
-            new Vector2(0.25f, 0.98f),
-            PanelLight,
-            ShowMore);
-
-        CreateText(
-            "AccountTitle",
-            panel,
-            "ACCOUNT LINK",
-            48,
-            new Vector2(0.27f, 0.9f),
-            new Vector2(0.82f, 0.98f),
-            TextAlignmentOptions.Center,
-            Accent);
-
-        CreateText(
-            "AccountSubtitle",
-            panel,
-            "Link Google to protect guest progress on Android.",
-            24,
-            new Vector2(0.15f, 0.85f),
-            new Vector2(0.85f, 0.9f),
-            TextAlignmentOptions.Center,
-            MutedText);
-
-        RectTransform card = CreatePanel(
-            "AccountCard",
-            panel,
-            Panel,
-            new Vector2(0.06f, 0.22f),
-            new Vector2(0.94f, 0.84f));
-
-        CreateText(
-            "AccountCardTitle",
-            card,
-            "CURRENT ACCOUNT",
-            28,
-            new Vector2(0.08f, 0.86f),
-            new Vector2(0.92f, 0.96f),
-            TextAlignmentOptions.Left,
-            Gold);
-
-        accountDetailText = CreateText(
-            "AccountDetailText",
-            card,
-            "Account status",
-            25,
-            new Vector2(0.08f, 0.5f),
-            new Vector2(0.92f, 0.83f),
-            TextAlignmentOptions.TopLeft);
-
-        googleLinkButton = CreateButton(
-            "GoogleLinkButton",
-            card,
-            "LINK GOOGLE",
-            new Vector2(0.08f, 0.34f),
-            new Vector2(0.92f, 0.47f),
-            Accent,
-            HandleGoogleLink);
-
-        CreateText(
-            "AccountNotice",
-            card,
-            "Android build uses Google login only.\n" +
-            "Linking keeps the current UID and all guest progress.",
-            25,
-            new Vector2(0.08f, 0.17f),
-            new Vector2(0.92f, 0.31f),
-            TextAlignmentOptions.Center,
-            new Color32(174, 189, 214, 255));
-
-        CreateButton(
-            "NewGuestButton",
-            card,
-            "START NEW GUEST",
-            new Vector2(0.2f, 0.02f),
-            new Vector2(0.8f, 0.12f),
-            Danger,
-            HandleLogoutAction);
+            ShowMore,
+            accountActions.LinkGoogle,
+            sessionActions.Logout);
+        accountPanel = accountPanelUI.GameObject;
     }
 
     private void BuildBottomNavigation(RectTransform root)
     {
-        RectTransform bottom = CreatePanel(
-            "BottomNavigation",
+        bottomNavigationUI = new BottomNavigationUI(
             root,
-            new Color32(24, 35, 58, 210),
-            Vector2.zero,
-            new Vector2(1f, 0.105f));
-
-        battleNavButton = CreateButton(
-            "BattleNav",
-            bottom,
-            "BATTLE",
-            new Vector2(0.015f, 0.08f),
-            new Vector2(0.185f, 0.92f),
-            PanelLight,
-            ShowBattle);
-
-        growthNavButton = CreateButton(
-            "GrowthNav",
-            bottom,
-            "GROWTH",
-            new Vector2(0.21f, 0.08f),
-            new Vector2(0.38f, 0.92f),
-            PanelLight,
-            ShowGrowth);
-
-        gachaNavButton = CreateButton(
-            "GachaNav",
-            bottom,
-            "GACHA",
-            new Vector2(0.405f, 0.08f),
-            new Vector2(0.575f, 0.92f),
-            Accent,
-            HandleGachaAction);
-
-        collectionNavButton = CreateButton(
-            "CollectionNav",
-            bottom,
-            "COMPANIONS",
-            new Vector2(0.6f, 0.08f),
-            new Vector2(0.77f, 0.92f),
-            PanelLight,
-            ShowCollection);
-
-        moreNavButton = CreateButton(
-            "MoreNav",
-            bottom,
-            "MORE",
-            new Vector2(0.795f, 0.08f),
-            new Vector2(0.985f, 0.92f),
-            PanelLight,
+            ShowBattle,
+            ShowGrowth,
+            ShowGacha,
+            ShowCollection,
             ShowMore);
+        notificationBadges.RegisterBottomNavigation(bottomNavigationUI);
+        navigation = new MainGameNavigationController(
+            bottomNavigationUI,
+            battlePanel,
+            growthPanel,
+            gachaPanel,
+            morePanel,
+            collectionPanel,
+            equipmentPanel,
+            questPanel,
+            shopPanel,
+            eventPanel,
+            settingsPanel,
+            accountPanel);
     }
 
     private void BuildTutorial(RectTransform root)
     {
-        RectTransform panel = CreatePanel(
-            "TutorialPanel",
+        tutorialPanelUI = new TutorialPanelUI(
             root,
-            new Color32(26, 38, 61, 250),
-            new Vector2(0.04f, 0.125f),
-            new Vector2(0.96f, 0.235f));
-        tutorialPanel = panel.gameObject;
-
-        objectiveTitleText = CreateText(
-            "ObjectiveTitle",
-            panel,
-            "NEXT OBJECTIVE",
-            26,
-            new Vector2(0.04f, 0.62f),
-            new Vector2(0.72f, 0.88f),
-            TextAlignmentOptions.Left,
-            Gold);
-
-        tutorialText = CreateText(
-            "TutorialText",
-            panel,
-            "Tutorial",
-            29,
-            new Vector2(0.04f, 0.16f),
-            new Vector2(0.72f, 0.58f),
-            TextAlignmentOptions.Left,
-            MutedText);
-
-        tutorialButton = CreateButton(
-            "TutorialAction",
-            panel,
-            "START",
-            new Vector2(0.75f, 0.18f),
-            new Vector2(0.97f, 0.82f),
-            Gold,
-            HandleTutorialAction);
-        tutorialButtonText =
-            tutorialButton.GetComponentInChildren<TMP_Text>();
+            GetTutorialFlow().HandleTutorialAction);
     }
 
     private void BuildStoryIntro(RectTransform root)
     {
-        RectTransform overlay = CreatePanel(
-            "StoryIntroOverlay",
+        storyIntroUI = new StoryIntroUI(
             root,
-            new Color32(8, 12, 22, 250),
-            Vector2.zero,
-            Vector2.one);
-        storyIntroOverlay = overlay.gameObject;
-
-        Button tapArea = storyIntroOverlay.AddComponent<Button>();
-        tapArea.targetGraphic = overlay.GetComponent<Image>();
-        tapArea.onClick.AddListener(HandleStoryIntroNext);
-
-        RectTransform artPanel = CreatePanel(
-            "StoryIntroArtPlaceholder",
-            overlay,
-            new Color32(135, 199, 255, 255),
-            new Vector2(0.06f, 0.36f),
-            new Vector2(0.94f, 0.9f));
-        storyIntroArtImage = artPanel.GetComponent<Image>();
-
-        CreatePanel(
-            "StoryIntroPixelFrame",
-            artPanel,
-            new Color32(255, 255, 255, 38),
-            new Vector2(0.03f, 0.04f),
-            new Vector2(0.97f, 0.96f));
-
-        storyIntroArtText = CreateText(
-            "StoryIntroArtText",
-            artPanel,
-            "(아트 필요)",
-            34,
-            new Vector2(0.08f, 0.34f),
-            new Vector2(0.92f, 0.66f),
-            TextAlignmentOptions.Center,
-            Color.white);
-
-        RectTransform dialoguePanel = CreatePanel(
-            "StoryIntroDialoguePanel",
-            overlay,
-            new Color32(28, 38, 60, 255),
-            new Vector2(0.06f, 0.08f),
-            new Vector2(0.94f, 0.33f));
-
-        storyIntroCounterText = CreateText(
-            "StoryIntroCounter",
-            dialoguePanel,
-            "1 / 7",
-            24,
-            new Vector2(0.05f, 0.74f),
-            new Vector2(0.24f, 0.94f),
-            TextAlignmentOptions.Left,
-            Gold);
-
-        storyIntroTitleText = CreateText(
-            "StoryIntroTitle",
-            dialoguePanel,
-            "전봇대 위의 세상",
-            36,
-            new Vector2(0.25f, 0.7f),
-            new Vector2(0.95f, 0.94f),
-            TextAlignmentOptions.Right,
-            Accent);
-
-        storyIntroBodyText = CreateText(
-            "StoryIntroBody",
-            dialoguePanel,
-            "대사는 추후 확정",
-            31,
-            new Vector2(0.05f, 0.26f),
-            new Vector2(0.95f, 0.68f),
-            TextAlignmentOptions.Left,
-            Color.white);
-
-        Button skipButton = CreateButton(
-            "StoryIntroSkipButton",
-            dialoguePanel,
-            "SKIP",
-            new Vector2(0.05f, 0.05f),
-            new Vector2(0.31f, 0.23f),
-            PanelLight,
-            HandleStoryIntroSkip);
-        skipButton.GetComponentInChildren<TMP_Text>().fontSizeMax = 21;
-
-        Button nextButton = CreateButton(
-            "StoryIntroNextButton",
-            dialoguePanel,
-            "NEXT",
-            new Vector2(0.64f, 0.05f),
-            new Vector2(0.95f, 0.23f),
-            Gold,
-            HandleStoryIntroNext);
-        storyIntroButtonText =
-            nextButton.GetComponentInChildren<TMP_Text>();
-
-        CreateText(
-            "StoryIntroTapHint",
-            dialoguePanel,
-            "화면을 눌러 다음 컷으로 이동",
-            20,
-            new Vector2(0.32f, 0.05f),
-            new Vector2(0.63f, 0.23f),
-            TextAlignmentOptions.Center,
-            MutedText);
-
-        storyIntroOverlay.SetActive(false);
+            GetTutorialFlow().HandleStoryIntroNext,
+            GetTutorialFlow().HandleStoryIntroSkip);
     }
 
     private void BuildOfflinePopup(RectTransform root)
     {
-        RectTransform overlay = CreatePanel(
-            "OfflineOverlay",
-            root,
-            new Color(0f, 0f, 0f, 0.75f),
-            Vector2.zero,
-            Vector2.one);
-        offlineOverlay = overlay.gameObject;
-
-        RectTransform card = CreatePanel(
-            "OfflineCard",
-            overlay,
-            Panel,
-            new Vector2(0.1f, 0.32f),
-            new Vector2(0.9f, 0.68f));
-
-        offlineText = CreateText(
-            "OfflineText",
-            card,
-            "Welcome back!",
-            42,
-            new Vector2(0.08f, 0.3f),
-            new Vector2(0.92f, 0.9f),
-            TextAlignmentOptions.Center,
-            Gold);
-
-        CreateButton(
-            "OfflineConfirm",
-            card,
-            "COLLECT",
-            new Vector2(0.22f, 0.08f),
-            new Vector2(0.78f, 0.27f),
-            Success,
-            () => offlineOverlay.SetActive(false));
-
-        offlineOverlay.SetActive(false);
+        offlineRewardUI = new OfflineRewardUI(root);
     }
 
     private void BuildToast(RectTransform root)
     {
-        RectTransform toast = CreatePanel(
-            "ToastPanel",
-            root,
-            new Color32(10, 15, 26, 235),
-            new Vector2(0.2f, 0.82f),
-            new Vector2(0.8f, 0.88f));
-        toastPanel = toast.gameObject;
-
-        toastText = CreateText(
-            "ToastText",
-            toast,
-            "",
-            29,
-            Vector2.zero,
-            Vector2.one,
-            TextAlignmentOptions.Center);
-
-        toastPanel.SetActive(false);
+        toastUI = new ToastUI(root);
     }
 
     private void BuildTitleScreen(RectTransform root)
     {
-        RectTransform overlay = CreatePanel(
-            "TitleOverlay",
+        titleScreenUI = new TitleScreenUI(
             root,
-            Background,
-            Vector2.zero,
-            Vector2.one);
-        titleOverlay = overlay.gameObject;
-
-        CreatePanel(
-            "TitleSkyBlock",
-            overlay,
-            new Color32(24, 42, 74, 255),
-            new Vector2(0f, 0.58f),
-            Vector2.one);
-
-        CreatePanel(
-            "TitleGroundBlock",
-            overlay,
-            new Color32(13, 18, 32, 255),
-            Vector2.zero,
-            new Vector2(1f, 0.58f));
-
-        RectTransform artPanel = CreatePanel(
-            "TitleArtPlaceholder",
-            overlay,
-            new Color32(28, 39, 65, 255),
-            new Vector2(0.07f, 0.48f),
-            new Vector2(0.93f, 0.9f));
-
-        CreateText(
-            "ArtNeededLabel",
-            artPanel,
-            "ART NEEDED",
-            44,
-            new Vector2(0.05f, 0.58f),
-            new Vector2(0.95f, 0.78f),
-            TextAlignmentOptions.Center,
-            Accent);
-
-        CreateText(
-            "ArtNeededDescription",
-            artPanel,
-            "Hero, companions, monsters, and world mood will be shown here.",
-            25,
-            new Vector2(0.08f, 0.14f),
-            new Vector2(0.92f, 0.34f),
-            TextAlignmentOptions.Center,
-            MutedText);
-
-        CreateText(
-            "GameLogo",
-            overlay,
-            "IDLE RPG\nPROTOTYPE",
-            64,
-            new Vector2(0.08f, 0.67f),
-            new Vector2(0.92f, 0.84f),
-            TextAlignmentOptions.Center,
-            Accent);
-
-        titleGoogleButton = CreateButton(
-            "TitleGoogleButton",
-            overlay,
-            "START WITH GOOGLE",
-            new Vector2(0.12f, 0.31f),
-            new Vector2(0.88f, 0.38f),
-            Accent,
-            HandleTitleGoogleAction);
-
-        titleGuestButton = CreateButton(
-            "TitleGuestButton",
-            overlay,
-            "PLAY AS GUEST",
-            new Vector2(0.12f, 0.22f),
-            new Vector2(0.88f, 0.29f),
-            PanelLight,
-            HandleTitleGuestAction);
-
-        titleStatusText = CreateText(
-            "TitleStatus",
-            overlay,
-            "Checking login...",
-            24,
-            new Vector2(0.1f, 0.11f),
-            new Vector2(0.9f, 0.2f),
-            TextAlignmentOptions.Center,
-            MutedText);
-
-        CreateText(
-            "TitleNotice",
-            overlay,
-            "Android only. Guest progress can be linked to Google later.",
-            22,
-            new Vector2(0.1f, 0.05f),
-            new Vector2(0.9f, 0.1f),
-            TextAlignmentOptions.Center,
-            MutedText);
-
-        titleOverlay.SetActive(false);
+            sessionActions.StartGoogleLogin,
+            sessionActions.StartGuestLogin);
     }
 
     private void BuildLoadingOverlay(RectTransform root)
     {
-        RectTransform overlay = CreatePanel(
-            "LoadingOverlay",
+        loadingOverlayUI = new LoadingOverlayUI(
             root,
-            Background,
-            Vector2.zero,
-            Vector2.one);
-        loadingOverlay = overlay.gameObject;
-
-        CreateText(
-            "GameTitle",
-            overlay,
-            "IDLE RPG PROTOTYPE",
-            62,
-            new Vector2(0.08f, 0.58f),
-            new Vector2(0.92f, 0.72f),
-            TextAlignmentOptions.Center,
-            Accent);
-
-        loadingText = CreateText(
-            "LoadingText",
-            overlay,
-            "Loading...",
-            34,
-            new Vector2(0.08f, 0.4f),
-            new Vector2(0.92f, 0.57f),
-            TextAlignmentOptions.Center);
-
-        retryButton = CreateButton(
-            "RetryButton",
-            overlay,
-            "RETRY",
-            new Vector2(0.3f, 0.31f),
-            new Vector2(0.7f, 0.39f),
-            Accent,
-            HandleRetryAction);
-        retryButton.gameObject.SetActive(false);
+            sessionActions.RetryInitialization);
     }
 
     private void BindEvents()
     {
-        battleManager.OnBattleStateChanged += RefreshBattle;
-        battleManager.OnPlayerAttackPerformed += HandlePlayerAttackVisual;
-        battleManager.OnEnemyAttackPerformed += HandleEnemyAttackVisual;
-        battleManager.OnEnemyDefeated += HandleEnemyDefeatedVisual;
-        battleManager.OnPlayerDefeated += HandlePlayerDefeatedVisual;
-        battleManager.OnCompanionSkillUsed += HandleCompanionSkillVisual;
-        battleManager.OnBossPatternUsed += HandleBossPatternVisual;
-        battleManager.OnBossChallengeFailed += HandleBossChallengeFailed;
-        if (EquipmentManager.Instance != null)
-            EquipmentManager.Instance.OnEquipmentDropped +=
-                HandleEquipmentDropped;
-        growthManager.OnUpgraded += HandleGrowthUpdated;
-        tutorialManager.OnTutorialChanged += RefreshTutorial;
-
-        if (PlayerDataManager.Instance != null)
-            PlayerDataManager.Instance.OnPlayerDataChanged += RefreshAll;
-
-        if (AccountLinkManager.Instance != null)
-            AccountLinkManager.Instance.OnAccountChanged += RefreshAccount;
-
-        if (MonetizationManager.Instance != null)
-        {
-            MonetizationManager.Instance.OnMonetizationChanged +=
-                RefreshShop;
-        }
+        eventSubscriptions = new MainGameEventSubscriptions(
+            battleManager,
+            growthManager,
+            tutorialManager,
+            companionManager,
+            battleHud,
+            RefreshBattle,
+            HandleEquipmentDropped,
+            HandleGrowthUpdated,
+            RefreshTutorial,
+            HandleCompanionChanged,
+            RefreshAll,
+            RefreshAccount,
+            RefreshShop);
+        eventSubscriptions.Bind();
     }
 
     private void RefreshTopBar()
     {
         PlayerData data = PlayerDataManager.Instance?.playerData;
-        if (data == null)
-            return;
-
-        goldText.text =
-            $"{LocalizationManager.Text("Gold", "골드")}  {data.gold:N0}";
-        stageText.text =
-            $"{LocalizationManager.Text("Stage", "스테이지")} {data.currentStage}";
+        topBarUI?.Refresh(data);
         if (autoAdvanceText != null)
         {
             autoAdvanceText.text =
-                data.autoAdvance
+                data != null && data.autoAdvance
                     ? LocalizationManager.Text("AUTO ON", "자동 진행")
                     : LocalizationManager.Text("REPEAT", "반복");
         }
-        powerText.text =
-            $"{LocalizationManager.Text("Power", "전투력")} " +
-            $"{GameBalance.GetCombatPower(data):N0}";
     }
 
     private void RefreshBattle()
@@ -2281,1389 +469,129 @@ public class MainGameUI : MonoBehaviour
         if (battleManager == null || !battleManager.IsInitialized)
             return;
 
-        PlayerData data = PlayerDataManager.Instance.playerData;
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        if (data == null)
+            return;
+
         RefreshWorldBackdrop(data.currentStage);
-        enemyNameText.text =
-            battleManager.IsBoss
-                ? $"{battleManager.EnemyName}  " +
-                  $"{battleManager.BossTimeRemaining:0.0}s"
-                : $"{battleManager.EnemyName}  " +
-                  $"{data.stageEnemyIndex + 1}/" +
-                  $"{GameBalance.EnemiesPerStage - 1}";
-
-        enemyHealthText.text =
-            $"{battleManager.EnemyHealth:N0} / " +
-            $"{battleManager.EnemyMaxHealth:N0}";
-        playerHealthText.text =
-            $"{battleManager.PlayerHealth:N0} / " +
-            $"{battleManager.PlayerMaxHealth:N0}";
-
-        SetBar(
-            enemyHealthFill,
-            battleManager.EnemyHealth,
-            battleManager.EnemyMaxHealth);
-        SetBar(
-            playerHealthFill,
-            battleManager.PlayerHealth,
-            battleManager.PlayerMaxHealth);
-
-        if (!battleManager.IsRunning)
-        {
-            combatStatusText.text =
-                LocalizationManager.Text("Paused", "일시정지");
-        }
-        else
-        {
-            combatStatusText.text =
-                $"{LocalizationManager.Text("DMG", "피해")} " +
-                $"{battleManager.LastPlayerDamage:N0}  " +
-                $"{LocalizationManager.Text("ATK", "공격")} " +
-                $"{GameBalance.GetPlayerAttack(data):N0}";
-        }
-
+        battleHud?.Refresh();
         RefreshTopBar();
-        RefreshSkillStatus();
-        RefreshBattleVisuals();
     }
 
     private void RefreshWorldBackdrop(int stage)
     {
-        int themeIndex = PrototypeBattleArt.GetThemeIndex(stage);
-        if (themeIndex == worldThemeIndex)
-            return;
-
-        worldThemeIndex = themeIndex;
-        SetWorldLayer(
-            worldBackgroundImage,
-            PrototypeBattleArt.GetStageBackground(stage),
-            Background);
-        SetWorldLayer(
-            worldMidgroundImage,
-            PrototypeBattleArt.GetStageMidground(stage),
-            Color.clear);
-        SetWorldLayer(
-            worldForegroundImage,
-            PrototypeBattleArt.GetStageForeground(stage),
-            Color.clear);
-    }
-
-    private static void SetWorldLayer(
-        Image image,
-        Sprite sprite,
-        Color fallbackColor)
-    {
-        if (image == null)
-            return;
-
-        image.sprite = sprite;
-        image.color = sprite == null ? fallbackColor : Color.white;
-    }
-
-    private void RefreshBattleVisuals()
-    {
-        PlayerData data = PlayerDataManager.Instance?.playerData;
-        if (data == null)
-            return;
-
-        BattleVisualProfile hero = BattleVisualResolver.GetHero();
-        playerActorView?.SetVisual(
-            hero?.sprite ?? PrototypeBattleArt.GetSupportHeroSprite(),
-            hero?.animatorController);
-
-        BattleVisualProfile enemy =
-            BattleVisualResolver.GetEnemy(
-                data.currentStage,
-                battleManager.IsBoss);
-        enemyActorView?.SetVisual(
-            enemy?.sprite ?? PrototypeBattleArt.GetEnemySprite(
-                data.currentStage,
-                battleManager.IsBoss),
-            enemy?.animatorController);
-
-        for (int slot = 0;
-             slot < companionActorViews.Count;
-             slot++)
-        {
-            CharacterData character =
-                companionManager?.GetEquippedAtSlot(slot);
-            Sprite sprite = character == null
-                ? null
-                : character.battleSprite ??
-                  character.icon;
-            companionActorViews[slot].SetVisual(
-                sprite,
-                character?.battleAnimator);
-        }
-    }
-
-    private void RefreshSkillStatus()
-    {
-        if (skillStatusText == null || companionManager == null)
-            return;
-
-        RefreshSkillButtons();
-
-        StringBuilder builder = new StringBuilder();
-        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
-        {
-            CharacterData character =
-                companionManager.GetEquippedAtSlot(slot);
-            if (character == null)
-                continue;
-
-            if (builder.Length > 0)
-                builder.Append("   ");
-
-            float cooldown =
-                slot < battleManager.SkillCooldowns.Count
-                    ? battleManager.SkillCooldowns[slot]
-                    : 0f;
-            builder.Append(
-                cooldown <= 0f
-                    ? $"{character.characterName}: " +
-                      LocalizationManager.Text("READY", "준비됨")
-                    : $"{character.characterName}: {cooldown:0.0}s");
-        }
-
-        skillStatusText.text = builder.Length > 0
-            ? builder.ToString()
-            : LocalizationManager.Text(
-                "No companion skills equipped.",
-                "장착한 동료 스킬이 없습니다.");
-    }
-
-    private void RefreshSkillButtons()
-    {
-        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
-        {
-            CharacterData character =
-                companionManager.GetEquippedAtSlot(slot);
-            float cooldown =
-                slot < battleManager.SkillCooldowns.Count
-                    ? battleManager.SkillCooldowns[slot]
-                    : 0f;
-
-            if (skillButtonTexts[slot] != null)
-            {
-                skillButtonTexts[slot].text = character == null
-                    ? "EMPTY"
-                    : cooldown <= 0f
-                        ? $"{character.characterName}\nREADY"
-                        : $"{character.characterName}\n{cooldown:0.0}s";
-            }
-
-            if (skillButtonImages[slot] != null)
-            {
-                skillButtonImages[slot].color =
-                    character != null && cooldown <= 0f
-                        ? Accent
-                        : PanelLight;
-            }
-        }
-    }
-
-    private void UseCompanionSkill(int slot)
-    {
-        if (battleManager != null &&
-            battleManager.TryUseCompanionSkill(slot))
-        {
-            return;
-        }
-
-        ShowToast("Skill is not ready.");
+        worldBackdropUI?.Refresh(stage);
     }
 
     private void RefreshGrowth()
     {
-        if (growthManager == null)
-            return;
-
-        PlayerData data = PlayerDataManager.Instance?.playerData;
-        if (data == null)
-            return;
-
-        attackGrowthText.text =
-            $"{LocalizationManager.Text("Attack", "공격력")} " +
-            $"Lv.{growthManager.GetLevel(UpgradeType.Attack)}\n" +
-            $"{LocalizationManager.Text("ATK", "공격")} " +
-            $"{GameBalance.GetPlayerAttack(data):N0}  (+base 6)\n" +
-            $"{LocalizationManager.Text("Cost", "비용")} " +
-            $"{growthManager.GetCost(UpgradeType.Attack):N0}";
-        healthGrowthText.text =
-            $"{LocalizationManager.Text("Health", "체력")} " +
-            $"Lv.{growthManager.GetLevel(UpgradeType.Health)}\n" +
-            $"HP {battleManager.PlayerMaxHealth:N0}  (+base 30)\n" +
-            $"{LocalizationManager.Text("Cost", "비용")} " +
-            $"{growthManager.GetCost(UpgradeType.Health):N0}";
-        speedGrowthText.text =
-            $"{LocalizationManager.Text("Attack Speed", "공격 속도")} " +
-            $"Lv.{growthManager.GetLevel(UpgradeType.AttackSpeed)}\n" +
-            $"{LocalizationManager.Text("Interval", "간격")} " +
-            $"{GameBalance.GetPlayerAttackInterval(data):0.00}s\n" +
-            $"{LocalizationManager.Text("Cost", "비용")} " +
-            $"{growthManager.GetCost(UpgradeType.AttackSpeed):N0}";
+        growthPanelUI?.Refresh(
+            growthManager,
+            battleManager,
+            PlayerDataManager.Instance?.playerData);
     }
 
     private void RefreshGacha()
     {
-        if (gachaCurrencyText == null || gachaPityText == null)
-            return;
-
         PlayerData data = PlayerDataManager.Instance?.playerData;
         if (data == null)
             return;
 
-        gachaCurrencyText.text =
-            $"{LocalizationManager.Text("Gem", "젬")} " +
-            $"{GachaEconomy.GetItemCount(data, "Gem"):N0}   " +
-            $"{LocalizationManager.Text("Ticket", "티켓")} " +
-            $"{GachaEconomy.GetItemCount(data, "GachaTicket"):N0}";
-        int remaining = Mathf.Max(
-            1,
-            GachaManager.PityLimit - data.pityCount);
-        gachaPityText.text =
-            $"{LocalizationManager.Text("SSR in", "SSR까지")} {remaining}";
+        gachaPanelUI?.Refresh(data);
     }
-
     private void RefreshMore()
     {
-        PlayerData data = PlayerDataManager.Instance?.playerData;
-        if (data == null)
-            return;
-
-        StringBuilder builder = new StringBuilder();
-        foreach (var item in data.inventory.items)
-        {
-            if (companionManager == null ||
-                !companionManager.IsCharacterItem(item.Key))
-            {
-                builder.AppendLine($"{item.Key}   x{item.Value}");
-            }
-        }
-
-        builder.AppendLine(
-            $"{LocalizationManager.Text("Mailbox", "우편함")}   " +
-            $"{data.mailbox.Count} " +
-            $"{LocalizationManager.Text("waiting", "개 대기 중")}");
-        builder.AppendLine(
-            $"{LocalizationManager.Text("Monsters defeated", "처치한 몬스터")}   " +
-            $"{data.totalMonstersDefeated:N0}");
-        inventoryText.text = builder.ToString();
-
-        StringBuilder companionBuilder = new StringBuilder();
-        var party = companionManager?.GetEquippedParty();
-        if (party == null || party.Count == 0)
-        {
-            companionBuilder.AppendLine(
-                $"{LocalizationManager.Text("Party", "파티")} 0/3");
-            companionBuilder.Append(
-                LocalizationManager.Text(
-                    "Recruit one in Gacha.",
-                    "뽑기에서 동료를 획득하세요."));
-        }
-        else
-        {
-            int bonus = 0;
-            companionBuilder.AppendLine(
-                $"{LocalizationManager.Text("PARTY", "파티")} " +
-                $"{party.Count}/{CompanionManager.PartySize}");
-            for (int i = 0; i < party.Count; i++)
-            {
-                CharacterData character = party[i];
-                if (i > 0)
-                    companionBuilder.Append(", ");
-
-                companionBuilder.Append(
-                    $"[{character.rarity}] {character.characterName}");
-                bonus += CompanionManager.GetAttackBonusPercent(
-                    character.rarity);
-            }
-
-            companionBuilder.AppendLine();
-            companionBuilder.Append(
-                $"{LocalizationManager.Text("Team Attack", "팀 공격력")} " +
-                $"+{bonus}%");
-            CompanionSynergyResult synergy =
-                companionManager.GetSynergyResult();
-            companionBuilder.AppendLine();
-            companionBuilder.Append(synergy.GetSummary());
-        }
-
-        companionText.text = companionBuilder.ToString();
-
-        AccountLinkManager accounts = AccountLinkManager.Instance;
-        string accountType = accounts != null &&
-            accounts.IsLinked(AccountLinkProvider.Google)
-                ? LocalizationManager.Text(
-                    "Linked account",
-                    "연동된 계정")
-                : LocalizationManager.Text(
-                    "Guest account",
-                    "게스트 계정");
-        accountText.text =
-            $"{accountType}  |  " +
-            $"{LocalizationManager.Text("Highest", "최고")} " +
-            $"{data.highestStage}";
-
-        if (DailyRewardManager.Instance != null)
-        {
-            int day = DailyRewardManager.Instance.GetNextRewardDay();
-            dailyRewardText.text =
-                DailyRewardManager.Instance.CanClaimReward()
-                    ? $"{LocalizationManager.Text("Daily Reward Day", "일일 보상")} " +
-                      $"{day} " +
-                      $"{LocalizationManager.Text("is ready", "수령 가능")}"
-                    : $"{LocalizationManager.Text("Daily Reward Day", "일일 보상")} " +
-                      $"{day} " +
-                      $"{LocalizationManager.Text("already claimed", "수령 완료")}";
-        }
+        morePanelUI?.Refresh(
+            PlayerDataManager.Instance?.playerData,
+            companionManager,
+            AccountLinkManager.Instance,
+            DailyRewardManager.Instance);
     }
 
     private void RefreshCollection()
     {
-        if (characterDetailText == null || companionManager == null)
+        if (companionManager == null)
             return;
 
-        if (selectedCharacter == null)
-        {
-            List<CharacterData> characters =
-                companionManager.GetAllCharacters();
-            if (characters.Count > 0)
-                selectedCharacter = characters[0];
-        }
-
+        companionActions?.EnsureSelected();
+        CharacterData selectedCharacter =
+            companionActions?.SelectedCharacter;
         if (selectedCharacter == null)
             return;
 
-        int owned =
-            companionManager.GetOwnedCount(
-                selectedCharacter.characterName);
-        int bonus =
-            CompanionManager.GetAttackBonusPercent(
-                selectedCharacter.rarity,
-                companionManager.GetStars(
-                    selectedCharacter.characterName));
-        int stars =
-            companionManager.GetStars(selectedCharacter.characterName);
-        int promotionCost =
-            companionManager.GetPromotionCost(
-                selectedCharacter.characterName);
-        bool equippedSelected = IsCharacterEquipped(selectedCharacter);
-        bool canPromote =
-            owned > 0 &&
-            stars < 5 &&
-            owned - 1 >= promotionCost &&
-            promotionCost > 0;
-
-        StringBuilder builder = new StringBuilder();
-        builder.AppendLine(
-            $"[{selectedCharacter.rarity}] " +
-            $"{selectedCharacter.characterName}");
-        builder.AppendLine(
-            owned > 0
-                ? $"{LocalizationManager.Text("Owned", "보유")} x{owned}  |  " +
-                  (equippedSelected
-                      ? LocalizationManager.Text("EQUIPPED", "장착 중")
-                      : LocalizationManager.Text("READY", "준비됨"))
-                : LocalizationManager.Text(
-                    "LOCKED - recruit from Gacha",
-                    "잠김 - 뽑기에서 획득하세요"));
-        builder.AppendLine(
-            $"{LocalizationManager.Text("Stars", "별")} {stars}/5  |  " +
-            $"{LocalizationManager.Text("Attack", "공격력")} +{bonus}%");
-        builder.AppendLine(
-            $"{selectedCharacter.element} / {selectedCharacter.role}");
-        if (owned > 0 && stars < 5)
-        {
-            builder.AppendLine(
-                canPromote
-                    ? LocalizationManager.Text(
-                        "Promotion ready.",
-                        "승급 가능.")
-                    : $"{LocalizationManager.Text("Promotion needs", "승급 필요")} " +
-                      $"{promotionCost} " +
-                      $"{LocalizationManager.Text("duplicate(s)", "중복 캐릭터")}");
-        }
-        builder.AppendLine(selectedCharacter.description);
-        builder.Append(
-            LocalizationManager.Text("Party", "파티") + ": ");
-
-        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
-        {
-            if (slot > 0)
-                builder.Append("  |  ");
-
-            CharacterData equipped =
-                companionManager.GetEquippedAtSlot(slot);
-            string equippedName = equipped == null
-                ? LocalizationManager.Text("Empty", "비어 있음")
-                : equipped.characterName;
-            builder.Append(
-                $"{slot + 1}. {equippedName}");
-        }
-
-        characterDetailText.text = builder.ToString();
-        RefreshCompanionSlotButtons();
-    }
-
-    private bool IsCharacterEquipped(CharacterData character)
-    {
-        if (character == null || companionManager == null)
-            return false;
-
-        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
-        {
-            CharacterData equipped =
-                companionManager.GetEquippedAtSlot(slot);
-            if (equipped == null)
-                continue;
-
-            if (equipped == character ||
-                equipped.characterName == character.characterName)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private void RefreshCompanionSlotButtons()
-    {
-        for (int slot = 0;
-             slot < companionSlotButtons.Count;
-             slot++)
-        {
-            Button button = companionSlotButtons[slot];
-            CharacterData equipped =
-                companionManager?.GetEquippedAtSlot(slot);
-            bool selectedOwned =
-                selectedCharacter != null &&
-                companionManager != null &&
-                companionManager.GetOwnedCount(
-                    selectedCharacter.characterName) > 0;
-            bool selectedInSlot =
-                selectedCharacter != null &&
-                equipped != null &&
-                equipped.characterName ==
-                selectedCharacter.characterName;
-
-            string label = equipped == null
-                ? $"{LocalizationManager.Text("SLOT", "슬롯")} {slot + 1}\n" +
-                  LocalizationManager.Text("EMPTY", "비어 있음")
-                : $"{LocalizationManager.Text("SLOT", "슬롯")} {slot + 1}\n" +
-                  equipped.characterName;
-
-            if (selectedInSlot)
-            {
-                label =
-                    $"{LocalizationManager.Text("SLOT", "슬롯")} {slot + 1}\n" +
-                    LocalizationManager.Text("REMOVE", "해제");
-            }
-            else if (selectedOwned)
-            {
-                label =
-                    $"{LocalizationManager.Text("SLOT", "슬롯")} {slot + 1}\n" +
-                    LocalizationManager.Text("EQUIP", "장착");
-            }
-
-            SetButtonLabel(button, label);
-
-            if (button != null)
-                button.interactable =
-                    selectedCharacter != null &&
-                    (selectedOwned || selectedInSlot);
-        }
+        collectionPanelUI?.Refresh(selectedCharacter, companionManager);
     }
 
     private void RefreshEquipment()
     {
-        if (equipmentText == null)
-            return;
-
-        PlayerData data = PlayerDataManager.Instance?.playerData;
-        if (data == null)
-            return;
-
-        string weapon = string.IsNullOrEmpty(data.equippedWeapon)
-            ? LocalizationManager.Text("None", "없음")
-            : data.equippedWeapon;
-        string armor = string.IsNullOrEmpty(data.equippedArmor)
-            ? LocalizationManager.Text("None", "없음")
-            : data.equippedArmor;
-        bool hasWeapon = !string.IsNullOrEmpty(data.equippedWeapon);
-        bool hasArmor = !string.IsNullOrEmpty(data.equippedArmor);
-
-        equipmentText.text =
-            $"{LocalizationManager.Text("WEAPON", "무기")}\n" +
-            $"{weapon}  Lv.{data.weaponUpgradeLevel}\n" +
-            $"{LocalizationManager.Text("Attack", "공격력")} " +
-            $"+{EquipmentManager.GetWeaponAttack(data)}\n" +
-            $"{LocalizationManager.Text("Next cost", "다음 비용")} " +
-            $"{(hasWeapon ? EquipmentManager.GetUpgradeCost(data.weaponUpgradeLevel).ToString("N0") : "-")}\n\n" +
-            $"{LocalizationManager.Text("ARMOR", "방어구")}\n" +
-            $"{armor}  Lv.{data.armorUpgradeLevel}\n" +
-            $"{LocalizationManager.Text("Health", "체력")} " +
-            $"+{EquipmentManager.GetArmorHealth(data)}\n" +
-            $"{LocalizationManager.Text("Next cost", "다음 비용")} " +
-            $"{(hasArmor ? EquipmentManager.GetUpgradeCost(data.armorUpgradeLevel).ToString("N0") : "-")}";
+        equipmentPanelUI?.Refresh(PlayerDataManager.Instance?.playerData);
     }
 
     private void RefreshQuests()
     {
-        if (questText != null && QuestManager.Instance != null)
-            questText.text = QuestManager.Instance.GetStatusText();
+        questPanelUI?.Refresh(
+            QuestManager.Instance,
+            PlayerDataManager.Instance?.playerData);
     }
-
     private void RefreshShop()
     {
-        if (shopText == null)
-            return;
-
-        PlayerData data = PlayerDataManager.Instance?.playerData;
-        if (data == null)
-        {
-            shopText.text = LocalizationManager.Text(
-                "Shop data unavailable.",
-                "상점 정보를 불러올 수 없습니다.");
-            return;
-        }
-
-        int gems = GachaEconomy.GetItemCount(data, "Gem");
-        int tickets = GachaEconomy.GetItemCount(data, "GachaTicket");
-        MonetizationManager monetization = MonetizationManager.Instance;
-        shopText.text =
-            $"{LocalizationManager.Text("Gems", "젬")} {gems:N0}  |  " +
-            $"{LocalizationManager.Text("Gold", "골드")} {data.gold:N0}  |  " +
-            $"{LocalizationManager.Text("Tickets", "티켓")} {tickets:N0}\n" +
-            (monetization?.GetStoreStatus() ??
-             LocalizationManager.Text(
-                 "Monetization service unavailable",
-                 "결제 서비스를 사용할 수 없습니다."));
-
-        if (monetization == null)
-            return;
-
-        bool busy = monetization.IsBusy;
-        bool starterOwned = data.ownedPurchaseProducts.Contains(
-            MonetizationManager.GetProductId(
-                RealMoneyProduct.StarterPack));
-        SetButtonLabel(
-            starterPackButton,
-            starterOwned
-                ? LocalizationManager.Text(
-                    "STARTER PACK  OWNED",
-                    "스타터 팩  보유 중")
-                : LocalizationManager.Text(
-                    "STARTER PACK",
-                    "스타터 팩") +
-                  "  " +
-                  monetization.GetPriceLabel(
-                      RealMoneyProduct.StarterPack) +
-                  "\n" +
-                  FormatCompact(GameBalanceConfig.StarterPackGems) +
-                  " " +
-                  LocalizationManager.Text("GEMS", "젬") +
-                  " + " +
-                  GameBalanceConfig.StarterPackTickets +
-                  " " +
-                  LocalizationManager.Text("TICKETS", "티켓") +
-                  " + " +
-                  FormatCompact(GameBalanceConfig.StarterPackGold) +
-                  " " +
-                  LocalizationManager.Text("GOLD", "골드"));
-        SetButtonLabel(
-            smallGemPackButton,
-            $"{GameBalanceConfig.SmallGemPackGems:N0} " +
-            $"{LocalizationManager.Text("GEMS", "젬")}  " +
-            monetization.GetPriceLabel(
-                RealMoneyProduct.GemPackSmall));
-        SetButtonLabel(
-            largeGemPackButton,
-            $"{GameBalanceConfig.LargeGemPackGems:N0} " +
-            $"{LocalizationManager.Text("GEMS", "젬")}  " +
-            monetization.GetPriceLabel(
-                RealMoneyProduct.GemPackLarge));
-
-        if (starterPackButton != null)
-            starterPackButton.interactable = !busy && !starterOwned;
-        if (smallGemPackButton != null)
-            smallGemPackButton.interactable = !busy;
-        if (largeGemPackButton != null)
-            largeGemPackButton.interactable = !busy;
-
-        if (rewardedAdButton != null)
-        {
-            bool canWatch =
-                monetization.CanWatchRewardedAd(out string reason);
-            rewardedAdButton.interactable =
-                !busy && monetization.RewardedAdReady && canWatch;
-            SetButtonLabel(
-                rewardedAdButton,
-                !monetization.AdProviderReady
-                    ? LocalizationManager.Text(
-                        "AD SDK PENDING",
-                        "광고 SDK 대기 중")
-                    : canWatch
-                    ? $"{LocalizationManager.Text("WATCH AD", "광고 보기")}  " +
-                      $"+{MonetizationManager.RewardedAdGemAmount} " +
-                      $"{LocalizationManager.Text("GEMS", "젬")}"
-                    : LocalizationManager.Translate(
-                        reason.ToUpperInvariant()));
-        }
+        shopPanelUI?.Refresh(
+            PlayerDataManager.Instance?.playerData,
+            MonetizationManager.Instance);
     }
 
     private void RefreshEvent()
     {
-        if (eventText != null && EventMissionManager.Instance != null)
-            eventText.text =
-                EventMissionManager.Instance.GetStatusText();
+        eventPanelUI?.Refresh(
+            EventMissionManager.Instance,
+            PlayerDataManager.Instance?.playerData);
+    }
+    private void RefreshNotificationBadges()
+    {
+        notificationBadges.Refresh(
+            NotificationBadgePolicy.Evaluate(
+                PlayerDataManager.Instance?.playerData,
+                growthManager,
+                companionManager));
     }
 
     private void RefreshSettings()
     {
-        if (settingsText == null)
-            return;
-
-        GameSettingsManager settings = GameSettingsManager.Instance;
-        if (settings == null)
-        {
-            settingsText.text = "Settings unavailable.";
-            return;
-        }
-
-        string on = LocalizationManager.Text("ON", "켜짐");
-        string off = LocalizationManager.Text("OFF", "꺼짐");
-        settingsText.text =
-            $"{LocalizationManager.Text("Sound", "소리")}   " +
-            $"{(settings.SoundEnabled ? on : off)}\n" +
-            $"{LocalizationManager.Text("Vibration", "진동")}   " +
-            $"{(settings.VibrationEnabled ? on : off)}\n" +
-            $"{LocalizationManager.Text("Notifications", "알림")}   " +
-            $"{(settings.NotificationsEnabled ? on : off)}\n" +
-            $"{LocalizationManager.Text("Frame Rate", "프레임")}   " +
-            $"{settings.TargetFrameRate} FPS\n" +
-            $"{LocalizationManager.Text("Language", "언어")}   " +
-            $"{(GameSettingsManager.IsKoreanLanguage ? "한국어" : "English")}";
+        settingsPanelUI?.Refresh(GameSettingsManager.Instance);
     }
-
-    private void PromoteSelectedCharacter()
-    {
-        if (selectedCharacter == null || companionManager == null)
-            return;
-
-        if (!companionManager.TryPromote(selectedCharacter))
-        {
-            ShowToast("Not enough duplicate copies.");
-            return;
-        }
-
-        battleManager?.RefreshPlayerStats();
-        PlayerDataManager.Instance?.NotifyPlayerDataChanged();
-        if (bootstrap != null)
-            _ = bootstrap.SaveNowAsync();
-
-        RefreshCollection();
-        ShowToast($"{selectedCharacter.characterName} promoted.");
-    }
-
     private void RefreshTutorial()
     {
         if (tutorialManager == null)
             return;
 
         RefreshStoryIntro();
-        if (tutorialManager.ShouldShowStoryIntro)
-        {
-            tutorialPanel.SetActive(false);
-            return;
-        }
-
-        tutorialPanel.SetActive(!tutorialManager.IsComplete);
-        if (tutorialManager.IsComplete)
-            return;
-
-        objectiveTitleText.text =
-            tutorialManager.CurrentStep == 0
-                ? "WELCOME"
-                : "NEXT OBJECTIVE";
-        tutorialText.text = tutorialManager.CurrentMessage;
-
-        switch (tutorialManager.CurrentStep)
-        {
-            case 0:
-                tutorialButtonText.text = "START";
-                break;
-            case 1:
-                tutorialButtonText.text = "GROWTH";
-                break;
-            default:
-                tutorialButtonText.text = "BATTLE";
-                break;
-        }
+        tutorialPanelUI?.Refresh(
+            tutorialManager,
+            tutorialManager.ShouldShowStoryIntro);
     }
 
     private void RefreshStoryIntro()
     {
-        if (storyIntroOverlay == null || tutorialManager == null)
-            return;
-
-        bool shouldShow = tutorialManager.ShouldShowStoryIntro;
-        storyIntroOverlay.SetActive(shouldShow);
-        if (!shouldShow)
-            return;
-
-        StoryIntroCut cut = tutorialManager.CurrentStoryCut;
-        IReadOnlyList<StoryIntroCut> cuts = tutorialManager.StoryCuts;
-        if (cut == null || cuts.Count == 0)
-        {
-            storyIntroOverlay.SetActive(false);
-            return;
-        }
-
-        storyIntroCounterText.text =
-            $"{cut.cutIndex} / {cuts.Count}";
-        storyIntroTitleText.text = cut.title;
-        storyIntroBodyText.text =
-            string.IsNullOrWhiteSpace(cut.body)
-                ? "대사는 추후 확정"
-                : cut.body;
-        storyIntroArtText.text =
-            string.IsNullOrWhiteSpace(cut.artDirection)
-                ? "(아트 필요)"
-                : cut.artDirection;
-
-        if (storyIntroArtImage != null)
-            storyIntroArtImage.color =
-                TryParseColor(cut.placeholderColorHex, PanelLight);
-
-        if (storyIntroButtonText != null)
-        {
-            storyIntroButtonText.text =
-                cut.cutIndex >= cuts.Count
-                    ? "작전 시작"
-                    : "다음";
-        }
+        storyIntroUI?.Refresh(tutorialManager);
     }
 
     private void RefreshAccount()
     {
-        if (accountDetailText == null)
-            return;
-
-        AccountLinkManager accounts = AccountLinkManager.Instance;
-        if (accounts == null)
-        {
-            accountDetailText.text = "Account service is unavailable.";
-            return;
-        }
-
-        accountDetailText.text =
-            accounts.GetAccountSummary() + "\n\n" +
-            GoogleCredentialTokenProvider.GetSetupStatus() + "\n" +
-            FirebaseManager.GetDiagnosticsStatus() + "\n" +
-            (PushNotificationManager.Instance != null
-                ? PushNotificationManager.Instance.GetTokenStatus()
-                : "FCM: Pending");
-
-        bool busy = accounts.IsBusy;
-        if (googleLinkButton != null)
-        {
-            googleLinkButton.interactable =
-                !busy &&
-                !accounts.IsLinked(AccountLinkProvider.Google);
-        }
-
+        accountPanelUI?.Refresh(AccountLinkManager.Instance);
     }
 
-    private void HandleTutorialAction()
+    private void HandleCompanionChanged()
     {
-        switch (tutorialManager.CurrentStep)
-        {
-            case 0:
-                tutorialManager.BeginTutorial();
-                ShowGrowth();
-                break;
-            case 1:
-                ShowGrowth();
-                break;
-            default:
-                ShowBattle();
-                break;
-        }
-    }
-
-    private void HandleStoryIntroNext()
-    {
-        if (tutorialManager == null ||
-            !tutorialManager.ShouldShowStoryIntro)
-        {
-            return;
-        }
-
-        IReadOnlyList<StoryIntroCut> cuts = tutorialManager.StoryCuts;
-        bool isLastCut =
-            cuts.Count == 0 ||
-            tutorialManager.CurrentStoryCutIndex >= cuts.Count - 1;
-
-        tutorialManager.AdvanceStoryIntro();
-
-        if (isLastCut)
-        {
-            tutorialManager.BeginTutorial();
-            ShowGrowth();
-        }
-    }
-
-    private void HandleStoryIntroSkip()
-    {
-        if (tutorialManager == null)
-            return;
-
-        tutorialManager.SkipStoryIntro();
-        RefreshTutorial();
-    }
-
-    private void HandleSaveAction()
-    {
-        bootstrap?.SaveNow();
-    }
-
-    private void HandleLogoutAction()
-    {
-        bootstrap?.Logout();
-    }
-
-    private void HandleTitleGoogleAction()
-    {
-        bootstrap?.StartGoogleLogin();
-    }
-
-    private void HandleTitleGuestAction()
-    {
-        bootstrap?.StartGuestLogin();
-    }
-
-    private async void HandleGoogleLink()
-    {
-        await HandleAccountLink(AccountLinkProvider.Google);
-    }
-
-    private async System.Threading.Tasks.Task HandleAccountLink(
-        AccountLinkProvider provider)
-    {
-        if (bootstrap == null)
-            return;
-
-        RefreshAccount();
-        AccountLinkResult result =
-            await bootstrap.LinkAccountAsync(provider);
-        RefreshAccount();
-        RefreshMore();
-        ShowToast(result.Message);
-    }
-
-    private void HandleGachaAction()
-    {
-        ShowGacha();
-    }
-
-    private async void RollGacha(int count)
-    {
-        if (isGachaRolling)
-            return;
-
-        if (GachaManager.Instance == null ||
-            PlayerDataManager.Instance?.playerData == null ||
-            InventoryManager.Instance == null)
-        {
-            gachaStatusText.text = LocalizationManager.Text(
-                "Game data is not ready.",
-                "게임 정보를 아직 불러오지 못했습니다.");
-            return;
-        }
-
-        PlayerData data = PlayerDataManager.Instance.playerData;
-        if (!GachaEconomy.TrySpend(
-                data,
-                count,
-                out GachaPayment payment))
-        {
-            gachaStatusText.text = count == 1
-                ? LocalizationManager.Text(
-                    "Need 1 Ticket or 100 Gems.",
-                    $"티켓 1개 또는 젬 {GachaEconomy.SingleGemCost}개가 필요합니다.")
-                : LocalizationManager.Text(
-                    "Need 10 Tickets or 900 Gems.",
-                    $"티켓 10개 또는 젬 {GachaEconomy.TenGemCost}개가 필요합니다.");
-            return;
-        }
-
-        isGachaRolling = true;
-        SetGachaButtonsInteractable(false);
-
-        try
-        {
-            List<CharacterData> results = count == 1
-                ? new List<CharacterData>
-                {
-                    GachaManager.Instance.RollCharacterWithPity()
-                }
-                : GachaManager.Instance.RollTen();
-
-            StringBuilder builder = new StringBuilder();
-            int ssrCount = 0;
-            int srCount = 0;
-            foreach (CharacterData character in results)
-            {
-                InventoryManager.Instance.AddItem(
-                    character.characterName,
-                    1,
-                    false);
-                builder.AppendLine(FormatGachaResult(character));
-                AnalyticsManager.Instance?.LogGachaRoll(character);
-
-                if (character.rarity == "SSR")
-                {
-                    ssrCount++;
-                    AnalyticsManager.Instance?.LogSSR(character);
-                }
-                else if (character.rarity == "SR")
-                {
-                    srCount++;
-                }
-            }
-
-            string summary = count == 10
-                ? $"\nSSR {ssrCount}   SR {srCount}   " +
-                  $"R {count - ssrCount - srCount}"
-                : "";
-            gachaResultText.text =
-                builder.ToString().TrimEnd() + summary;
-            gachaStatusText.text = payment.UsedTickets
-                ? $"{LocalizationManager.Text("Used", "사용")} " +
-                  $"{payment.Amount} " +
-                  $"{LocalizationManager.Text("ticket(s).", "티켓")}"
-                : $"{LocalizationManager.Text("Used", "사용")} " +
-                  $"{payment.Amount:N0} " +
-                  $"{LocalizationManager.Text("Gems.", "젬")}";
-
-            QuestManager.Instance?.ReportGacha(results.Count);
-            EventMissionManager.Instance?.ReportGacha(results.Count);
-
-            if (FirestoreManager.Instance != null)
-            {
-                await FirestoreManager.Instance.SavePlayerDataAsync(data);
-            }
-
-            PlayerDataManager.Instance.NotifyPlayerDataChanged();
-            RefreshGacha();
-        }
-        catch (Exception exception)
-        {
-            GachaEconomy.Refund(data, payment);
-            gachaStatusText.text = LocalizationManager.Text(
-                "Recruitment failed. Cost refunded.",
-                "모집에 실패했습니다. 비용을 돌려받았습니다.");
-            Debug.LogException(exception);
-        }
-        finally
-        {
-            isGachaRolling = false;
-            SetGachaButtonsInteractable(true);
-        }
-    }
-
-    private static string FormatGachaResult(CharacterData character)
-    {
-        string color;
-        switch (character.rarity)
-        {
-            case "SSR":
-                color = "#FFD34D";
-                break;
-            case "SR":
-                color = "#B68CFF";
-                break;
-            default:
-                color = "#B9CCE8";
-                break;
-        }
-
-        return
-            $"<color={color}>[{character.rarity}] " +
-            $"{character.characterName}</color>";
-    }
-
-    private void SetGachaButtonsInteractable(bool interactable)
-    {
-        if (gachaSingleButton != null)
-            gachaSingleButton.interactable = interactable;
-        if (gachaTenButton != null)
-            gachaTenButton.interactable = interactable;
-    }
-
-    private void HandleRetryAction()
-    {
-        bootstrap?.RetryInitialization();
-    }
-
-    private void HandleAutoEquip()
-    {
-        if (companionManager == null)
-            return;
-
-        bool changed = companionManager.TryEquipBestOwned(
-            out CharacterData equipped);
-        if (!changed && equipped == null)
-        {
-            ShowToast("Recruit a companion first.");
-            return;
-        }
-
-        ApplyCompanionSelection(equipped);
-    }
-
-    private void SelectCharacter(CharacterData character)
-    {
-        selectedCharacter = character;
-        RefreshCollection();
-    }
-
-    private void ToggleSelectedCharacterSlot(int slotIndex)
-    {
-        if (selectedCharacter == null || companionManager == null)
-            return;
-
-        CharacterData equipped =
-            companionManager.GetEquippedAtSlot(slotIndex);
-        bool changed;
-
-        if (equipped == selectedCharacter)
-        {
-            changed = companionManager.TryUnequipSlot(slotIndex);
-        }
-        else
-        {
-            changed = companionManager.TryEquipToSlot(
-                selectedCharacter,
-                slotIndex);
-        }
-
-        if (!changed)
-        {
-            ShowToast("This companion is not owned.");
-            return;
-        }
-
         battleManager?.RefreshPlayerStats();
-        PlayerDataManager.Instance?.NotifyPlayerDataChanged();
-        if (bootstrap != null)
-            _ = bootstrap.SaveNowAsync();
-
         RefreshCollection();
-        ShowToast(
-            equipped == selectedCharacter
-                ? $"{selectedCharacter.characterName} removed."
-                : $"{selectedCharacter.characterName} set to slot " +
-                  $"{slotIndex + 1}.");
-    }
-
-    private void ApplyCompanionSelection(CharacterData equipped)
-    {
-        if (equipped == null)
-        {
-            ShowToast("Recruit a companion first.");
-            return;
-        }
-
-        battleManager?.RefreshPlayerStats();
-        PlayerDataManager.Instance?.NotifyPlayerDataChanged();
-        if (bootstrap != null)
-            _ = bootstrap.SaveNowAsync();
-
-        int bonus =
-            CompanionManager.GetAttackBonusPercent(
-                equipped.rarity,
-                companionManager.GetStars(equipped.characterName));
-        selectedCharacter = equipped;
-        RefreshBattle();
-        RefreshCollection();
-        ShowToast(
-            $"{equipped.characterName} equipped. Attack +{bonus}%.");
-    }
-
-    private async void ClaimDailyReward()
-    {
-        try
-        {
-            if (DailyRewardManager.Instance == null)
-                return;
-
-            bool claimed =
-                await DailyRewardManager.Instance.ClaimRewardAsync();
-            ShowToast(claimed
-                ? "Daily reward collected."
-                : "Daily reward is not available.");
-            RefreshMore();
-        }
-        catch (Exception exception)
-        {
-            Debug.LogException(exception);
-            ShowToast("Reward claim failed.");
-        }
-    }
-
-    private async void ClaimAllMail()
-    {
-        try
-        {
-            if (MailboxManager.Instance == null)
-                return;
-
-            int claimed =
-                await MailboxManager.Instance.ClaimAllMailsAsync();
-            ShowToast(claimed > 0
-                ? $"{claimed} mail reward(s) collected."
-                : "No mail rewards available.");
-            RefreshMore();
-        }
-        catch (Exception exception)
-        {
-            Debug.LogException(exception);
-            ShowToast("Mail claim failed.");
-        }
-    }
-
-    private async void UpgradeAttack()
-    {
-        await UpgradeHero(UpgradeType.Attack);
-    }
-
-    private async void UpgradeHealth()
-    {
-        await UpgradeHero(UpgradeType.Health);
-    }
-
-    private async void UpgradeAttackSpeed()
-    {
-        await UpgradeHero(UpgradeType.AttackSpeed);
-    }
-
-    private async System.Threading.Tasks.Task UpgradeHero(
-        UpgradeType type)
-    {
-        if (growthManager == null)
-            return;
-
-        PlayerData data = PlayerDataManager.Instance?.playerData;
-        if (data == null)
-            return;
-
-        int cost = growthManager.GetCost(type);
-        if (data.gold < cost)
-        {
-            ShowToast($"Need {(cost - data.gold):N0} more Gold.");
-            return;
-        }
-
-        bool upgraded = await growthManager.TryUpgradeAsync(type);
-        if (!upgraded)
-        {
-            ShowToast("Upgrade failed.");
-            return;
-        }
-
-        RefreshGrowth();
-        RefreshBattle();
+        battleHud?.RefreshVisuals();
+        battleHud?.RefreshSkillStatus();
         RefreshTopBar();
-        ShowToast(
-            $"{GetUpgradeDisplayName(type)} Lv." +
-            $"{growthManager.GetLevel(type)}");
-    }
-
-    private async void UpgradeWeapon()
-    {
-        await UpgradeEquipment(EquipmentSlot.Weapon);
-    }
-
-    private async void UpgradeArmor()
-    {
-        await UpgradeEquipment(EquipmentSlot.Armor);
-    }
-
-    private async System.Threading.Tasks.Task UpgradeEquipment(
-        EquipmentSlot slot)
-    {
-        if (EquipmentManager.Instance == null)
-            return;
-
-        bool upgraded =
-            await EquipmentManager.Instance.TryUpgradeAsync(slot);
-        if (!upgraded)
-        {
-            ShowToast("Equipment missing or not enough Gold.");
-            return;
-        }
-
-        battleManager.RefreshPlayerStats();
-        RefreshEquipment();
-        ShowToast($"{slot} upgraded.");
     }
 
     private void HandleEquipmentDropped(string itemName)
     {
-        battleManager?.RefreshPlayerStats();
-        ShowToast($"Equipment found: {itemName}");
-        RefreshEquipment();
-    }
-
-    private async void ClaimCurrentQuest()
-    {
-        bool claimed = QuestManager.Instance != null &&
-            await QuestManager.Instance.ClaimCurrentQuestAsync();
-        ShowToast(claimed
-            ? "Quest reward collected. Next quest started."
-            : "Current quest is not complete.");
-        RefreshQuests();
-    }
-
-    private async void ClaimAchievements()
-    {
-        int claimed = QuestManager.Instance == null
-            ? 0
-            : await QuestManager.Instance
-                .ClaimAvailableAchievementsAsync();
-        ShowToast(claimed > 0
-            ? $"{claimed} achievement reward(s) collected."
-            : "No achievement rewards available.");
-        RefreshQuests();
-    }
-
-    private async void BuyGoldPouch()
-    {
-        await BuyShopProduct(ShopProduct.GoldPouch);
-    }
-
-    private async void BuyTicketBundle()
-    {
-        await BuyShopProduct(ShopProduct.TicketBundle);
-    }
-
-    private async void BuyGrowthChest()
-    {
-        await BuyShopProduct(ShopProduct.GrowthChest);
-    }
-
-    private async void BuyStarterPack()
-    {
-        await BuyRealMoneyProduct(RealMoneyProduct.StarterPack);
-    }
-
-    private async void BuySmallGemPack()
-    {
-        await BuyRealMoneyProduct(RealMoneyProduct.GemPackSmall);
-    }
-
-    private async void BuyLargeGemPack()
-    {
-        await BuyRealMoneyProduct(RealMoneyProduct.GemPackLarge);
-    }
-
-    private async void WatchRewardedAd()
-    {
-        MonetizationManager monetization = MonetizationManager.Instance;
-        if (monetization == null)
-            return;
-
-        string message = await monetization.ShowRewardedAdAsync(
-            RewardedAdPlacement.ShopFreeGems);
-        ShowToast(message);
-        RefreshTopBar();
-        RefreshMore();
-        RefreshShop();
-    }
-
-    private async System.Threading.Tasks.Task BuyRealMoneyProduct(
-        RealMoneyProduct product)
-    {
-        MonetizationManager monetization = MonetizationManager.Instance;
-        if (monetization == null)
-            return;
-
-        string message = await monetization.PurchaseAsync(product);
-        ShowToast(message);
-        RefreshTopBar();
-        RefreshMore();
-        RefreshShop();
-    }
-
-    private async System.Threading.Tasks.Task BuyShopProduct(
-        ShopProduct product)
-    {
-        try
-        {
-            bool purchased = ShopManager.Instance != null &&
-                await ShopManager.Instance.TryPurchaseAsync(product);
-            ShowToast(purchased
-                ? $"Purchased: {ShopManager.GetDescription(product)}."
-                : "Not enough Gems.");
-        }
-        catch (Exception exception)
-        {
-            Debug.LogException(exception);
-            ShowToast("Purchase failed. Gems were restored.");
-        }
-
-        RefreshTopBar();
-        RefreshMore();
-        RefreshShop();
-    }
-
-    private async void ClaimEventReward()
-    {
-        bool claimed = EventMissionManager.Instance != null &&
-            await EventMissionManager.Instance.ClaimRewardAsync();
-        ShowToast(claimed
-            ? "Event reward collected."
-            : "Event missions are not complete.");
-        RefreshTopBar();
-        RefreshMore();
-        RefreshEvent();
-    }
-
-    private void ToggleSound()
-    {
-        GameSettingsManager.Instance?.ToggleSound();
-        RefreshSettings();
-    }
-
-    private void ToggleVibration()
-    {
-        GameSettingsManager.Instance?.ToggleVibration();
-        RefreshSettings();
-    }
-
-    private void ToggleNotifications()
-    {
-        GameSettingsManager.Instance?.ToggleNotifications();
-        RefreshSettings();
-    }
-
-    private void ToggleFrameRate()
-    {
-        GameSettingsManager.Instance?.ToggleFrameRate();
-        RefreshSettings();
-    }
-
-    private void ToggleLanguage()
-    {
-        GameSettingsManager.Instance?.ToggleLanguage();
-        RefreshAll();
-        string message = GameSettingsManager.IsKoreanLanguage
-            ? "\uC5B8\uC5B4\uAC00 \uD55C\uAD6D\uC5B4\uB85C \uBCC0\uACBD\uB418\uC5C8\uC2B5\uB2C8\uB2E4."
-            : "Language changed to English.";
-        ShowToast(message);
+        equipmentActions?.HandleDropped(itemName);
     }
 
     private void HandleGrowthUpdated(UpgradeType type)
@@ -3674,665 +602,91 @@ public class MainGameUI : MonoBehaviour
 
     private void ChangeStage(int direction)
     {
-        PlayerData data = PlayerDataManager.Instance?.playerData;
-        if (data == null)
-            return;
-
-        if (!battleManager.SelectStage(data.currentStage + direction))
-        {
-            ShowToast(direction < 0
-                ? "This is the first stage."
-                : "Clear the current highest stage first.");
-            return;
-        }
-
-        if (bootstrap != null)
-            _ = bootstrap.SaveNowAsync();
+        battleActions?.ChangeStage(direction);
     }
 
     private void ToggleAutoAdvance()
     {
-        battleManager.ToggleAutoAdvance();
-        if (bootstrap != null)
-            _ = bootstrap.SaveNowAsync();
-
-        PlayerData data = PlayerDataManager.Instance.playerData;
-        ShowToast(data.autoAdvance
-            ? "Auto stage advance enabled."
-            : "Current stage repeat enabled.");
-    }
-
-    private void HandlePlayerAttackVisual(int damage)
-    {
-        playerAnimationTimer = 0.18f;
-        enemyAnimationTimer = 0.25f;
-        attackTrailTimer = 0.18f;
-        ShowEnemyDamage(damage, false);
-        playerActorView?.Play(BattleAnimationCue.Attack);
-        enemyActorView?.Play(BattleAnimationCue.Hit);
-    }
-
-    private void HandleEnemyAttackVisual(int damage)
-    {
-        enemyAnimationTimer = 0.18f;
-        playerAnimationTimer = 0.25f;
-        ShowPlayerDamage(damage);
-        enemyActorView?.Play(BattleAnimationCue.Attack);
-        playerActorView?.Play(BattleAnimationCue.Hit);
-    }
-
-    private void HandleEnemyDefeatedVisual(int reward)
-    {
-        enemyAnimationTimer = 0.4f;
-        ShowRewardPopup(reward);
-        enemyActorView?.Play(BattleAnimationCue.Death);
-    }
-
-    private void HandlePlayerDefeatedVisual()
-    {
-        playerDefeatTimer = 1.8f;
-        playerActorView?.Play(BattleAnimationCue.Death);
-    }
-
-    private void HandleCompanionSkillVisual(
-        int slot,
-        CharacterData character,
-        int damage)
-    {
-        enemyAnimationTimer = 0.35f;
-        attackTrailTimer = 0.24f;
-        ShowEnemyDamage(damage, true);
-        if (slot >= 0 && slot < companionActorViews.Count)
-            companionActorViews[slot].Play(BattleAnimationCue.Skill);
-        enemyActorView?.Play(BattleAnimationCue.Hit);
-        ShowToast(
-            $"{character.skillName}  DMG {damage:N0}");
-    }
-
-    private void HandleBossChallengeFailed()
-    {
-        enemyAnimationTimer = 0.4f;
-        ShowToast("Boss time expired. Retrying.");
-    }
-
-    private void HandleBossPatternVisual(
-        BossPatternDefinition pattern,
-        int damage)
-    {
-        enemyAnimationTimer = 0.3f;
-        playerAnimationTimer = 0.3f;
-        ShowPlayerDamage(damage);
-        enemyActorView?.Play(BattleAnimationCue.Skill);
-        playerActorView?.Play(BattleAnimationCue.Hit);
-        ShowToast($"{pattern.patternName}  DMG {damage:N0}");
-    }
-
-    private void ShowEnemyDamage(int damage, bool skill)
-    {
-        if (enemyDamagePopup == null || enemyDamageText == null)
-            return;
-
-        enemyDamagePopupTimer = skill ? 0.72f : 0.55f;
-        enemyDamageText.text = skill
-            ? $"SKILL\n-{damage:N0}"
-            : $"-{damage:N0}";
-        enemyDamageText.color = skill ? Accent : Gold;
-        enemyDamagePopup.gameObject.SetActive(true);
-    }
-
-    private void ShowPlayerDamage(int damage)
-    {
-        if (playerDamagePopup == null || playerDamageText == null)
-            return;
-
-        playerDamagePopupTimer = 0.55f;
-        playerDamageText.text = $"-{damage:N0}";
-        playerDamageText.color = Danger;
-        playerDamagePopup.gameObject.SetActive(true);
-    }
-
-    private void ShowRewardPopup(int reward)
-    {
-        if (rewardPopup == null || rewardPopupText == null)
-            return;
-
-        rewardPopupTimer = 0.9f;
-        rewardPopupText.text = $"+{reward:N0} GOLD";
-        rewardPopupText.color = Success;
-        rewardPopup.gameObject.SetActive(true);
-    }
-
-    private void UpdateBattleAnimations(float deltaTime)
-    {
-        enemyAnimationTimer = Mathf.Max(
-            0f,
-            enemyAnimationTimer - deltaTime);
-        playerAnimationTimer = Mathf.Max(
-            0f,
-            playerAnimationTimer - deltaTime);
-        playerDefeatTimer = Mathf.Max(
-            0f,
-            playerDefeatTimer - deltaTime);
-        attackTrailTimer = Mathf.Max(
-            0f,
-            attackTrailTimer - deltaTime);
-        enemyDamagePopupTimer = Mathf.Max(
-            0f,
-            enemyDamagePopupTimer - deltaTime);
-        playerDamagePopupTimer = Mathf.Max(
-            0f,
-            playerDamagePopupTimer - deltaTime);
-        rewardPopupTimer = Mathf.Max(
-            0f,
-            rewardPopupTimer - deltaTime);
-
-        UpdateAttackTrail();
-        UpdateFloatingPopup(
-            enemyDamagePopup,
-            enemyDamageText,
-            enemyDamagePopupTimer,
-            0.72f,
-            new Vector2(0f, 34f));
-        UpdateFloatingPopup(
-            playerDamagePopup,
-            playerDamageText,
-            playerDamagePopupTimer,
-            0.55f,
-            new Vector2(0f, 22f));
-        UpdateFloatingPopup(
-            rewardPopup,
-            rewardPopupText,
-            rewardPopupTimer,
-            0.9f,
-            new Vector2(0f, 28f));
-
-        if (enemyVisual != null)
-        {
-            float pulse = enemyAnimationTimer > 0f
-                ? Mathf.Sin(enemyAnimationTimer * 70f) * 12f
-                : 0f;
-            enemyVisual.anchoredPosition = new Vector2(pulse, 0f);
-            enemyVisual.localScale = enemyAnimationTimer > 0.3f
-                ? Vector3.one * 0.65f
-                : Vector3.one;
-            enemyVisualImage.color =
-                enemyActorView != null && enemyActorView.HasSprite
-                    ? enemyAnimationTimer > 0f
-                        ? Color.Lerp(Color.white, Danger, 0.4f)
-                        : Color.white
-                    : enemyAnimationTimer > 0f
-                        ? Color.Lerp(Danger, Color.white, 0.45f)
-                        : Danger;
-        }
-
-        if (playerVisual != null)
-        {
-            float lunge = playerAnimationTimer > 0.12f ? 18f : 0f;
-            playerVisual.anchoredPosition = new Vector2(lunge, 0f);
-            playerVisual.localScale = playerDefeatTimer > 0f
-                ? Vector3.one * 0.55f
-                : Vector3.one;
-            playerVisualImage.color =
-                playerActorView != null && playerActorView.HasSprite
-                    ? playerAnimationTimer > 0f
-                        ? Color.Lerp(Color.white, Danger, 0.45f)
-                        : Color.white
-                    : playerAnimationTimer > 0f
-                        ? Color.Lerp(Accent, Danger, 0.55f)
-                        : Accent;
-        }
-    }
-
-    private void UpdateAttackTrail()
-    {
-        if (attackTrail == null || attackTrailImage == null)
-            return;
-
-        bool active = attackTrailTimer > 0f;
-        attackTrail.gameObject.SetActive(active);
-        if (!active)
-            return;
-
-        float ratio = Mathf.Clamp01(attackTrailTimer / 0.24f);
-        attackTrail.localScale = new Vector3(
-            Mathf.Lerp(0.4f, 1.2f, ratio),
-            Mathf.Lerp(0.5f, 1f, ratio),
-            1f);
-        attackTrailImage.color = new Color(
-            Accent.r,
-            Accent.g,
-            Accent.b,
-            Mathf.Lerp(0f, 0.55f, ratio));
-    }
-
-    private static void UpdateFloatingPopup(
-        RectTransform popup,
-        TMP_Text text,
-        float timer,
-        float duration,
-        Vector2 floatOffset)
-    {
-        if (popup == null)
-            return;
-
-        bool active = timer > 0f;
-        popup.gameObject.SetActive(active);
-        if (!active)
-            return;
-
-        float progress = 1f - Mathf.Clamp01(timer / duration);
-        popup.anchoredPosition = Vector2.Lerp(
-            Vector2.zero,
-            floatOffset,
-            progress);
-        popup.localScale =
-            Vector3.one * Mathf.Lerp(1.18f, 0.92f, progress);
-
-        if (text != null)
-        {
-            Color color = text.color;
-            color.a = Mathf.Lerp(1f, 0f, progress);
-            text.color = color;
-        }
+        battleActions?.ToggleAutoAdvance();
     }
 
     private void ShowBattle()
     {
-        SetActiveView(battlePanel);
-        SetActiveNavigation(battleNavButton);
+        navigation?.ShowBattle();
     }
 
     private void ShowGrowth()
     {
-        SetActiveView(growthPanel);
-        SetActiveNavigation(growthNavButton);
+        navigation?.ShowGrowth();
         RefreshGrowth();
     }
 
     private void ShowGacha()
     {
-        SetActiveView(gachaPanel);
-        SetActiveNavigation(gachaNavButton);
+        navigation?.ShowGacha();
         RefreshGacha();
     }
 
     private void ShowMore()
     {
-        SetActiveView(morePanel);
-        SetActiveNavigation(moreNavButton);
+        navigation?.ShowMore();
         RefreshMore();
     }
 
     private void ShowCollection()
     {
-        SetActiveView(collectionPanel);
-        SetActiveNavigation(collectionNavButton);
+        navigation?.ShowCollection();
         RefreshCollection();
     }
 
     private void ShowEquipment()
     {
-        SetActiveView(equipmentPanel);
-        SetActiveNavigation(moreNavButton);
+        navigation?.ShowEquipment();
         RefreshEquipment();
     }
 
     private void ShowQuests()
     {
-        SetActiveView(questPanel);
-        SetActiveNavigation(moreNavButton);
+        navigation?.ShowQuests();
         RefreshQuests();
     }
 
     private void ShowShop()
     {
-        SetActiveView(shopPanel);
-        SetActiveNavigation(moreNavButton);
+        navigation?.ShowShop();
         RefreshShop();
     }
 
     private void ShowEvent()
     {
-        SetActiveView(eventPanel);
-        SetActiveNavigation(moreNavButton);
+        navigation?.ShowEvent();
         RefreshEvent();
     }
 
     private void ShowSettings()
     {
-        SetActiveView(settingsPanel);
-        SetActiveNavigation(moreNavButton);
+        navigation?.ShowSettings();
         RefreshSettings();
     }
 
     private void ShowAccount()
     {
-        SetActiveView(accountPanel);
-        SetActiveNavigation(moreNavButton);
+        navigation?.ShowAccount();
         RefreshAccount();
     }
 
-    private void SetActiveView(GameObject active)
+    private TutorialFlowController GetTutorialFlow()
     {
-        if (battlePanel != null)
-            battlePanel.SetActive(active != null);
-        if (growthPanel != null)
-            growthPanel.SetActive(active == growthPanel);
-        if (gachaPanel != null)
-            gachaPanel.SetActive(active == gachaPanel);
-        if (morePanel != null)
-            morePanel.SetActive(active == morePanel);
-        if (collectionPanel != null)
-            collectionPanel.SetActive(active == collectionPanel);
-        if (equipmentPanel != null)
-            equipmentPanel.SetActive(active == equipmentPanel);
-        if (questPanel != null)
-            questPanel.SetActive(active == questPanel);
-        if (shopPanel != null)
-            shopPanel.SetActive(active == shopPanel);
-        if (eventPanel != null)
-            eventPanel.SetActive(active == eventPanel);
-        if (settingsPanel != null)
-            settingsPanel.SetActive(active == settingsPanel);
-        if (accountPanel != null)
-            accountPanel.SetActive(active == accountPanel);
-    }
-
-    private void SetActiveNavigation(Button active)
-    {
-        SetNavigationColor(battleNavButton, active == battleNavButton);
-        SetNavigationColor(growthNavButton, active == growthNavButton);
-        SetNavigationColor(gachaNavButton, active == gachaNavButton);
-        SetNavigationColor(
-            collectionNavButton,
-            active == collectionNavButton);
-        SetNavigationColor(moreNavButton, active == moreNavButton);
-    }
-
-    private void SetNavigationColor(Button button, bool isActive)
-    {
-        if (button == null || button.targetGraphic == null)
-            return;
-
-        Transform artTransform = button.transform.Find("ButtonArt");
-        if (artTransform != null &&
-            artTransform.TryGetComponent(out Image artImage))
+        if (tutorialFlow == null)
         {
-            artImage.sprite = isActive
-                ? PrototypeUiArt.ButtonSelected
-                : PrototypeUiArt.ButtonNormal;
-            artImage.color = Color.white;
+            tutorialFlow = new TutorialFlowController(
+                tutorialManager,
+                ShowBattle,
+                ShowGrowth,
+                RefreshTutorial);
         }
 
-        TMP_Text label = button.GetComponentInChildren<TMP_Text>();
-        if (label != null)
-            label.color = isActive ? Color.white : MutedText;
-    }
-
-    private static void SetBar(
-        RectTransform fill,
-        int current,
-        int maximum)
-    {
-        if (fill == null)
-            return;
-
-        float ratio = maximum <= 0
-            ? 0f
-            : Mathf.Clamp01(current / (float)maximum);
-        fill.anchorMax = new Vector2(ratio, 1f);
-    }
-
-    private static RectTransform CreateHealthBar(
-        RectTransform parent,
-        string name,
-        Color fillColor,
-        Vector2 anchorMin,
-        Vector2 anchorMax)
-    {
-        RectTransform background = CreatePanel(
-            name,
-            parent,
-            new Color32(12, 18, 30, 255),
-            anchorMin,
-            anchorMax);
-
-        return CreatePanel(
-            "Fill",
-            background,
-            fillColor,
-            Vector2.zero,
-            Vector2.one);
-    }
-
-    private static RectTransform CreatePanel(
-        string name,
-        Transform parent,
-        Color color,
-        Vector2 anchorMin,
-        Vector2 anchorMax)
-    {
-        GameObject panel = new GameObject(
-            name,
-            typeof(RectTransform),
-            typeof(Image));
-        panel.transform.SetParent(parent, false);
-
-        RectTransform rect = panel.GetComponent<RectTransform>();
-        rect.anchorMin = anchorMin;
-        rect.anchorMax = anchorMax;
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
-
-        panel.GetComponent<Image>().color = color;
-
-        if (PrototypeUiArt.ShouldDecoratePanel(name))
-        {
-            Image frame = CreateSpriteImage(
-                "PanelArt",
-                rect,
-                PrototypeUiArt.PanelFrame,
-                Vector2.zero,
-                Vector2.one);
-            frame.type = Image.Type.Sliced;
-            frame.preserveAspect = false;
-        }
-        return rect;
-    }
-
-    private static Image CreateSpriteImage(
-        string name,
-        Transform parent,
-        Sprite sprite,
-        Vector2 anchorMin,
-        Vector2 anchorMax)
-    {
-        GameObject imageObject = new GameObject(
-            name,
-            typeof(RectTransform),
-            typeof(Image));
-        imageObject.transform.SetParent(parent, false);
-
-        RectTransform rect = imageObject.GetComponent<RectTransform>();
-        rect.anchorMin = anchorMin;
-        rect.anchorMax = anchorMax;
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
-
-        Image image = imageObject.GetComponent<Image>();
-        image.sprite = sprite;
-        image.color = sprite == null ? Color.clear : Color.white;
-        image.preserveAspect = true;
-        image.raycastTarget = false;
-        return image;
-    }
-
-    private static TMP_Text CreateText(
-        string name,
-        Transform parent,
-        string value,
-        float fontSize,
-        Vector2 anchorMin,
-        Vector2 anchorMax,
-        TextAlignmentOptions alignment,
-        Color? color = null)
-    {
-        GameObject textObject = new GameObject(
-            name,
-            typeof(RectTransform),
-            typeof(TextMeshProUGUI));
-        textObject.transform.SetParent(parent, false);
-
-        RectTransform rect =
-            textObject.GetComponent<RectTransform>();
-        rect.anchorMin = anchorMin;
-        rect.anchorMax = anchorMax;
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
-
-        TextMeshProUGUI text =
-            textObject.GetComponent<TextMeshProUGUI>();
-        text.text = LocalizationManager.Translate(value);
-        text.fontSize = fontSize;
-        text.enableAutoSizing = true;
-        text.fontSizeMax = fontSize;
-        text.fontSizeMin = Mathf.Max(14f, fontSize * 0.58f);
-        text.lineSpacing = -8f;
-        text.alignment = alignment;
-        text.color = color ?? Color.white;
-        text.textWrappingMode = TextWrappingModes.Normal;
-        text.raycastTarget = false;
-        GameFont.Apply(text);
-
-        return text;
-    }
-
-    private static Button CreateButton(
-        string name,
-        Transform parent,
-        string label,
-        Vector2 anchorMin,
-        Vector2 anchorMax,
-        Color color,
-        UnityEngine.Events.UnityAction action)
-    {
-        RectTransform rect = CreatePanel(
-            name,
-            parent,
-            color,
-            anchorMin,
-            anchorMax);
-
-        Button button = rect.gameObject.AddComponent<Button>();
-        button.targetGraphic = rect.GetComponent<Image>();
-        button.onClick.AddListener(
-            () => AudioManager.Instance?.PlayButtonClick());
-        button.onClick.AddListener(action);
-
-        ColorBlock colors = button.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = new Color32(235, 245, 255, 255);
-        colors.pressedColor = new Color32(180, 190, 205, 255);
-        colors.disabledColor = new Color32(125, 125, 125, 170);
-        button.colors = colors;
-
-        bool isSkillButton = PrototypeUiArt.IsSkillButton(name);
-        Image buttonArt = CreateSpriteImage(
-            "ButtonArt",
-            rect,
-            isSkillButton
-                ? PrototypeUiArt.SkillFrame
-                : PrototypeUiArt.ButtonNormal,
-            Vector2.zero,
-            Vector2.one);
-        buttonArt.type = isSkillButton
-            ? Image.Type.Simple
-            : Image.Type.Sliced;
-        buttonArt.preserveAspect = isSkillButton;
-        rect.GetComponent<Image>().color = Color.clear;
-        button.targetGraphic = buttonArt;
-
-        Sprite iconSprite = PrototypeUiArt.GetButtonIcon(name);
-        if (iconSprite != null)
-        {
-            CreateSpriteImage(
-                "Icon",
-                rect,
-                iconSprite,
-                new Vector2(0.25f, 0.31f),
-                new Vector2(0.75f, 0.96f));
-        }
-
-        CreateText(
-            "Label",
-            rect,
-            LocalizationManager.Translate(label),
-            27,
-            new Vector2(0.05f, 0.04f),
-            iconSprite == null
-                ? new Vector2(0.95f, 0.93f)
-                : new Vector2(0.95f, 0.34f),
-            TextAlignmentOptions.Center,
-            Color.white);
-
-        return button;
-    }
-
-    private static Color TryParseColor(string htmlColor, Color fallback)
-    {
-        if (string.IsNullOrWhiteSpace(htmlColor))
-            return fallback;
-
-        return ColorUtility.TryParseHtmlString(
-            htmlColor,
-            out Color parsed)
-            ? parsed
-            : fallback;
-    }
-
-    private static void SetButtonLabel(Button button, string value)
-    {
-        if (button == null)
-            return;
-
-        TMP_Text label = button.GetComponentInChildren<TMP_Text>();
-        if (label != null)
-            label.text = LocalizationManager.Translate(value);
-    }
-
-    private static string GetUpgradeDisplayName(UpgradeType type)
-    {
-        switch (type)
-        {
-            case UpgradeType.Attack:
-                return "Attack";
-            case UpgradeType.Health:
-                return "Health";
-            case UpgradeType.AttackSpeed:
-                return "Attack Speed";
-            default:
-                return type.ToString();
-        }
-    }
-
-    private static string FormatCompact(int value)
-    {
-        return value >= 1000 && value % 1000 == 0
-            ? $"{value / 1000}K"
-            : value.ToString("N0");
-    }
-
-    private static Color GetRarityColor(string rarity)
-    {
-        switch (rarity)
-        {
-            case "SSR":
-                return new Color32(184, 112, 255, 255);
-            case "SR":
-                return new Color32(77, 137, 235, 255);
-            default:
-                return PanelLight;
-        }
+        return tutorialFlow;
     }
 
     private static void EnsureEventSystem()
@@ -4348,45 +702,6 @@ public class MainGameUI : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (battleManager != null)
-        {
-            battleManager.OnBattleStateChanged -= RefreshBattle;
-            battleManager.OnPlayerAttackPerformed -=
-                HandlePlayerAttackVisual;
-            battleManager.OnEnemyAttackPerformed -=
-                HandleEnemyAttackVisual;
-            battleManager.OnEnemyDefeated -=
-                HandleEnemyDefeatedVisual;
-            battleManager.OnPlayerDefeated -=
-                HandlePlayerDefeatedVisual;
-            battleManager.OnCompanionSkillUsed -=
-                HandleCompanionSkillVisual;
-            battleManager.OnBossPatternUsed -=
-                HandleBossPatternVisual;
-            battleManager.OnBossChallengeFailed -=
-                HandleBossChallengeFailed;
-        }
-
-        if (EquipmentManager.Instance != null)
-            EquipmentManager.Instance.OnEquipmentDropped -=
-                HandleEquipmentDropped;
-
-        if (growthManager != null)
-            growthManager.OnUpgraded -= HandleGrowthUpdated;
-
-        if (tutorialManager != null)
-            tutorialManager.OnTutorialChanged -= RefreshTutorial;
-
-        if (PlayerDataManager.Instance != null)
-            PlayerDataManager.Instance.OnPlayerDataChanged -= RefreshAll;
-
-        if (AccountLinkManager.Instance != null)
-            AccountLinkManager.Instance.OnAccountChanged -= RefreshAccount;
-
-        if (MonetizationManager.Instance != null)
-        {
-            MonetizationManager.Instance.OnMonetizationChanged -=
-                RefreshShop;
-        }
+        eventSubscriptions?.Dispose();
     }
 }

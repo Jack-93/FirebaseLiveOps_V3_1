@@ -16,6 +16,7 @@ public static class ProjectValidation
         ValidateGachaEconomy();
         ValidateStoryIntro();
         ValidatePrototypeScene();
+        ValidatePrototypeUiArt();
         ValidateCharacterPlaceholders();
         ValidateRuntimeComposition();
 
@@ -53,10 +54,39 @@ public static class ProjectValidation
 
     private static void ValidateBattleLayout()
     {
-        Require(
-            Resources.Load<Sprite>(
-                "PrototypeArt/Backgrounds/StageSunset") != null,
-            "Prototype battle background is missing.");
+        string[] stageBackgrounds =
+        {
+            "StageSunset",
+            "StageForest",
+            "StageRooftop",
+            "StageRain"
+        };
+        foreach (string background in stageBackgrounds)
+        {
+            ValidatePrototypeSpriteAsset(
+                "Assets/Resources/PrototypeArt/Backgrounds/" +
+                background + ".png",
+                background + " battle background is missing.");
+        }
+
+        string[] enemies =
+        {
+            "CatScout",
+            "CatForest",
+            "CatRooftop",
+            "CatRain",
+            "CatScoutBoss",
+            "CatForestBoss",
+            "CatRooftopBoss",
+            "CatRainBoss"
+        };
+        foreach (string enemy in enemies)
+        {
+            ValidatePrototypeSpriteAsset(
+                "Assets/Resources/PrototypeArt/Enemies/" +
+                enemy + ".png",
+                enemy + " battle enemy art is missing.");
+        }
 
         Require(
             BattleLayoutConfig.CompanionAnchors.Length ==
@@ -254,26 +284,80 @@ public static class ProjectValidation
     {
         const string mainScenePath =
             "Assets/Scenes/MainGameScene.unity";
-        const string gachaScenePath =
-            "Assets/Scenes/VerticalGachaScene.unity";
 
         SceneAsset scene =
             AssetDatabase.LoadAssetAtPath<SceneAsset>(mainScenePath);
         Require(scene != null, "MainGameScene is missing.");
-        SceneAsset gachaScene =
-            AssetDatabase.LoadAssetAtPath<SceneAsset>(gachaScenePath);
-        Require(gachaScene != null, "GachaScene is missing.");
 
         EditorBuildSettingsScene[] scenes =
             EditorBuildSettings.scenes;
-        Require(scenes.Length >= 2,
+        Require(scenes.Length >= 1,
             "Prototype build scenes are incomplete.");
         Require(scenes[0].enabled &&
             scenes[0].path == mainScenePath,
             "MainGameScene must be the first build scene.");
-        Require(scenes[1].enabled &&
-            scenes[1].path == gachaScenePath,
-            "GachaScene must be the second build scene.");
+    }
+
+    private static void ValidatePrototypeUiArt()
+    {
+        const string panelFramePath =
+            "Assets/Resources/PrototypeArt/UI/PanelFrame.png";
+        Texture2D panelFrame =
+            AssetDatabase.LoadAssetAtPath<Texture2D>(panelFramePath);
+        Require(panelFrame != null,
+            "PanelFrame UI art is missing.");
+
+        TextureImporter importer =
+            AssetImporter.GetAtPath(panelFramePath) as TextureImporter;
+        Require(importer != null,
+            "PanelFrame importer is missing.");
+        Require(importer.textureType == TextureImporterType.Sprite,
+            "PanelFrame must be imported as a Sprite.");
+        Require(importer.spriteBorder == new Vector4(32f, 32f, 32f, 32f),
+            "PanelFrame must use the stable 32px 9-slice border.");
+        Require(!importer.mipmapEnabled,
+            "PanelFrame mipmaps must stay disabled for pixel UI.");
+
+        ValidateUiSpriteBorder(
+            "Assets/Resources/PrototypeArt/UI/ButtonNormal.png",
+            new Vector4(32f, 32f, 32f, 32f));
+        ValidateUiSpriteBorder(
+            "Assets/Resources/PrototypeArt/UI/ButtonSelected.png",
+            new Vector4(32f, 32f, 32f, 32f));
+
+        ValidatePrototypeSpriteAsset(
+            "Assets/Resources/PrototypeArt/Banners/" +
+            "StandardRecruitment.png",
+            "StandardRecruitment gacha banner art is missing.");
+    }
+
+    private static void ValidateUiSpriteBorder(
+        string assetPath,
+        Vector4 expectedBorder)
+    {
+        Texture2D texture =
+            AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
+        Require(texture != null,
+            assetPath + " is missing.");
+
+        TextureImporter importer =
+            AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        Require(importer != null,
+            assetPath + " importer is missing.");
+        Require(importer.textureType == TextureImporterType.Sprite,
+            assetPath + " must be imported as a Sprite.");
+        Require(importer.spriteBorder == expectedBorder,
+            assetPath + " has an invalid 9-slice border.");
+        Require(!importer.mipmapEnabled,
+            assetPath + " mipmaps must stay disabled for pixel UI.");
+    }
+
+    private static void ValidatePrototypeSpriteAsset(
+        string assetPath,
+        string missingMessage)
+    {
+        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        Require(sprite != null, missingMessage);
     }
 
     private static void ValidateGachaEconomy()
@@ -339,10 +423,18 @@ public static class ProjectValidation
                 "Story intro cut title is missing.");
             Require(!string.IsNullOrWhiteSpace(cut.body),
                 "Story intro cut body is missing.");
+            Require(!cut.body.Contains("추후 확정"),
+                "Story intro cut body must contain draft dialogue.");
             Require(!string.IsNullOrWhiteSpace(cut.artDirection),
                 "Story intro art direction is missing.");
             Require(cut.artDirection.Contains("아트 필요"),
                 "Story intro cut must mark pending art clearly.");
+            Require(!string.IsNullOrWhiteSpace(cut.artResourcePath),
+                "Story intro cut art resource path is missing.");
+            ValidatePrototypeSpriteAsset(
+                "Assets/Resources/" + cut.artResourcePath + ".png",
+                "Story intro cut art is missing: " +
+                cut.artResourcePath);
         }
     }
 
@@ -424,13 +516,18 @@ public static class ProjectValidation
             Require(playerManager.playerData.tutorialStep == 1,
                 "Tutorial start transition failed.");
 
+            Require(battle.ChargePower(),
+                "Tutorial power charge action failed.");
+            Require(playerManager.playerData.tutorialStep == 2,
+                "Tutorial power charge transition failed.");
+
             bool upgraded = growth
                 .TryUpgradeAsync(UpgradeType.Attack)
                 .GetAwaiter()
                 .GetResult();
 
             Require(upgraded, "Tutorial growth action failed.");
-            Require(playerManager.playerData.tutorialStep == 2,
+            Require(playerManager.playerData.tutorialStep == 3,
                 "Tutorial growth transition failed.");
             Require(battle.IsRunning,
                 "Battle did not start after tutorial growth.");

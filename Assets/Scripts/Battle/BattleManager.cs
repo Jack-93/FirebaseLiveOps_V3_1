@@ -9,11 +9,14 @@ public class BattleManager : MonoBehaviour
     public event Action<int> OnEnemyDefeated;
     public event Action<int> OnStageCleared;
     public event Action<int> OnPlayerAttackPerformed;
+    public event Action<int, CharacterData, int> OnCompanionBasicAttackPerformed;
     public event Action<int> OnEnemyAttackPerformed;
     public event Action OnPlayerDefeated;
     public event Action<int, CharacterData, int> OnCompanionSkillUsed;
     public event Action<BossPatternDefinition, int> OnBossPatternUsed;
     public event Action OnBossChallengeFailed;
+    public event Action OnPowerChargePerformed;
+    public event Action<float, float> OnPowerCharged;
 
     public bool IsInitialized { get; private set; }
     public bool IsRunning { get; private set; }
@@ -25,15 +28,20 @@ public class BattleManager : MonoBehaviour
     public int EnemyMaxHealth { get; private set; }
     public int LastPlayerDamage { get; private set; }
     public int LastEnemyDamage { get; private set; }
+    public float PowerCharge { get; private set; }
+    public float PowerChargeMax => PowerChargeLimit;
+    public float PowerChargeRatio =>
+        PowerChargeLimit <= 0f ? 0f : PowerCharge / PowerChargeLimit;
     public float BossTimeRemaining { get; private set; }
     public IReadOnlyList<float> SkillCooldowns => skillCooldowns;
+    public static float CompanionSkillPowerCost => SkillPowerCost;
 
     public string EnemyName =>
         GameBalance.GetEnemyName(Data.currentStage, IsBoss);
 
     private PlayerData Data => PlayerDataManager.Instance?.playerData;
 
-    private float playerAttackTimer;
+    private float supportFallbackAttackTimer;
     private float enemyAttackTimer;
     private float recoveryTimer;
     private bool isRecovering;
@@ -42,6 +50,14 @@ public class BattleManager : MonoBehaviour
     private List<BossPatternDefinition> bossPatterns;
     private readonly float[] skillCooldowns =
         new float[CompanionManager.PartySize];
+    private readonly float[] companionAttackTimers =
+        new float[CompanionManager.PartySize];
+
+    private const float PowerChargeLimit = 100f;
+    private const float PowerChargePerTap = 12f;
+    private const float SkillPowerCost = 35f;
+    private const float SkillCooldownBoostOnFullCharge = 1.25f;
+    private const float EmptyPartyFallbackInterval = 2.4f;
 
     public void Initialize()
     {
@@ -152,16 +168,10 @@ public class BattleManager : MonoBehaviour
                 return;
         }
 
-        playerAttackTimer -= deltaTime;
+        supportFallbackAttackTimer -= deltaTime;
         enemyAttackTimer -= deltaTime;
-        TickCompanionSkills(deltaTime);
-
-        if (playerAttackTimer <= 0f)
-        {
-            PlayerAttack();
-            playerAttackTimer =
-                GameBalance.GetPlayerAttackInterval(Data);
-        }
+        TickCompanionBasicAttacks(deltaTime);
+        TickCompanionSkillCooldowns(deltaTime);
 
         if (!isRecovering && EnemyHealth > 0 && enemyAttackTimer <= 0f)
         {
@@ -172,9 +182,61 @@ public class BattleManager : MonoBehaviour
 
     private void PlayerAttack()
     {
-        LastPlayerDamage = GameBalance.GetPlayerAttack(Data);
+        LastPlayerDamage = Mathf.Max(
+            1,
+            Mathf.RoundToInt(GameBalance.GetPlayerAttack(Data) * 0.25f));
         EnemyHealth = Math.Max(0, EnemyHealth - LastPlayerDamage);
         OnPlayerAttackPerformed?.Invoke(LastPlayerDamage);
+
+        if (EnemyHealth <= 0)
+            DefeatEnemy();
+
+        NotifyChanged();
+    }
+
+    private void TickCompanionBasicAttacks(float deltaTime)
+    {
+        CompanionManager companions = CompanionManager.Instance;
+        if (companions == null)
+            return;
+
+        bool hasCompanion = false;
+        for (int slot = 0;
+             slot < CompanionManager.PartySize;
+             slot++)
+        {
+            CharacterData character =
+                companions.GetEquippedAtSlot(slot);
+            if (character == null)
+            {
+                companionAttackTimers[slot] = GetCompanionAttackDelay(slot);
+                continue;
+            }
+
+            hasCompanion = true;
+            companionAttackTimers[slot] -= deltaTime;
+            if (companionAttackTimers[slot] > 0f || EnemyHealth <= 0)
+                continue;
+
+            CompanionBasicAttack(slot, character);
+            companionAttackTimers[slot] = GetCompanionAttackDelay(slot);
+        }
+
+        if (!hasCompanion &&
+            supportFallbackAttackTimer <= 0f &&
+            EnemyHealth > 0)
+        {
+            PlayerAttack();
+            supportFallbackAttackTimer = EmptyPartyFallbackInterval;
+        }
+    }
+
+    private void CompanionBasicAttack(int slot, CharacterData character)
+    {
+        int damage = GetCompanionBasicDamage(character);
+        LastPlayerDamage = damage;
+        EnemyHealth = Math.Max(0, EnemyHealth - damage);
+        OnCompanionBasicAttackPerformed?.Invoke(slot, character, damage);
 
         if (EnemyHealth <= 0)
             DefeatEnemy();
@@ -245,7 +307,7 @@ public class BattleManager : MonoBehaviour
         }
     }
 
-    private void TickCompanionSkills(float deltaTime)
+    private void TickCompanionSkillCooldowns(float deltaTime)
     {
         CompanionManager companions = CompanionManager.Instance;
         if (companions == null)
@@ -263,9 +325,9 @@ public class BattleManager : MonoBehaviour
                 continue;
             }
 
-            skillCooldowns[slot] -= deltaTime;
-            if (skillCooldowns[slot] <= 0f)
-                UseCompanionSkill(slot, character);
+            skillCooldowns[slot] = Mathf.Max(
+                0f,
+                skillCooldowns[slot] - deltaTime);
         }
     }
 
@@ -273,7 +335,8 @@ public class BattleManager : MonoBehaviour
     {
         if (!IsRunning || isRecovering || EnemyHealth <= 0 ||
             slot < 0 || slot >= skillCooldowns.Length ||
-            skillCooldowns[slot] > 0f)
+            skillCooldowns[slot] > 0f ||
+            PowerCharge < SkillPowerCost)
         {
             return false;
         }
@@ -283,7 +346,30 @@ public class BattleManager : MonoBehaviour
         if (character == null)
             return false;
 
+        PowerCharge = Mathf.Max(0f, PowerCharge - SkillPowerCost);
         UseCompanionSkill(slot, character);
+        OnPowerCharged?.Invoke(PowerCharge, PowerChargeLimit);
+        return true;
+    }
+
+    public bool ChargePower()
+    {
+        if (!IsInitialized || !IsRunning || isRecovering)
+            return false;
+
+        float previous = PowerCharge;
+        PowerCharge = Mathf.Min(
+            PowerChargeLimit,
+            PowerCharge + PowerChargePerTap);
+        if (PowerCharge >= PowerChargeLimit &&
+            previous < PowerChargeLimit)
+        {
+            ReduceSkillCooldowns(SkillCooldownBoostOnFullCharge);
+        }
+
+        OnPowerChargePerformed?.Invoke();
+        OnPowerCharged?.Invoke(PowerCharge, PowerChargeLimit);
+        NotifyChanged();
         return true;
     }
 
@@ -304,6 +390,52 @@ public class BattleManager : MonoBehaviour
             DefeatEnemy();
 
         NotifyChanged();
+    }
+
+    private int GetCompanionBasicDamage(CharacterData character)
+    {
+        float rarityMultiplier = GetBasicAttackMultiplier(character.rarity);
+        int stars =
+            CompanionManager.Instance?.GetStars(character.characterName) ?? 1;
+        float starMultiplier = 1f + Mathf.Max(0, stars - 1) * 0.08f;
+        return Math.Max(
+            1,
+            Mathf.RoundToInt(
+                GameBalance.GetPlayerAttack(Data) *
+                rarityMultiplier *
+                starMultiplier));
+    }
+
+    private static float GetBasicAttackMultiplier(string rarity)
+    {
+        switch (rarity)
+        {
+            case "SSR":
+                return 0.62f;
+            case "SR":
+                return 0.48f;
+            default:
+                return 0.36f;
+        }
+    }
+
+    private float GetCompanionAttackDelay(int slot)
+    {
+        return Mathf.Max(
+            0.65f,
+            GameBalance.GetPlayerAttackInterval(Data) +
+            0.25f +
+            slot * 0.15f);
+    }
+
+    private void ReduceSkillCooldowns(float amount)
+    {
+        for (int slot = 0; slot < skillCooldowns.Length; slot++)
+        {
+            skillCooldowns[slot] = Mathf.Max(
+                0f,
+                skillCooldowns[slot] - amount);
+        }
     }
 
     private void DefeatEnemy()
@@ -366,7 +498,8 @@ public class BattleManager : MonoBehaviour
             : null;
         bossPatternIndex = 0;
         bossPatternTimer = GetFirstBossPatternCooldown();
-        playerAttackTimer = 0.25f;
+        ResetCompanionAttackTimers();
+        supportFallbackAttackTimer = 0.8f;
         enemyAttackTimer = IsBoss ? 1.15f : 1.55f;
     }
 
@@ -374,7 +507,8 @@ public class BattleManager : MonoBehaviour
     {
         EnemyHealth = EnemyMaxHealth;
         BossTimeRemaining = GameBalance.BossTimeLimit;
-        playerAttackTimer = 0.25f;
+        ResetCompanionAttackTimers();
+        supportFallbackAttackTimer = 0.8f;
         enemyAttackTimer = 1.15f;
         bossPatternIndex = 0;
         bossPatternTimer = GetFirstBossPatternCooldown();
@@ -394,6 +528,14 @@ public class BattleManager : MonoBehaviour
         }
 
         return 0f;
+    }
+
+    private void ResetCompanionAttackTimers()
+    {
+        for (int slot = 0; slot < companionAttackTimers.Length; slot++)
+        {
+            companionAttackTimers[slot] = 0.25f + slot * 0.22f;
+        }
     }
 
     private void RecoverPlayer()

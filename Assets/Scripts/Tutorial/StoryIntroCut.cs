@@ -9,6 +9,7 @@ public sealed class StoryIntroCut
     public string artDirection;
     public string placeholderColorHex;
     public bool requiresArt;
+    public string artResourcePath;
 
     public StoryIntroCut(
         int cutIndex,
@@ -16,7 +17,8 @@ public sealed class StoryIntroCut
         string body,
         string artDirection,
         string placeholderColorHex,
-        bool requiresArt = true)
+        bool requiresArt = true,
+        string artResourcePath = null)
     {
         this.cutIndex = cutIndex;
         this.title = title;
@@ -24,5 +26,6 @@ public sealed class StoryIntroCut
         this.artDirection = artDirection;
         this.placeholderColorHex = placeholderColorHex;
         this.requiresArt = requiresArt;
+        this.artResourcePath = artResourcePath;
     }
 }

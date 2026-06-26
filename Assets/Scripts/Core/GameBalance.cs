@@ -12,18 +12,18 @@ public static class GameBalance
 
     private static readonly string[] EnemyNames =
     {
-        "Slime Scout",
-        "Cave Fang",
-        "Forest Wisp",
-        "Clockwork Bug"
+        "Alley Cat",
+        "Roof Cat",
+        "Storm Cat",
+        "Wire Cat"
     };
 
     private static readonly string[] BossNames =
     {
-        "Slime Monarch",
-        "Ironjaw",
-        "Ancient Treant",
-        "Gear Colossus"
+        "Boss Cat",
+        "Iron Claw Cat",
+        "Old Tree Cat",
+        "Gear Cat"
     };
 
     public static int GetPlayerAttack(PlayerData data)

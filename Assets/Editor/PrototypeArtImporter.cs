@@ -20,10 +20,13 @@ public sealed class PrototypeArtImporter : AssetPostprocessor
                        assetPath.Contains("/Companions/") ||
                        assetPath.Contains("/Enemies/");
         bool isUi = assetPath.Contains("/UI/");
+        bool isPixelScene = assetPath.Contains("/Backgrounds/") ||
+                            assetPath.Contains("/Story/") ||
+                            assetPath.Contains("/Banners/");
         importer.maxTextureSize = isActor || isUi
             ? 256
             : 1024;
-        importer.filterMode = isActor || isUi
+        importer.filterMode = isActor || isUi || isPixelScene
             ? FilterMode.Point
             : FilterMode.Bilinear;
         importer.textureCompression = isUi
@@ -32,9 +35,9 @@ public sealed class PrototypeArtImporter : AssetPostprocessor
 
         string fileName = System.IO.Path.GetFileNameWithoutExtension(assetPath);
         if (fileName == "PanelFrame")
-            importer.spriteBorder = new Vector4(58f, 58f, 58f, 58f);
+            importer.spriteBorder = new Vector4(32f, 32f, 32f, 32f);
         else if (fileName == "ButtonNormal" || fileName == "ButtonSelected")
-            importer.spriteBorder = new Vector4(48f, 48f, 48f, 48f);
+            importer.spriteBorder = new Vector4(32f, 32f, 32f, 32f);
     }
 
     [MenuItem("Tools/Prototype Art/Reimport UI Sprites")]

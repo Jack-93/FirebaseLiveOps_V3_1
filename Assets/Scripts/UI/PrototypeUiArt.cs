@@ -4,6 +4,7 @@ using UnityEngine;
 public static class PrototypeUiArt
 {
     private const string Root = "PrototypeArt/UI/";
+    private const string BannerRoot = "PrototypeArt/Banners/";
 
     private static readonly Dictionary<string, Sprite> Cache =
         new Dictionary<string, Sprite>();
@@ -13,12 +14,42 @@ public static class PrototypeUiArt
     public static Sprite ButtonSelected => Load("ButtonSelected");
     public static Sprite SkillFrame => Load("SkillFrame");
     public static Sprite GoldIcon => Load("IconGold");
+    public static Sprite StandardGachaBanner =>
+        LoadResource(BannerRoot + "StandardRecruitment");
 
     public static Sprite GetButtonIcon(string buttonName)
     {
         if (string.IsNullOrEmpty(buttonName))
             return null;
 
+        if (IsSkillButton(buttonName))
+            return null;
+
+        if (buttonName.Contains("Gold"))
+            return Load("IconGold");
+        if (buttonName.Contains("Gem"))
+            return Load("IconGem");
+        if (buttonName.Contains("Ticket"))
+            return Load("IconTicket");
+        if (buttonName.Contains("Mail"))
+            return Load("IconEvent");
+        if (buttonName.Contains("Google") ||
+            buttonName.Contains("Guest") ||
+            buttonName.Contains("Account"))
+            return Load("IconMenu");
+        if (buttonName.Contains("Sound") ||
+            buttonName.Contains("Vibration") ||
+            buttonName.Contains("Notifications") ||
+            buttonName.Contains("FrameRate") ||
+            buttonName.Contains("Language") ||
+            buttonName.Contains("Settings"))
+            return Load("IconMenu");
+        if (buttonName.Contains("StarterPack") ||
+            buttonName.Contains("RewardedAd"))
+            return Load("IconShop");
+        if (buttonName.Contains("Weapon") ||
+            buttonName.Contains("Armor"))
+            return Load("IconEquipment");
         if (buttonName.Contains("Battle"))
             return Load("IconBattle");
         if (buttonName.Contains("Growth"))
@@ -69,11 +100,16 @@ public static class PrototypeUiArt
 
     private static Sprite Load(string name)
     {
-        if (Cache.TryGetValue(name, out Sprite sprite))
+        return LoadResource(Root + name);
+    }
+
+    private static Sprite LoadResource(string path)
+    {
+        if (Cache.TryGetValue(path, out Sprite sprite))
             return sprite;
 
-        sprite = Resources.Load<Sprite>(Root + name);
-        Cache[name] = sprite;
+        sprite = Resources.Load<Sprite>(path);
+        Cache[path] = sprite;
         return sprite;
     }
 }

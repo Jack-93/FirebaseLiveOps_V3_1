@@ -8,33 +8,35 @@ public class QuestManager : MonoBehaviour
     private enum SequentialQuestType
     {
         DefeatMonsters,
+        ChargePower,
         RecruitCompanion,
         UpgradeHero,
-        ClearStage,
         UpgradeEquipment
     }
 
     private static readonly string[] QuestNames =
     {
         "Defeat monsters",
+        "Charge power",
         "Recruit companions",
         "Upgrade hero",
-        "Clear a stage",
         "Upgrade equipment"
     };
 
     private static readonly string[] KoreanQuestNames =
     {
         "몬스터 처치",
+        "전력 충전",
         "동료 모집",
         "영웅 강화",
-        "스테이지 클리어",
         "장비 강화"
     };
 
-    private static readonly int[] QuestTargets = { 5, 1, 1, 1, 1 };
+    private static readonly int[] QuestTargets = { 5, 10, 1, 1, 1 };
     private const int QuestRewardGold =
         GameBalanceConfig.QuestRewardGold;
+
+    public static int QuestCount => QuestNames.Length;
 
     public static QuestManager Instance;
 
@@ -62,7 +64,8 @@ public class QuestManager : MonoBehaviour
         if (battleManager != null)
         {
             battleManager.OnEnemyDefeated -= HandleEnemyDefeated;
-            battleManager.OnStageCleared -= HandleStageCleared;
+            battleManager.OnPowerChargePerformed -=
+                HandlePowerChargePerformed;
         }
 
         if (growthManager != null)
@@ -76,7 +79,8 @@ public class QuestManager : MonoBehaviour
         equipmentManager = equipment;
 
         battleManager.OnEnemyDefeated += HandleEnemyDefeated;
-        battleManager.OnStageCleared += HandleStageCleared;
+        battleManager.OnPowerChargePerformed +=
+            HandlePowerChargePerformed;
         growthManager.OnUpgraded += HandleHeroUpgraded;
         equipmentManager.OnEquipmentUpgraded += HandleEquipmentUpgraded;
         NormalizeProgress();
@@ -108,6 +112,12 @@ public class QuestManager : MonoBehaviour
     public void ReportGacha(int count)
     {
         AddProgress(SequentialQuestType.RecruitCompanion, count);
+    }
+
+    public static int GetTargetForIndex(int index)
+    {
+        index = Mathf.Clamp(index, 0, QuestTargets.Length - 1);
+        return QuestTargets[index];
     }
 
     public async Task<int> ClaimAvailableAchievementsAsync()
@@ -193,9 +203,9 @@ public class QuestManager : MonoBehaviour
         AddProgress(SequentialQuestType.DefeatMonsters, 1);
     }
 
-    private void HandleStageCleared(int stage)
+    private void HandlePowerChargePerformed()
     {
-        AddProgress(SequentialQuestType.ClearStage, 1);
+        AddProgress(SequentialQuestType.ChargePower, 1);
     }
 
     private void HandleHeroUpgraded(UpgradeType type)
@@ -273,7 +283,8 @@ public class QuestManager : MonoBehaviour
         if (battleManager != null)
         {
             battleManager.OnEnemyDefeated -= HandleEnemyDefeated;
-            battleManager.OnStageCleared -= HandleStageCleared;
+            battleManager.OnPowerChargePerformed -=
+                HandlePowerChargePerformed;
         }
 
         if (growthManager != null)

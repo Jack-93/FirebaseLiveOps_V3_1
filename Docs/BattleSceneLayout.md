@@ -3,14 +3,13 @@
 ## 고정 전투 좌표
 
 전투 캐릭터 좌표는 모든 스테이지와 배경에서 동일하게 유지한다.
-맵마다 발판의 재질과 형태만 바꾸고 캐릭터 중심점은 이동하지 않는다.
+맵마다 발판이나 바닥 형태만 바꾸고, 캐릭터 중심점은 움직이지 않는다.
 
-- 참새 이등병: 좌측 후방 지원대
-- 캐릭터 1: 전투 진형의 위쪽
+- 참새 이등병: 왼쪽 후방 지원 위치
+- 캐릭터 1: 전투 진형 위쪽
 - 캐릭터 2: 캐릭터 1보다 오른쪽 아래
 - 캐릭터 3: 캐릭터 2보다 오른쪽 아래
-- 고양이 적: 가장 오른쪽 위
-- 한 스테이지에 표시되는 고양이 적: 1마리
+- 고양이: 가장 오른쪽, 스테이지당 1마리
 
 정규화 좌표:
 
@@ -26,28 +25,51 @@
 
 ## 맵 제작 규칙
 
-- 얇은 전깃줄 위에 서 있는 연출을 강제하지 않는다.
-- 나무 발판, 지붕, 간판, 배관, 성벽, 바위처럼 맵에 어울리는 바닥을 사용한다.
-- 발판은 각 고정 좌표의 캐릭터 발밑을 자연스럽게 받치도록 그린다.
-- 공격, 투사체, 스킬, 피격 이펙트는 고정 좌표를 기준으로 재사용한다.
-- 배경과 발판이 달라져도 캐릭터 1/2/3의 순서와 상대 위치는 바꾸지 않는다.
+- 현실 전깃줄 위 전투를 그대로 강제하지 않는다.
+- 나무 발판, 지붕, 간판, 배관, 전봇대 구조물처럼 맵에 어울리는 바닥을 사용한다.
+- 발판은 고정 좌표의 캐릭터 발밑에 자연스럽게 맞춘다.
+- 공격, 투사체, 스킬 이펙트는 고정 좌표를 기준으로 계산한다.
+- 배경과 발판이 달라도 캐릭터 1/2/3 순서와 상대 위치는 바꾸지 않는다.
+
+## 전투 피드백 규칙
+
+- 참새 이등병은 직접 공격하지 않고 뒤에서 전력 충전 무기를 사용한다.
+- 유저가 `전력 충전` 버튼을 누르면 전력 게이지가 오른다.
+- 신규 튜토리얼의 첫 조작 목표는 `전력 충전` 버튼이다.
+- 메인 퀘스트 순환에도 `전력 충전 10회` 목표를 포함한다.
+- 장착 동료 3명이 기본 공격을 자동으로 수행한다.
+- 동료 스킬은 쿨다운이 끝나고 전력이 충분할 때 사용할 수 있다.
+- 일반 공격, 동료 스킬, 적 공격은 같은 고정 좌표에서 짧은 flash와 popup으로 표현한다.
+- 동료 스킬은 각 슬롯에서 고양이 좌표로 날아가는 투사체를 사용한다.
+- 스킬 버튼은 준비 완료 상태와 쿨다운 상태를 색상과 덮개로 구분한다.
+- 보스 패턴은 중앙 경고 배너와 붉은 flash로 표시한다.
+- 보스 제한 시간이 5초 이하로 남으면 보스 이름 색을 위험색으로 바꾼다.
+
+## 알림 배지 규칙
+
+- 퀘스트 완료, 이벤트 보상 가능, 출석 보상 가능, 우편 대기, 뽑기 가능, 성장/장비 강화 가능 상태는 빨간 `!` 배지로 표시한다.
+- 배지는 실제 기능 버튼 위에 붙이고 입력을 막지 않는다.
+- 배지는 임시 UI 신호이므로 추후 실제 아이콘 아트로 교체한다.
 
 ## 스테이지 테마 에셋 규칙
 
-`Resources/PrototypeArt` 아래에 다음 이름으로 파일을 추가하면 코드 수정 없이
-10스테이지 단위로 자동 교체된다. 없는 파일은 현재 Sunset/Scout 아트로 대체된다.
+`Assets/Resources/PrototypeArt` 아래 파일명은 코드와 연결되어 있다.
+같은 파일명으로 PNG를 교체하면 코드 수정 없이 실제 아트로 바뀐다.
 
-| 스테이지 | 배경 이름 | 일반 적 | 보스 |
+현재 기본 placeholder 세트:
+
+| 스테이지 | 배경 | 일반 적 | 보스 |
 |---|---|---|---|
-| 1~10 | `StageSunset.png` | `CatScout.png` | `CatScoutBoss.png` |
-| 11~20 | `StageForest.png` | `CatForest.png` | `CatForestBoss.png` |
-| 21~30 | `StageRooftop.png` | `CatRooftop.png` | `CatRooftopBoss.png` |
-| 31 이상 | `StageRain.png` | `CatRain.png` | `CatRainBoss.png` |
+| 1~10 | `Backgrounds/StageSunset.png` | `Enemies/CatScout.png` | `Enemies/CatScoutBoss.png` |
+| 11~20 | `Backgrounds/StageForest.png` | `Enemies/CatForest.png` | `Enemies/CatForestBoss.png` |
+| 21~30 | `Backgrounds/StageRooftop.png` | `Enemies/CatRooftop.png` | `Enemies/CatRooftopBoss.png` |
+| 31 이상 | `Backgrounds/StageRain.png` | `Enemies/CatRain.png` | `Enemies/CatRainBoss.png` |
 
 선택 레이어:
 
 - 기본 배경: `Backgrounds/StageName.png`
 - 중간 장식: `Backgrounds/StageName_Midground.png`
 - 전경 장식: `Backgrounds/StageName_Foreground.png`
-- 적: `Enemies/CatName.png`
-- 플레이어 참새 이등병: `Heroes/SupportSparrow.png`
+
+`Midground`와 `Foreground`는 없으면 표시하지 않는다.
+최종 아트 교체 시 파일명과 경로만 유지하면 된다.

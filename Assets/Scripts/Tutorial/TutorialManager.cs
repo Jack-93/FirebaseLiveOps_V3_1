@@ -58,9 +58,13 @@ public class TutorialManager : MonoBehaviour
                         "전봇대 방어 작전을 시작하세요.");
                 case 1:
                     return LocalizationManager.Text(
+                        "Charge power once to support your companions.",
+                        "전력 충전을 한 번 눌러 동료를 지원하세요.");
+                case 2:
+                    return LocalizationManager.Text(
                         "Open Growth and upgrade Attack once.",
                         "성장에서 공격력을 한 번 강화하세요.");
-                case 2:
+                case 3:
                     return LocalizationManager.Text(
                         "Return to Battle and defeat one enemy.",
                         "전투로 돌아가 적 한 마리를 처치하세요.");
@@ -86,13 +90,14 @@ public class TutorialManager : MonoBehaviour
         if (!isBound)
         {
             growthManager.OnUpgraded += HandleUpgraded;
+            battleManager.OnPowerChargePerformed += HandlePowerCharge;
             battleManager.OnEnemyDefeated += HandleEnemyDefeated;
             isBound = true;
         }
 
         battleManager.SetRunning(
             !ShouldShowStoryIntro &&
-            (IsComplete || CurrentStep >= 2));
+            (IsComplete || CurrentStep >= 1));
         OnTutorialChanged?.Invoke();
     }
 
@@ -143,6 +148,7 @@ public class TutorialManager : MonoBehaviour
         data.storyIntroCutIndex =
             Math.Max(0, StoryCuts.Count - 1);
         data.tutorialStep = 1;
+        battleManager?.SetRunning(true);
         PlayerDataManager.Instance.NotifyPlayerDataChanged();
         OnTutorialChanged?.Invoke();
         _ = SaveAsync();
@@ -163,14 +169,30 @@ public class TutorialManager : MonoBehaviour
         PlayerData data = PlayerDataManager.Instance?.playerData;
         if (data == null ||
             data.tutorialCompleted ||
-            data.tutorialStep != 1 ||
+            data.tutorialStep != 2 ||
             type != UpgradeType.Attack)
         {
             return;
         }
 
-        data.tutorialStep = 2;
+        data.tutorialStep = 3;
         battleManager.SetRunning(true);
+        PlayerDataManager.Instance.NotifyPlayerDataChanged();
+        OnTutorialChanged?.Invoke();
+        _ = SaveAsync();
+    }
+
+    private void HandlePowerCharge()
+    {
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        if (data == null ||
+            data.tutorialCompleted ||
+            data.tutorialStep != 1)
+        {
+            return;
+        }
+
+        data.tutorialStep = 2;
         PlayerDataManager.Instance.NotifyPlayerDataChanged();
         OnTutorialChanged?.Invoke();
         _ = SaveAsync();
@@ -181,7 +203,7 @@ public class TutorialManager : MonoBehaviour
         PlayerData data = PlayerDataManager.Instance?.playerData;
         if (data == null ||
             data.tutorialCompleted ||
-            data.tutorialStep != 2)
+            data.tutorialStep != 3)
         {
             return;
         }
@@ -218,6 +240,9 @@ public class TutorialManager : MonoBehaviour
             growthManager.OnUpgraded -= HandleUpgraded;
 
         if (battleManager != null)
+        {
+            battleManager.OnPowerChargePerformed -= HandlePowerCharge;
             battleManager.OnEnemyDefeated -= HandleEnemyDefeated;
+        }
     }
 }

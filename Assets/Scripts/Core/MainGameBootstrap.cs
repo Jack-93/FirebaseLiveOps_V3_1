@@ -254,22 +254,6 @@ public class MainGameBootstrap : MonoBehaviour
         await InitializeAsync();
     }
 
-    public async void OpenGacha()
-    {
-        if (!IsReady)
-            return;
-
-        try
-        {
-            await SaveNowAsync();
-            SceneManager.LoadScene("VerticalGachaScene");
-        }
-        catch (Exception exception)
-        {
-            Debug.LogException(exception);
-        }
-    }
-
     public async void SaveNow()
     {
         try
