@@ -25,40 +25,25 @@ public class ShopManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    public async Task<bool> TryPurchaseAsync(ShopProduct product)
+    public Task<bool> TryPurchaseAsync(ShopProduct product)
     {
         PlayerData data = PlayerDataManager.Instance?.playerData;
         if (data == null)
-            return false;
+            return Task.FromResult(false);
 
+        if (!IsValidProduct(product))
+            return Task.FromResult(false);
+
+        data.EnsureInitialized();
         int gemCost = GetGemCost(product);
         int currentGems = GachaEconomy.GetItemCount(data, "Gem");
         if (currentGems < gemCost)
-            return false;
-
-        int previousGold = data.gold;
-        int previousTickets =
-            GachaEconomy.GetItemCount(data, "GachaTicket");
+            return Task.FromResult(false);
 
         SetItemCount(data, "Gem", currentGems - gemCost);
         GrantProduct(data, product);
-        PlayerDataManager.Instance.NotifyPlayerDataChanged();
-
-        try
-        {
-            if (FirestoreManager.Instance != null)
-                await FirestoreManager.Instance.SavePlayerDataAsync(data);
-
-            return true;
-        }
-        catch
-        {
-            data.gold = previousGold;
-            SetItemCount(data, "Gem", currentGems);
-            SetItemCount(data, "GachaTicket", previousTickets);
-            PlayerDataManager.Instance.NotifyPlayerDataChanged();
-            throw;
-        }
+        PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
+        return Task.FromResult(true);
     }
 
     public static int GetGemCost(ShopProduct product)
@@ -81,13 +66,15 @@ public class ShopManager : MonoBehaviour
         switch (product)
         {
             case ShopProduct.GoldPouch:
-                return $"{GameBalanceConfig.ShopGoldPouchGold:N0} Gold";
+                return CompactNumberFormatter.Format(
+                    GameBalanceConfig.ShopGoldPouchGold) + " Gold";
             case ShopProduct.TicketBundle:
                 return
-                    $"{GameBalanceConfig.ShopTicketBundleTickets} " +
+                    $"{CompactNumberFormatter.Format(GameBalanceConfig.ShopTicketBundleTickets)} " +
                     "Gacha Tickets";
             case ShopProduct.GrowthChest:
-                return $"{GameBalanceConfig.ShopGrowthChestGold:N0} Gold";
+                return CompactNumberFormatter.Format(
+                    GameBalanceConfig.ShopGrowthChestGold) + " Gold";
             default:
                 throw new ArgumentOutOfRangeException(nameof(product));
         }
@@ -124,5 +111,12 @@ public class ShopManager : MonoBehaviour
             data.inventory.items[itemName] = amount;
         else
             data.inventory.items.Remove(itemName);
+    }
+
+    private static bool IsValidProduct(ShopProduct product)
+    {
+        return product == ShopProduct.GoldPouch ||
+            product == ShopProduct.TicketBundle ||
+            product == ShopProduct.GrowthChest;
     }
 }

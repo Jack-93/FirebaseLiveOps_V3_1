@@ -4,11 +4,11 @@ using UnityEngine;
 
 public sealed class SettingsPanelUI
 {
-    private readonly RectTransform panel;
-    private readonly TMP_Text settingsText;
-    private readonly TMP_Text summaryText;
+    private RectTransform panel;
+    private TMP_Text settingsText;
+    private TMP_Text summaryText;
 
-    public GameObject GameObject => panel.gameObject;
+    public GameObject GameObject => panel == null ? null : panel.gameObject;
 
     private static readonly Color OverlayBackground =
         new Color32(12, 18, 30, 218);
@@ -28,6 +28,42 @@ public sealed class SettingsPanelUI
         new Color32(190, 203, 225, 255);
 
     public SettingsPanelUI(
+        RectTransform root,
+        Action showMore,
+        Action toggleSound,
+        Action toggleVibration,
+        Action toggleNotifications,
+        Action toggleFrameRate,
+        Action toggleLanguage,
+        bool usePrefab = true)
+    {
+        if (usePrefab &&
+            RuntimeUiBinder.TryInstantiatePrefab(
+                "SettingsPanel",
+                root,
+                out panel))
+        {
+            Bind(
+                showMore,
+                toggleSound,
+                toggleVibration,
+                toggleNotifications,
+                toggleFrameRate,
+                toggleLanguage);
+            return;
+        }
+
+        BuildGenerated(
+            root,
+            showMore,
+            toggleSound,
+            toggleVibration,
+            toggleNotifications,
+            toggleFrameRate,
+            toggleLanguage);
+    }
+
+    public void BuildGenerated(
         RectTransform root,
         Action showMore,
         Action toggleSound,
@@ -159,19 +195,21 @@ public sealed class SettingsPanelUI
     {
         if (settings == null)
         {
-            settingsText.text =
-                LocalizationManager.Translate("Settings unavailable.");
-            summaryText.text = string.Empty;
+            SetText(
+                settingsText,
+                LocalizationManager.Translate("Settings unavailable."));
+            SetText(summaryText, string.Empty);
             return;
         }
 
         string on = LocalizationManager.Translate("ON");
         string off = LocalizationManager.Translate("OFF");
         string language = GameSettingsManager.IsKoreanLanguage
-            ? "한국어"
+            ? "\uD55C\uAD6D\uC5B4"
             : "English";
 
-        settingsText.text =
+        SetText(
+            settingsText,
             $"{LocalizationManager.Translate("Sound")}   " +
             $"{(settings.SoundEnabled ? on : off)}\n" +
             $"{LocalizationManager.Translate("Vibration")}   " +
@@ -181,11 +219,45 @@ public sealed class SettingsPanelUI
             $"{LocalizationManager.Translate("Frame Rate")}   " +
             $"{settings.TargetFrameRate} FPS\n" +
             $"{LocalizationManager.Translate("Language")}   " +
-            $"{language}";
+            $"{language}");
 
-        summaryText.text =
+        SetText(
+            summaryText,
             $"{settings.TargetFrameRate} FPS  |  " +
             $"{(settings.SoundEnabled ? on : off)}  |  " +
-            $"{language}";
+            $"{language}");
+    }
+
+    private void Bind(
+        Action showMore,
+        Action toggleSound,
+        Action toggleVibration,
+        Action toggleNotifications,
+        Action toggleFrameRate,
+        Action toggleLanguage)
+    {
+        settingsText = RuntimeUiBinder.FindText(panel, "SettingsText");
+        summaryText =
+            RuntimeUiBinder.FindText(panel, "SettingsSummaryText");
+
+        Replace("SettingsBackButton", showMore);
+        Replace("ToggleSoundButton", toggleSound);
+        Replace("ToggleVibrationButton", toggleVibration);
+        Replace("ToggleNotificationsButton", toggleNotifications);
+        Replace("ToggleFrameRateButton", toggleFrameRate);
+        Replace("ToggleLanguageButton", toggleLanguage);
+    }
+
+    private void Replace(string buttonName, Action action)
+    {
+        RuntimeUiBinder.ReplaceButtonAction(
+            RuntimeUiBinder.FindButton(panel, buttonName),
+            () => action?.Invoke());
+    }
+
+    private static void SetText(TMP_Text text, string value)
+    {
+        if (text != null)
+            text.text = value;
     }
 }

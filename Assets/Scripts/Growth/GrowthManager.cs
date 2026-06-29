@@ -37,17 +37,20 @@ public class GrowthManager : MonoBehaviour
         return GameBalance.GetUpgradeCost(type, GetLevel(type));
     }
 
-    public async Task<bool> TryUpgradeAsync(UpgradeType type)
+    public Task<bool> TryUpgradeAsync(UpgradeType type)
     {
         PlayerData data = PlayerDataManager.Instance?.playerData;
         if (data == null)
-            return false;
+            return Task.FromResult(false);
+
+        if (!IsValidUpgradeType(type))
+            return Task.FromResult(false);
 
         int cost = GetCost(type);
         if (data.gold < cost)
         {
             Debug.Log("[Growth] Not enough gold.");
-            return false;
+            return Task.FromResult(false);
         }
 
         data.gold -= cost;
@@ -63,18 +66,17 @@ public class GrowthManager : MonoBehaviour
             case UpgradeType.AttackSpeed:
                 data.attackSpeedLevel++;
                 break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(type));
         }
 
-        battleManager?.RefreshPlayerStats();
-        PlayerDataManager.Instance.NotifyPlayerDataChanged();
-        OnUpgraded?.Invoke(type);
+        PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
+        RefreshBattleStatsSafely();
+        SafeEvent.Invoke(
+            OnUpgraded,
+            type,
+            "Growth",
+            nameof(OnUpgraded));
 
-        if (FirestoreManager.Instance != null)
-            await FirestoreManager.Instance.SavePlayerDataAsync(data);
-
-        return true;
+        return Task.FromResult(true);
     }
 
     public async void UpgradeAttack()
@@ -103,4 +105,27 @@ public class GrowthManager : MonoBehaviour
             Debug.LogException(exception);
         }
     }
+
+    private void RefreshBattleStatsSafely()
+    {
+        try
+        {
+            battleManager?.RefreshPlayerStats();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning(
+                "[Growth] Battle stat refresh failed: " +
+                exception.Message);
+            Debug.LogException(exception);
+        }
+    }
+
+    private static bool IsValidUpgradeType(UpgradeType type)
+    {
+        return type == UpgradeType.Attack ||
+            type == UpgradeType.Health ||
+            type == UpgradeType.AttackSpeed;
+    }
+
 }

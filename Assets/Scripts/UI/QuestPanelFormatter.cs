@@ -3,7 +3,6 @@ public struct QuestProgressView
     public int Progress;
     public int Target;
     public int QuestIndex;
-    public string Text;
 }
 
 public static class QuestPanelFormatter
@@ -37,11 +36,7 @@ public static class QuestPanelFormatter
         {
             Progress = progress,
             Target = target,
-            QuestIndex = questIndex,
-            Text =
-                $"{LocalizationManager.Translate("Quest")} " +
-                $"{questIndex + 1}/{QuestManager.QuestCount}   " +
-                $"{progress}/{target}"
+            QuestIndex = questIndex
         };
     }
 

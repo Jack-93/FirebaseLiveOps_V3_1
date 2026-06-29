@@ -65,6 +65,10 @@ Unity 2D 모바일 방치형 RPG 프로토타입
 - 동료 배치는 캐릭터 1 위쪽, 캐릭터 2 중앙, 캐릭터 3 아래쪽으로 고정
 - 스테이지당 고양이 적 1마리 표시
 - 맵별 발판은 달라져도 전투 캐릭터 좌표는 동일하게 유지
+- 동료 공격용 투사체 구조와 임시 전기 투사체 리소스
+- 대상 머리 위에 표시되는 데미지 숫자 UI
+- 1,000 이상 숫자를 A/B/C 방식으로 줄여 보여주는 `CompactNumberFormatter`
+- 고양이 적 픽셀 아트 및 애니메이션 에셋 교체 준비 구조
 
 ### 성장 / 장비
 
@@ -123,7 +127,8 @@ Unity 2D 모바일 방치형 RPG 프로토타입
 - 알림 ON/OFF 설정 구조
 - 30/60 FPS 전환
 - 언어 전환 구조
-- 아직 실제 한글 폰트/로컬라이징 완성 전이므로 UI 문구는 임시 영어 중심 -> 추 후 폰트 추가 및 한글화 예정
+- Jua/Jalnan2/ONE Mobile POP 계열 폰트 리소스 추가
+- 아직 실제 한글 로컬라이징 완성 전이므로 일부 UI 문구는 임시 영어 중심 -> 추 후 문구 확정 및 한글화 예정
 
 ### 모바일 UI / Android 빌드
 
@@ -131,6 +136,11 @@ Unity 2D 모바일 방치형 RPG 프로토타입
 - Safe Area 대응 공통 레이아웃 `MobileScreenLayout`
 - 긴 Android 화면 비율 대응
 - 메인/뽑기 UI 공통 Canvas 구조 정리
+- 주요 UI를 `Assets/Resources/Prefabs/UI` prefab 기반으로 전환
+- prefab이 없거나 깨진 경우 기존 runtime 생성 fallback 사용
+- `RuntimeUiBinder`로 prefab 안 버튼, 텍스트, 숫자, 진행바를 이름 기준으로 다시 연결
+- `Tools > UI > Regenerate Runtime UI Prefabs` 메뉴로 런타임 UI prefab 재생성 가능
+- `Tools > UI > Rebuild UI Preview Scene` 메뉴로 UI 조정용 preview scene 생성 가능
 - AndroidManifest 커스텀 설정
 - POST_NOTIFICATIONS 권한 추가
 - Firebase Messaging용 Android Activity 설정
@@ -146,7 +156,8 @@ Unity 2D 모바일 방치형 RPG 프로토타입
 2. `MainGameBootstrap`이 기본 매니저들을 생성
 3. 화면 방향 Portrait
 4. `MobileScreenLayout`을 통해 모바일 Safe Area UI를 구성
-5. 메인 UI가 먼저 생성되고 로딩 오버레이가 표시
+5. `Resources/Prefabs/UI`의 prefab UI를 우선 불러오고, 없으면 코드 생성 UI로 대체
+6. 메인 UI가 먼저 생성되고 로딩 오버레이가 표시
 
 ### 1-1. 신규 유저 스토리 튜토리얼
 
@@ -185,7 +196,16 @@ Unity 2D 모바일 방치형 RPG 프로토타입
 1. 플레이어는 메인 전투 화면에서 자동 전투
 2. 몬스터 처치와 스테이지 진행이 전투 매니저에서 처리
 3. 자동 진행 -> 다음 스테이지 진행
-4. 성장, 장비, 동료, 퀘스트 진행 상황이 전투력과 보상 흐름에 연결
+4. 동료 공격 시 투사체와 데미지 숫자를 표시
+5. 성장, 장비, 동료, 퀘스트 진행 상황이 전투력과 보상 흐름에 연결
+
+### 5-1. UI prefab 조정 흐름
+
+1. 실제 게임은 `MainGameScene`의 `MainGameBootstrap`에서 UI를 생성
+2. 조정할 UI는 `Assets/Resources/Prefabs/UI` 안의 prefab을 직접 수정
+3. `Tools > UI > Rebuild UI Preview Scene`으로 조정용 scene 생성 가능
+4. preview scene에서 prefab instance를 수정한 경우 `Overrides > Apply All`로 prefab에 반영
+5. `Tools > UI > Regenerate Runtime UI Prefabs`는 코드 기준 prefab 재생성용이므로 수동 수정 후에는 주의해서 사용
 
 ### 6. 성장 / 장비 / 동료
 
@@ -218,7 +238,7 @@ Unity 2D 모바일 방치형 RPG 프로토타입
 
 - 캐릭터 콘셉트, 이름, 관계성
 - 튜토리얼 컷별 최종 대사와 픽셀 아트
-- 최종 UI 색상, 폰트, 아이콘, 배치
+- 최종 UI 색상, 폰트, 아이콘, 프레임, 배치
 - 실제 영웅/동료/몬스터/보스 스프라이트
 - 배경 이미지
 - 스킬 이펙트
@@ -236,7 +256,7 @@ Unity 2D 모바일 방치형 RPG 프로토타입
 - 동료 스프라이트
 - 몬스터/보스 스프라이트
 - 배경 이미지
-- UI 아이콘
+- 최종 UI 아이콘과 프레임
 - 스킬 이펙트
 - BGM
 - 효과음
@@ -246,7 +266,7 @@ Unity 2D 모바일 방치형 RPG 프로토타입
 
 - 테스트용 골드/젬 100,000 지급
 - 임시 캐릭터 이름과 수치
-- 코드로 생성되는 프로토타입 UI 일부
+- 임시 prefab UI 아트와 runtime fallback UI 일부
 - 테스트용 상점 상품
 - 임시 영어 문구
 - 실제 SDK 연결 전의 결제/광고 placeholder

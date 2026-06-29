@@ -17,18 +17,20 @@ public static class MorePanelSummaryFormatter
                 if (companionManager == null ||
                     !companionManager.IsCharacterItem(item.Key))
                 {
-                    builder.AppendLine($"{item.Key}   x{item.Value}");
+                    builder.AppendLine(
+                        item.Key + "   x" +
+                        CompactNumberFormatter.Format(item.Value));
                 }
             }
         }
 
         builder.AppendLine(
             $"{LocalizationManager.Translate("Mailbox")}   " +
-            $"{data.mailbox.Count} " +
+            $"{CompactNumberFormatter.Format(data.mailbox.Count)} " +
             $"{LocalizationManager.Translate("waiting")}");
         builder.AppendLine(
             $"{LocalizationManager.Translate("Monsters defeated")}   " +
-            $"{data.totalMonstersDefeated:N0}");
+            $"{CompactNumberFormatter.Format(data.totalMonstersDefeated)}");
         return builder.ToString();
     }
 
@@ -39,7 +41,9 @@ public static class MorePanelSummaryFormatter
         if (party == null || party.Count == 0)
         {
             builder.AppendLine(
-                $"{LocalizationManager.Translate("Party")} 0/3");
+                $"{LocalizationManager.Translate("Party")} " +
+                $"{CompactNumberFormatter.Format(0)}/" +
+                $"{CompactNumberFormatter.Format(CompanionManager.PartySize)}");
             builder.Append(
                 LocalizationManager.Translate("Recruit one in Gacha."));
             return builder.ToString();
@@ -48,7 +52,8 @@ public static class MorePanelSummaryFormatter
         int bonus = 0;
         builder.AppendLine(
             $"{LocalizationManager.Translate("PARTY")} " +
-            $"{party.Count}/{CompanionManager.PartySize}");
+            $"{CompactNumberFormatter.Format(party.Count)}/" +
+            $"{CompactNumberFormatter.Format(CompanionManager.PartySize)}");
         for (int i = 0; i < party.Count; i++)
         {
             CharacterData character = party[i];
@@ -64,7 +69,7 @@ public static class MorePanelSummaryFormatter
         builder.AppendLine();
         builder.Append(
             $"{LocalizationManager.Translate("Team Attack")} " +
-            $"+{bonus}%");
+            $"{CompactNumberFormatter.Format(bonus, "+")}%");
         CompanionSynergyResult synergy =
             companionManager.GetSynergyResult();
         builder.AppendLine();
@@ -83,7 +88,7 @@ public static class MorePanelSummaryFormatter
         return
             $"{accountType}  |  " +
             $"{LocalizationManager.Translate("Highest")} " +
-            $"{data.highestStage}\n" +
+            $"{CompactNumberFormatter.Format(data.highestStage)}\n" +
             SaveStatusFormatter.FormatShort(FirestoreManager.Instance);
     }
 
@@ -98,10 +103,10 @@ public static class MorePanelSummaryFormatter
         int day = dailyRewards.GetNextRewardDay();
         return dailyRewards.CanClaimReward()
             ? $"{LocalizationManager.Translate("Daily Reward Day")} " +
-              $"{day} " +
+              $"{CompactNumberFormatter.Format(day)} " +
               $"{LocalizationManager.Translate("is ready")}"
             : $"{LocalizationManager.Translate("Daily Reward Day")} " +
-              $"{day} " +
+              $"{CompactNumberFormatter.Format(day)} " +
               $"{LocalizationManager.Translate("already claimed")}";
     }
 }

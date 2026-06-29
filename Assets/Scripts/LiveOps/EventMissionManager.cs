@@ -44,13 +44,17 @@ public class EventMissionManager : MonoBehaviour
         if (data == null || count <= 0)
             return;
 
-        data.eventGachaCount = Mathf.Min(
+        int nextCount = Mathf.Min(
             GachaTarget,
             data.eventGachaCount + count);
+        if (nextCount == data.eventGachaCount)
+            return;
+
+        data.eventGachaCount = nextCount;
         UpdatePoints(data);
     }
 
-    public async Task<bool> ClaimRewardAsync()
+    public Task<bool> ClaimRewardAsync()
     {
         ResetIfNeeded();
         PlayerData data = PlayerDataManager.Instance?.playerData;
@@ -58,24 +62,28 @@ public class EventMissionManager : MonoBehaviour
             data.eventRewardClaimed ||
             data.eventMissionPoints < RewardPointTarget)
         {
-            return false;
+            return Task.FromResult(false);
         }
 
+        InventoryManager inventoryManager = InventoryManager.Instance;
+        if (inventoryManager == null)
+        {
+            Debug.LogError("[Event] InventoryManager is missing.");
+            return Task.FromResult(false);
+        }
+
+        data.EnsureInitialized();
         data.eventRewardClaimed = true;
-        InventoryManager.Instance.AddItem(
+        inventoryManager.AddItem(
             "Gem",
             GameBalanceConfig.EventRewardGems,
             false);
-        InventoryManager.Instance.AddItem(
+        inventoryManager.AddItem(
             "GachaTicket",
             GameBalanceConfig.EventRewardTickets,
             false);
-        PlayerDataManager.Instance.NotifyPlayerDataChanged();
-
-        if (FirestoreManager.Instance != null)
-            await FirestoreManager.Instance.SavePlayerDataAsync(data);
-
-        return true;
+        PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
+        return Task.FromResult(true);
     }
 
     public string GetStatusText()
@@ -92,22 +100,25 @@ public class EventMissionManager : MonoBehaviour
                 "Reward claimed",
                 "보상 수령 완료")
             : $"{LocalizationManager.Text("Points", "포인트")} " +
-              $"{data.eventMissionPoints}/{RewardPointTarget}";
+              $"{CompactNumberFormatter.Format(data.eventMissionPoints)}/" +
+              $"{CompactNumberFormatter.Format(RewardPointTarget)}";
         return
             $"{LocalizationManager.Text("DAILY PLAY EVENT", "일일 플레이 이벤트")}\n" +
             $"{LocalizationManager.Text("Defeat monsters", "몬스터 처치")}  " +
-            $"{data.eventKillCount}/{KillTarget}  " +
-            $"({GameBalanceConfig.EventKillPoints} " +
+            $"{CompactNumberFormatter.Format(data.eventKillCount)}/" +
+            $"{CompactNumberFormatter.Format(KillTarget)}  " +
+            $"({CompactNumberFormatter.Format(GameBalanceConfig.EventKillPoints)} " +
             $"{LocalizationManager.Text("pts", "점")})\n" +
             $"{LocalizationManager.Text("Recruit companions", "동료 모집")}  " +
-            $"{data.eventGachaCount}/{GachaTarget}  " +
-            $"({GameBalanceConfig.EventGachaPoints} " +
+            $"{CompactNumberFormatter.Format(data.eventGachaCount)}/" +
+            $"{CompactNumberFormatter.Format(GachaTarget)}  " +
+            $"({CompactNumberFormatter.Format(GameBalanceConfig.EventGachaPoints)} " +
             $"{LocalizationManager.Text("pts", "점")})\n\n" +
             $"{reward}\n" +
             $"{LocalizationManager.Text("Reward", "보상")}: " +
-            $"{GameBalanceConfig.EventRewardGems} " +
+            $"{CompactNumberFormatter.Format(GameBalanceConfig.EventRewardGems)} " +
             $"{LocalizationManager.Text("Gems", "젬")} + " +
-            $"{GameBalanceConfig.EventRewardTickets} " +
+            $"{CompactNumberFormatter.Format(GameBalanceConfig.EventRewardTickets)} " +
             $"{LocalizationManager.Text("Gacha Tickets", "뽑기 티켓")}";
     }
 
@@ -118,9 +129,13 @@ public class EventMissionManager : MonoBehaviour
         if (data == null)
             return;
 
-        data.eventKillCount = Mathf.Min(
+        int nextCount = Mathf.Min(
             KillTarget,
             data.eventKillCount + 1);
+        if (nextCount == data.eventKillCount)
+            return;
+
+        data.eventKillCount = nextCount;
         UpdatePoints(data);
     }
 
@@ -133,7 +148,7 @@ public class EventMissionManager : MonoBehaviour
             points += GameBalanceConfig.EventGachaPoints;
 
         data.eventMissionPoints = points;
-        PlayerDataManager.Instance.NotifyPlayerDataChanged();
+        PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
     }
 
     private static void ResetIfNeeded()
@@ -151,7 +166,7 @@ public class EventMissionManager : MonoBehaviour
         data.eventGachaCount = 0;
         data.eventMissionPoints = 0;
         data.eventRewardClaimed = false;
-        PlayerDataManager.Instance.NotifyPlayerDataChanged();
+        PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
     }
 
     private void OnDestroy()

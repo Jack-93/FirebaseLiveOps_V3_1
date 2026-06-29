@@ -1,8 +1,13 @@
+using System.Globalization;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public sealed class BattleStatusHudUI
 {
+    private const string NumberResourceRoot =
+        "PrototypeArt/Numbers/DamageGold";
+
     private readonly Color danger;
     private readonly Color accent;
     private readonly Color success;
@@ -10,11 +15,20 @@ public sealed class BattleStatusHudUI
     private RectTransform enemyHealthFill;
     private RectTransform playerHealthFill;
     private RectTransform powerChargeFill;
+    private Image powerChargeFillImage;
     private TMP_Text enemyNameText;
-    private TMP_Text enemyHealthText;
-    private TMP_Text playerHealthText;
-    private TMP_Text powerChargeText;
+    private TMP_Text enemyProgressSeparatorText;
+    private TMP_Text enemyProgressSuffixText;
+    private TMP_Text powerChargeLabelText;
     private TMP_Text combatStatusText;
+    private SpriteNumberText enemyProgressCurrentNumberText;
+    private SpriteNumberText enemyProgressMaxNumberText;
+    private SpriteNumberText enemyHealthCurrentNumberText;
+    private SpriteNumberText enemyHealthMaxNumberText;
+    private SpriteNumberText playerHealthCurrentNumberText;
+    private SpriteNumberText playerHealthMaxNumberText;
+    private SpriteNumberText powerChargeCurrentNumberText;
+    private SpriteNumberText powerChargeMaxNumberText;
 
     public BattleStatusHudUI(
         Color danger,
@@ -33,9 +47,41 @@ public sealed class BattleStatusHudUI
             parent,
             "Enemy",
             28,
-            new Vector2(0.66f, 0.84f),
-            new Vector2(0.96f, 0.92f),
+            new Vector2(0.56f, 0.84f),
+            new Vector2(0.79f, 0.92f),
+            TextAlignmentOptions.Right,
+            Color.white);
+        enemyProgressCurrentNumberText = new SpriteNumberText(
+            parent,
+            "EnemyProgressCurrentNumberText",
+            NumberResourceRoot,
+            22f,
+            new Vector2(0.8f, 0.84f),
+            new Vector2(0.88f, 0.92f));
+        enemyProgressSeparatorText = RuntimeUiFactory.CreateText(
+            "EnemyProgressSeparatorText",
+            parent,
+            "/",
+            22,
+            new Vector2(0.88f, 0.84f),
+            new Vector2(0.9f, 0.92f),
             TextAlignmentOptions.Center,
+            Color.white);
+        enemyProgressMaxNumberText = new SpriteNumberText(
+            parent,
+            "EnemyProgressMaxNumberText",
+            NumberResourceRoot,
+            22f,
+            new Vector2(0.9f, 0.84f),
+            new Vector2(0.96f, 0.92f));
+        enemyProgressSuffixText = RuntimeUiFactory.CreateText(
+            "EnemyProgressSuffixText",
+            parent,
+            "s",
+            20,
+            new Vector2(0.9f, 0.84f),
+            new Vector2(0.96f, 0.92f),
+            TextAlignmentOptions.Left,
             Color.white);
     }
 
@@ -48,15 +94,29 @@ public sealed class BattleStatusHudUI
             new Vector2(0.7f, 0.64f),
             new Vector2(0.96f, 0.68f));
 
-        enemyHealthText = RuntimeUiFactory.CreateText(
-            "EnemyHealthText",
+        enemyHealthCurrentNumberText = new SpriteNumberText(
             parent,
-            "0 / 0",
+            "EnemyHealthCurrentNumberText",
+            NumberResourceRoot,
+            20f,
+            new Vector2(0.705f, 0.635f),
+            new Vector2(0.82f, 0.685f));
+        RuntimeUiFactory.CreateText(
+            "EnemyHealthSeparatorText",
+            parent,
+            "/",
             20,
-            new Vector2(0.7f, 0.635f),
-            new Vector2(0.96f, 0.685f),
+            new Vector2(0.82f, 0.635f),
+            new Vector2(0.84f, 0.685f),
             TextAlignmentOptions.Center,
             Color.white);
+        enemyHealthMaxNumberText = new SpriteNumberText(
+            parent,
+            "EnemyHealthMaxNumberText",
+            NumberResourceRoot,
+            20f,
+            new Vector2(0.84f, 0.635f),
+            new Vector2(0.955f, 0.685f));
     }
 
     public void BuildPlayerStatus(RectTransform parent)
@@ -77,15 +137,29 @@ public sealed class BattleStatusHudUI
             success,
             new Vector2(0.03f, 0.2f),
             new Vector2(0.32f, 0.235f));
-        playerHealthText = RuntimeUiFactory.CreateText(
-            "PlayerHealthText",
+        playerHealthCurrentNumberText = new SpriteNumberText(
             parent,
-            "0 / 0",
+            "PlayerHealthCurrentNumberText",
+            NumberResourceRoot,
+            18f,
+            new Vector2(0.035f, 0.195f),
+            new Vector2(0.15f, 0.24f));
+        RuntimeUiFactory.CreateText(
+            "PlayerHealthSeparatorText",
+            parent,
+            "/",
             18,
-            new Vector2(0.03f, 0.195f),
-            new Vector2(0.32f, 0.24f),
+            new Vector2(0.15f, 0.195f),
+            new Vector2(0.17f, 0.24f),
             TextAlignmentOptions.Center,
             Color.white);
+        playerHealthMaxNumberText = new SpriteNumberText(
+            parent,
+            "PlayerHealthMaxNumberText",
+            NumberResourceRoot,
+            18f,
+            new Vector2(0.17f, 0.195f),
+            new Vector2(0.315f, 0.24f));
 
         powerChargeFill = BattleHudUiFactory.CreateHealthBar(
             parent,
@@ -93,15 +167,94 @@ public sealed class BattleStatusHudUI
             accent,
             new Vector2(0.03f, 0.145f),
             new Vector2(0.32f, 0.18f));
-        powerChargeText = RuntimeUiFactory.CreateText(
-            "PowerChargeText",
+        powerChargeFillImage =
+            powerChargeFill.GetComponent<Image>();
+        powerChargeLabelText = RuntimeUiFactory.CreateText(
+            "PowerChargeLabelText",
             parent,
-            "Power 0 / 100",
-            18,
+            "Power",
+            15,
             new Vector2(0.03f, 0.14f),
-            new Vector2(0.32f, 0.185f),
+            new Vector2(0.13f, 0.185f),
+            TextAlignmentOptions.Left,
+            Color.white);
+        powerChargeCurrentNumberText = new SpriteNumberText(
+            parent,
+            "PowerChargeCurrentNumberText",
+            NumberResourceRoot,
+            18f,
+            new Vector2(0.13f, 0.14f),
+            new Vector2(0.205f, 0.185f));
+        RuntimeUiFactory.CreateText(
+            "PowerChargeSeparatorText",
+            parent,
+            "/",
+            18,
+            new Vector2(0.205f, 0.14f),
+            new Vector2(0.225f, 0.185f),
             TextAlignmentOptions.Center,
             Color.white);
+        powerChargeMaxNumberText = new SpriteNumberText(
+            parent,
+            "PowerChargeMaxNumberText",
+            NumberResourceRoot,
+            18f,
+            new Vector2(0.225f, 0.14f),
+            new Vector2(0.32f, 0.185f));
+    }
+
+    public void Bind(RectTransform parent)
+    {
+        enemyNameText = RuntimeUiBinder.FindText(parent, "EnemyName");
+        enemyProgressSeparatorText =
+            RuntimeUiBinder.FindText(parent, "EnemyProgressSeparatorText");
+        enemyProgressSuffixText =
+            RuntimeUiBinder.FindText(parent, "EnemyProgressSuffixText");
+        combatStatusText =
+            RuntimeUiBinder.FindText(parent, "CombatStatus");
+        powerChargeLabelText =
+            RuntimeUiBinder.FindText(parent, "PowerChargeLabelText");
+
+        enemyHealthFill = FindFill(parent, "EnemyHealthBar");
+        playerHealthFill = FindFill(parent, "PlayerHealthBar");
+        powerChargeFill = FindFill(parent, "PowerChargeBar");
+        powerChargeFillImage =
+            powerChargeFill == null
+                ? null
+                : powerChargeFill.GetComponent<Image>();
+
+        enemyProgressCurrentNumberText = BindNumber(
+            parent,
+            "EnemyProgressCurrentNumberText",
+            22f);
+        enemyProgressMaxNumberText = BindNumber(
+            parent,
+            "EnemyProgressMaxNumberText",
+            22f);
+        enemyHealthCurrentNumberText = BindNumber(
+            parent,
+            "EnemyHealthCurrentNumberText",
+            20f);
+        enemyHealthMaxNumberText = BindNumber(
+            parent,
+            "EnemyHealthMaxNumberText",
+            20f);
+        playerHealthCurrentNumberText = BindNumber(
+            parent,
+            "PlayerHealthCurrentNumberText",
+            18f);
+        playerHealthMaxNumberText = BindNumber(
+            parent,
+            "PlayerHealthMaxNumberText",
+            18f);
+        powerChargeCurrentNumberText = BindNumber(
+            parent,
+            "PowerChargeCurrentNumberText",
+            18f);
+        powerChargeMaxNumberText = BindNumber(
+            parent,
+            "PowerChargeMaxNumberText",
+            18f);
     }
 
     public void Refresh(BattleManager battleManager, PlayerData data)
@@ -111,16 +264,24 @@ public sealed class BattleStatusHudUI
 
         RefreshEnemyName(battleManager, data);
 
-        enemyHealthText.text =
-            $"{battleManager.EnemyHealth:N0} / " +
-            $"{battleManager.EnemyMaxHealth:N0}";
-        playerHealthText.text =
-            $"{battleManager.PlayerHealth:N0} / " +
-            $"{battleManager.PlayerMaxHealth:N0}";
-        powerChargeText.text =
-            $"{LocalizationManager.Translate("Power Charge")} " +
-            $"{battleManager.PowerCharge:0} / " +
-            $"{battleManager.PowerChargeMax:0}";
+        enemyHealthCurrentNumberText.SetText(
+            CompactNumberFormatter.Format(battleManager.EnemyHealth));
+        enemyHealthMaxNumberText.SetText(
+            CompactNumberFormatter.Format(battleManager.EnemyMaxHealth));
+
+        playerHealthCurrentNumberText.SetText(
+            CompactNumberFormatter.Format(battleManager.PlayerHealth));
+        playerHealthMaxNumberText.SetText(
+            CompactNumberFormatter.Format(battleManager.PlayerMaxHealth));
+
+        powerChargeLabelText.text =
+            LocalizationManager.Text("Power", "전력");
+        powerChargeCurrentNumberText.SetText(
+            CompactNumberFormatter.Format(
+                Mathf.RoundToInt(battleManager.PowerCharge)));
+        powerChargeMaxNumberText.SetText(
+            CompactNumberFormatter.Format(
+                Mathf.RoundToInt(battleManager.PowerChargeMax)));
 
         BattleHudUiFactory.SetBar(
             enemyHealthFill,
@@ -135,26 +296,101 @@ public sealed class BattleStatusHudUI
             battleManager.PowerCharge,
             battleManager.PowerChargeMax);
 
-        combatStatusText.text = !battleManager.IsRunning
-            ? LocalizationManager.Translate("Paused")
-            : $"{LocalizationManager.Translate("Companion DMG")} " +
-              $"{battleManager.LastPlayerDamage:N0}  " +
-              $"{LocalizationManager.Translate("Charge")} " +
-              $"{battleManager.PowerCharge:0}%";
+        bool fullPower =
+            battleManager.PowerCharge >= battleManager.PowerChargeMax;
+        bool enoughPower =
+            battleManager.PowerCharge >=
+            BattleManager.CompanionSkillPowerCost;
+        combatStatusText.text = GetCombatStatusText(
+            battleManager,
+            fullPower,
+            enoughPower);
+        combatStatusText.color = fullPower ? accent : Color.white;
+
+        if (powerChargeFillImage != null)
+            powerChargeFillImage.color = fullPower
+                ? success
+                : enoughPower
+                    ? accent
+                    : Color.white;
+    }
+
+    private static string GetCombatStatusText(
+        BattleManager battleManager,
+        bool fullPower,
+        bool enoughPower)
+    {
+        if (!battleManager.IsRunning)
+            return LocalizationManager.Translate("Paused");
+
+        if (battleManager.IsRecovering)
+            return LocalizationManager.Text(
+                "Recovering...",
+                "\uD68C\uBCF5 \uC911...");
+
+        if (fullPower)
+        {
+            return LocalizationManager.Text(
+                "FULL POWER - skills boosted",
+                "\uC804\uB825 \uCD5C\uB300 - \uC2A4\uD0AC \uAC00\uC18D");
+        }
+
+        return enoughPower
+            ? LocalizationManager.Text(
+                "Skill power ready",
+                "\uC2A4\uD0AC \uC804\uB825 \uC900\uBE44")
+            : LocalizationManager.Text(
+                "Charge power",
+                "\uC804\uB825 \uCDA9\uC804");
     }
 
     private void RefreshEnemyName(BattleManager battleManager, PlayerData data)
     {
-        enemyNameText.text = battleManager.IsBoss
-            ? $"{battleManager.EnemyName}  " +
-              $"{battleManager.BossTimeRemaining:0.0}s"
-            : $"{battleManager.EnemyName}  " +
-              $"{data.stageEnemyIndex + 1}/" +
-              $"{GameBalance.EnemiesPerStage - 1}";
-        enemyNameText.color =
+        enemyNameText.text = battleManager.EnemyName;
+        bool dangerTime =
             battleManager.IsBoss &&
-            battleManager.BossTimeRemaining <= 5f
+            battleManager.BossTimeRemaining <= 5f;
+        enemyNameText.color =
+            dangerTime
                 ? danger
                 : Color.white;
+        enemyProgressSeparatorText.gameObject.SetActive(!battleManager.IsBoss);
+        enemyProgressMaxNumberText.SetActive(!battleManager.IsBoss);
+        enemyProgressSuffixText.gameObject.SetActive(battleManager.IsBoss);
+        enemyProgressSuffixText.color = dangerTime ? danger : Color.white;
+
+        if (battleManager.IsBoss)
+        {
+            enemyProgressCurrentNumberText.SetText(
+                battleManager.BossTimeRemaining.ToString(
+                    "0.0",
+                    CultureInfo.InvariantCulture));
+            return;
+        }
+
+        enemyProgressCurrentNumberText.SetText(
+            CompactNumberFormatter.Format(data.stageEnemyIndex + 1));
+        enemyProgressMaxNumberText.SetText(
+            CompactNumberFormatter.Format(
+                GameBalance.EnemiesPerStage - 1));
+    }
+
+    private static RectTransform FindFill(
+        Transform parent,
+        string barName)
+    {
+        RectTransform bar = RuntimeUiBinder.FindRect(parent, barName);
+        return RuntimeUiBinder.FindChildRect(bar, "Fill");
+    }
+
+    private static SpriteNumberText BindNumber(
+        Transform parent,
+        string name,
+        float characterHeight)
+    {
+        return new SpriteNumberText(
+            RuntimeUiBinder.FindRect(parent, name),
+            NumberResourceRoot,
+            characterHeight);
     }
 }

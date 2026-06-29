@@ -44,13 +44,23 @@ public static class PlayerDataLocalCache
             string json = JsonConvert.SerializeObject(
                 data,
                 Formatting.None);
-            File.WriteAllText(path, json);
+            WriteAllTextAtomic(path, json);
         }
         catch (Exception exception)
         {
             Debug.LogWarning(
                 $"[PlayerDataLocalCache] Save failed: {exception.Message}");
         }
+    }
+
+    public static bool IsNewerThan(
+        PlayerData localData,
+        PlayerData serverData)
+    {
+        return localData != null &&
+            serverData != null &&
+            localData.lastOnlineUnixTime >
+            serverData.lastOnlineUnixTime;
     }
 
     private static string GetPath(string uid)
@@ -69,5 +79,27 @@ public static class PlayerDataLocalCache
             uid = uid.Replace(invalid, '_');
 
         return uid;
+    }
+
+    private static void WriteAllTextAtomic(string path, string contents)
+    {
+        string tempPath = path + ".tmp";
+        File.WriteAllText(tempPath, contents);
+
+        if (!File.Exists(path))
+        {
+            File.Move(tempPath, path);
+            return;
+        }
+
+        try
+        {
+            File.Replace(tempPath, path, null);
+        }
+        catch
+        {
+            File.Delete(path);
+            File.Move(tempPath, path);
+        }
     }
 }

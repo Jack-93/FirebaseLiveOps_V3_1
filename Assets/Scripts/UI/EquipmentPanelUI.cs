@@ -4,13 +4,21 @@ using UnityEngine;
 
 public sealed class EquipmentPanelUI
 {
-    private readonly RectTransform panel;
-    private readonly TMP_Text equipmentText;
-    private readonly TMP_Text equipmentPowerText;
-    private readonly RectTransform weaponUpgradeFill;
-    private readonly RectTransform armorUpgradeFill;
+    private const string NumberResourceRoot =
+        "PrototypeArt/Numbers/DamageGold";
 
-    public GameObject GameObject => panel.gameObject;
+    private RectTransform panel;
+    private TMP_Text noEquipmentText;
+    private EquipmentLoadoutRowUI weaponRow;
+    private EquipmentLoadoutRowUI armorRow;
+    private TMP_Text powerLabelText;
+    private TMP_Text goldLabelText;
+    private SpriteNumberText powerNumberText;
+    private SpriteNumberText goldNumberText;
+    private RectTransform weaponUpgradeFill;
+    private RectTransform armorUpgradeFill;
+
+    public GameObject GameObject => panel == null ? null : panel.gameObject;
 
     private static readonly Color OverlayBackground =
         new Color32(12, 18, 30, 218);
@@ -28,6 +36,26 @@ public sealed class EquipmentPanelUI
         new Color32(190, 203, 225, 255);
 
     public EquipmentPanelUI(
+        RectTransform root,
+        Action showMore,
+        Action upgradeWeapon,
+        Action upgradeArmor,
+        bool usePrefab = true)
+    {
+        if (usePrefab &&
+            RuntimeUiBinder.TryInstantiatePrefab(
+                "EquipmentPanel",
+                root,
+                out panel))
+        {
+            Bind(showMore, upgradeWeapon, upgradeArmor);
+            return;
+        }
+
+        BuildGenerated(root, showMore, upgradeWeapon, upgradeArmor);
+    }
+
+    public void BuildGenerated(
         RectTransform root,
         Action showMore,
         Action upgradeWeapon,
@@ -86,8 +114,8 @@ public sealed class EquipmentPanelUI
             TextAlignmentOptions.Left,
             Gold);
 
-        equipmentText = RuntimeUiFactory.CreateText(
-            "EquipmentText",
+        noEquipmentText = RuntimeUiFactory.CreateText(
+            "EquipmentEmptyText",
             card,
             EquipmentPanelFormatter.NoEquipment,
             31,
@@ -95,16 +123,55 @@ public sealed class EquipmentPanelUI
             new Vector2(0.93f, 0.82f),
             TextAlignmentOptions.TopLeft,
             Color.white);
-
-        equipmentPowerText = RuntimeUiFactory.CreateText(
-            "EquipmentPowerText",
+        weaponRow = CreateLoadoutRow(
             card,
-            "0",
+            "Weapon",
+            "WEAPON",
+            "Attack",
+            Accent,
+            new Vector2(0.07f, 0.63f),
+            new Vector2(0.93f, 0.82f));
+        armorRow = CreateLoadoutRow(
+            card,
+            "Armor",
+            "ARMOR",
+            "Health",
+            Success,
+            new Vector2(0.07f, 0.45f),
+            new Vector2(0.93f, 0.62f));
+
+        powerLabelText = RuntimeUiFactory.CreateText(
+            "EquipmentPowerLabelText",
+            card,
+            "Power",
             23,
             new Vector2(0.07f, 0.37f),
-            new Vector2(0.93f, 0.43f),
+            new Vector2(0.2f, 0.43f),
             TextAlignmentOptions.Left,
             MutedText);
+        powerNumberText = new SpriteNumberText(
+            card,
+            "EquipmentPowerNumberText",
+            NumberResourceRoot,
+            22f,
+            new Vector2(0.2f, 0.37f),
+            new Vector2(0.43f, 0.43f));
+        goldLabelText = RuntimeUiFactory.CreateText(
+            "EquipmentGoldLabelText",
+            card,
+            "Gold",
+            23,
+            new Vector2(0.48f, 0.37f),
+            new Vector2(0.6f, 0.43f),
+            TextAlignmentOptions.Left,
+            MutedText);
+        goldNumberText = new SpriteNumberText(
+            card,
+            "EquipmentGoldNumberText",
+            NumberResourceRoot,
+            22f,
+            new Vector2(0.6f, 0.37f),
+            new Vector2(0.93f, 0.43f));
 
         weaponUpgradeFill = RuntimeProgressBar.Create(
             card,
@@ -142,16 +209,27 @@ public sealed class EquipmentPanelUI
     {
         if (data == null)
         {
-            equipmentText.text = EquipmentPanelFormatter.NoEquipment;
-            equipmentPowerText.text = string.Empty;
+            SetTextActive(noEquipmentText, true);
+            weaponRow?.SetActive(false);
+            armorRow?.SetActive(false);
+            SetSummaryVisible(false);
             RuntimeProgressBar.Set(weaponUpgradeFill, 0, 20);
             RuntimeProgressBar.Set(armorUpgradeFill, 0, 20);
             return;
         }
 
-        equipmentText.text = EquipmentPanelFormatter.FormatLoadout(data);
-        equipmentPowerText.text =
-            EquipmentPanelFormatter.FormatPowerSummary(data);
+        SetTextActive(noEquipmentText, false);
+        weaponRow?.SetActive(true);
+        armorRow?.SetActive(true);
+        SetSummaryVisible(true);
+        RefreshLoadoutRows(data);
+        SetText(powerLabelText, LocalizationManager.Translate("Power"));
+        powerNumberText?.SetText(
+            CompactNumberFormatter.Format(
+                GameBalance.GetCombatPower(data)));
+        SetText(goldLabelText, LocalizationManager.Translate("Gold"));
+        goldNumberText?.SetText(
+            CompactNumberFormatter.Format(data.gold));
 
         RuntimeProgressBar.Set(
             weaponUpgradeFill,
@@ -161,5 +239,276 @@ public sealed class EquipmentPanelUI
             armorUpgradeFill,
             data.armorUpgradeLevel,
             20);
+    }
+
+    private void SetSummaryVisible(bool visible)
+    {
+        SetTextActive(powerLabelText, visible);
+        SetTextActive(goldLabelText, visible);
+        powerNumberText?.SetActive(visible);
+        goldNumberText?.SetActive(visible);
+    }
+
+    private void RefreshLoadoutRows(PlayerData data)
+    {
+        bool hasWeapon = !string.IsNullOrEmpty(data.equippedWeapon);
+        bool hasArmor = !string.IsNullOrEmpty(data.equippedArmor);
+        weaponRow?.Refresh(
+            LocalizationManager.Translate("WEAPON"),
+            hasWeapon
+                ? data.equippedWeapon
+                : LocalizationManager.Translate("None"),
+            hasWeapon,
+            data.weaponUpgradeLevel,
+            LocalizationManager.Translate("Attack"),
+            EquipmentManager.GetWeaponAttack(data),
+            hasWeapon
+                ? EquipmentManager.GetUpgradeCost(data.weaponUpgradeLevel)
+                : -1);
+        armorRow?.Refresh(
+            LocalizationManager.Translate("ARMOR"),
+            hasArmor
+                ? data.equippedArmor
+                : LocalizationManager.Translate("None"),
+            hasArmor,
+            data.armorUpgradeLevel,
+            LocalizationManager.Translate("Health"),
+            EquipmentManager.GetArmorHealth(data),
+            hasArmor
+                ? EquipmentManager.GetUpgradeCost(data.armorUpgradeLevel)
+                : -1);
+    }
+
+    private void Bind(
+        Action showMore,
+        Action upgradeWeapon,
+        Action upgradeArmor)
+    {
+        noEquipmentText =
+            RuntimeUiBinder.FindText(panel, "EquipmentEmptyText");
+        weaponRow = BindLoadoutRow("Weapon");
+        armorRow = BindLoadoutRow("Armor");
+        powerLabelText =
+            RuntimeUiBinder.FindText(panel, "EquipmentPowerLabelText");
+        goldLabelText =
+            RuntimeUiBinder.FindText(panel, "EquipmentGoldLabelText");
+        powerNumberText = RuntimeUiBinder.BindNumber(
+            panel,
+            "EquipmentPowerNumberText",
+            NumberResourceRoot,
+            22f);
+        goldNumberText = RuntimeUiBinder.BindNumber(
+            panel,
+            "EquipmentGoldNumberText",
+            NumberResourceRoot,
+            22f);
+        weaponUpgradeFill =
+            RuntimeUiBinder.FindProgressFill(
+                panel,
+                "WeaponUpgradeProgressBar");
+        armorUpgradeFill =
+            RuntimeUiBinder.FindProgressFill(
+                panel,
+                "ArmorUpgradeProgressBar");
+        Replace("EquipmentBackButton", showMore);
+        Replace("UpgradeWeaponButton", upgradeWeapon);
+        Replace("UpgradeArmorButton", upgradeArmor);
+    }
+
+    private EquipmentLoadoutRowUI BindLoadoutRow(string key)
+    {
+        RectTransform row =
+            RuntimeUiBinder.FindRect(panel, key + "LoadoutRow");
+        return new EquipmentLoadoutRowUI(
+            row,
+            RuntimeUiBinder.FindText(row, key + "SectionText"),
+            RuntimeUiBinder.FindText(row, key + "NameText"),
+            RuntimeUiBinder.FindText(row, key + "ValueLabelText"),
+            RuntimeUiBinder.BindNumber(
+                row,
+                key + "LevelNumberText",
+                NumberResourceRoot,
+                19f),
+            RuntimeUiBinder.BindNumber(
+                row,
+                key + "ValueNumberText",
+                NumberResourceRoot,
+                19f),
+            RuntimeUiBinder.BindNumber(
+                row,
+                key + "CostNumberText",
+                NumberResourceRoot,
+                19f));
+    }
+
+    private void Replace(string buttonName, Action action)
+    {
+        RuntimeUiBinder.ReplaceButtonAction(
+            RuntimeUiBinder.FindButton(panel, buttonName),
+            () => action?.Invoke());
+    }
+
+    private static EquipmentLoadoutRowUI CreateLoadoutRow(
+        RectTransform parent,
+        string key,
+        string section,
+        string valueLabel,
+        Color accent,
+        Vector2 anchorMin,
+        Vector2 anchorMax)
+    {
+        RectTransform row = RuntimeUiFactory.CreatePanel(
+            key + "LoadoutRow",
+            parent,
+            new Color32(24, 35, 58, 180),
+            anchorMin,
+            anchorMax);
+
+        TMP_Text sectionText = RuntimeUiFactory.CreateText(
+            key + "SectionText",
+            row,
+            section,
+            20,
+            new Vector2(0.02f, 0.56f),
+            new Vector2(0.28f, 0.92f),
+            TextAlignmentOptions.Left,
+            accent);
+        TMP_Text nameText = RuntimeUiFactory.CreateText(
+            key + "NameText",
+            row,
+            "None",
+            20,
+            new Vector2(0.02f, 0.1f),
+            new Vector2(0.36f, 0.52f),
+            TextAlignmentOptions.Left,
+            Color.white);
+        RuntimeUiFactory.CreateText(
+            key + "LevelLabel",
+            row,
+            "Lv.",
+            18,
+            new Vector2(0.38f, 0.56f),
+            new Vector2(0.47f, 0.92f),
+            TextAlignmentOptions.Right,
+            MutedText);
+        SpriteNumberText levelNumberText = new SpriteNumberText(
+            row,
+            key + "LevelNumberText",
+            NumberResourceRoot,
+            19f,
+            new Vector2(0.47f, 0.56f),
+            new Vector2(0.6f, 0.92f));
+        TMP_Text valueLabelText = RuntimeUiFactory.CreateText(
+            key + "ValueLabelText",
+            row,
+            valueLabel,
+            18,
+            new Vector2(0.38f, 0.1f),
+            new Vector2(0.52f, 0.5f),
+            TextAlignmentOptions.Left,
+            MutedText);
+        SpriteNumberText valueNumberText = new SpriteNumberText(
+            row,
+            key + "ValueNumberText",
+            NumberResourceRoot,
+            19f,
+            new Vector2(0.52f, 0.1f),
+            new Vector2(0.68f, 0.5f));
+        RuntimeUiFactory.CreateText(
+            key + "CostLabel",
+            row,
+            LocalizationManager.Text(
+                "Next cost",
+                "\uB2E4\uC74C \uBE44\uC6A9"),
+            17,
+            new Vector2(0.7f, 0.56f),
+            new Vector2(0.98f, 0.92f),
+            TextAlignmentOptions.Center,
+            MutedText);
+        SpriteNumberText costNumberText = new SpriteNumberText(
+            row,
+            key + "CostNumberText",
+            NumberResourceRoot,
+            19f,
+            new Vector2(0.7f, 0.1f),
+            new Vector2(0.98f, 0.5f));
+
+        return new EquipmentLoadoutRowUI(
+            row,
+            sectionText,
+            nameText,
+            valueLabelText,
+            levelNumberText,
+            valueNumberText,
+            costNumberText);
+    }
+
+    private static void SetText(TMP_Text text, string value)
+    {
+        if (text != null)
+            text.text = value;
+    }
+
+    private static void SetTextActive(TMP_Text text, bool active)
+    {
+        if (text != null)
+            text.gameObject.SetActive(active);
+    }
+
+    private sealed class EquipmentLoadoutRowUI
+    {
+        private readonly RectTransform root;
+        private readonly TMP_Text sectionText;
+        private readonly TMP_Text nameText;
+        private readonly TMP_Text valueLabelText;
+        private readonly SpriteNumberText levelNumberText;
+        private readonly SpriteNumberText valueNumberText;
+        private readonly SpriteNumberText costNumberText;
+
+        public EquipmentLoadoutRowUI(
+            RectTransform root,
+            TMP_Text sectionText,
+            TMP_Text nameText,
+            TMP_Text valueLabelText,
+            SpriteNumberText levelNumberText,
+            SpriteNumberText valueNumberText,
+            SpriteNumberText costNumberText)
+        {
+            this.root = root;
+            this.sectionText = sectionText;
+            this.nameText = nameText;
+            this.valueLabelText = valueLabelText;
+            this.levelNumberText = levelNumberText;
+            this.valueNumberText = valueNumberText;
+            this.costNumberText = costNumberText;
+        }
+
+        public void SetActive(bool active)
+        {
+            if (root != null)
+                root.gameObject.SetActive(active);
+        }
+
+        public void Refresh(
+            string section,
+            string itemName,
+            bool hasItem,
+            int level,
+            string valueLabel,
+            int value,
+            int nextCost)
+        {
+            SetText(sectionText, section);
+            SetText(nameText, itemName);
+            SetText(valueLabelText, valueLabel);
+            levelNumberText?.SetText(hasItem
+                ? CompactNumberFormatter.Format(level)
+                : "-");
+            valueNumberText?.SetText(
+                CompactNumberFormatter.Format(value, "+"));
+            costNumberText?.SetText(nextCost >= 0
+                ? CompactNumberFormatter.Format(nextCost)
+                : "-");
+        }
     }
 }

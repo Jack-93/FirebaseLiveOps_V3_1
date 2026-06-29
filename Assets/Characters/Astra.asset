@@ -16,6 +16,10 @@ MonoBehaviour:
   rarity: SSR
   icon: {fileID: 0}
   battleSprite: {fileID: 0}
+  basicProjectileSprite: {fileID: 21300000, guid: 96e76109869d4e7f88953cc0701507e0, type: 3}
+  skillProjectileSprite: {fileID: 21300000, guid: 9e708890c3b84bbdb9a19d4f118c4308, type: 3}
+  basicProjectileTint: {r: 1, g: 1, b: 1, a: 1}
+  skillProjectileTint: {r: 1, g: 1, b: 1, a: 1}
   battleAnimator: {fileID: 0}
   element: 3
   role: 1

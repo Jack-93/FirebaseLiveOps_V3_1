@@ -3,34 +3,70 @@ using UnityEngine.UI;
 
 public sealed class WorldBackdropUI
 {
-    private readonly Image backgroundImage;
-    private readonly Image midgroundImage;
-    private readonly Image foregroundImage;
+    private RectTransform backdrop;
+    private Image backgroundImage;
+    private Image midgroundImage;
+    private Image foregroundImage;
     private int themeIndex = -1;
 
     private static readonly Color Background =
         new Color32(17, 24, 39, 255);
 
-    public WorldBackdropUI(RectTransform root, int stage)
+    public GameObject GameObject => backdrop == null ? null : backdrop.gameObject;
+
+    public WorldBackdropUI(
+        RectTransform root,
+        int stage,
+        bool usePrefab = true)
     {
         Image rootImage = root.GetComponent<Image>();
-        rootImage.color = Color.clear;
-        rootImage.raycastTarget = false;
+        if (rootImage != null)
+        {
+            rootImage.color = Color.clear;
+            rootImage.raycastTarget = false;
+        }
 
         themeIndex = PrototypeBattleArt.GetThemeIndex(stage);
+
+        if (usePrefab &&
+            RuntimeUiBinder.TryInstantiatePrefab(
+                "WorldBackdrop",
+                root,
+                out backdrop))
+        {
+            Bind();
+            RefreshLayers(stage);
+            return;
+        }
+
+        BuildGenerated(root, stage);
+    }
+
+    public void BuildGenerated(RectTransform root, int stage)
+    {
+        backdrop = RuntimeUiFactory.CreatePanel(
+            "WorldBackdrop",
+            root,
+            Color.clear,
+            Vector2.zero,
+            Vector2.one);
+        Image backdropImage = backdrop.GetComponent<Image>();
+        if (backdropImage != null)
+            backdropImage.raycastTarget = false;
+
         backgroundImage = CreateWorldLayer(
             "WorldBackgroundLayer",
-            root,
+            backdrop,
             PrototypeBattleArt.GetStageBackground(stage),
             Background);
         midgroundImage = CreateWorldLayer(
             "WorldMidgroundLayer",
-            root,
+            backdrop,
             PrototypeBattleArt.GetStageMidground(stage),
             Color.clear);
         foregroundImage = CreateWorldLayer(
             "WorldForegroundLayer",
-            root,
+            backdrop,
             PrototypeBattleArt.GetStageForeground(stage),
             Color.clear);
     }
@@ -42,6 +78,28 @@ public sealed class WorldBackdropUI
             return;
 
         themeIndex = nextThemeIndex;
+        RefreshLayers(stage);
+    }
+
+    private void Bind()
+    {
+        Image backdropImage = backdrop.GetComponent<Image>();
+        if (backdropImage != null)
+        {
+            backdropImage.color = Color.clear;
+            backdropImage.raycastTarget = false;
+        }
+
+        backgroundImage =
+            RuntimeUiBinder.FindImage(backdrop, "WorldBackgroundLayer");
+        midgroundImage =
+            RuntimeUiBinder.FindImage(backdrop, "WorldMidgroundLayer");
+        foregroundImage =
+            RuntimeUiBinder.FindImage(backdrop, "WorldForegroundLayer");
+    }
+
+    private void RefreshLayers(int stage)
+    {
         SetWorldLayer(
             backgroundImage,
             PrototypeBattleArt.GetStageBackground(stage),
@@ -85,5 +143,6 @@ public sealed class WorldBackdropUI
 
         image.sprite = sprite;
         image.color = sprite == null ? fallbackColor : Color.white;
+        image.raycastTarget = false;
     }
 }

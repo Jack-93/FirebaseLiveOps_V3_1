@@ -27,6 +27,9 @@ public class CompanionManager : MonoBehaviour
 
     public bool Initialize()
     {
+        if (Instance == null)
+            Instance = this;
+
         LoadDatabase();
 
         PlayerData data = PlayerDataManager.Instance?.playerData;
@@ -84,7 +87,7 @@ public class CompanionManager : MonoBehaviour
         data.equippedCompanions[slotIndex] = character.characterName;
         data.equippedCompanionRarities[slotIndex] = character.rarity;
         SyncLegacyEquipment(data);
-        OnCompanionChanged?.Invoke();
+        InvokeCompanionChanged();
         return true;
     }
 
@@ -105,7 +108,7 @@ public class CompanionManager : MonoBehaviour
         data.equippedCompanions[slotIndex] = "";
         data.equippedCompanionRarities[slotIndex] = "";
         SyncLegacyEquipment(data);
-        OnCompanionChanged?.Invoke();
+        InvokeCompanionChanged();
         return true;
     }
 
@@ -211,6 +214,11 @@ public class CompanionManager : MonoBehaviour
         return FindCharacter(itemName) != null;
     }
 
+    public CharacterData FindCharacterByName(string characterName)
+    {
+        return FindCharacter(characterName);
+    }
+
     public static int GetAttackBonusPercent(string rarity)
     {
         switch (rarity)
@@ -240,6 +248,7 @@ public class CompanionManager : MonoBehaviour
         if (data == null || GetOwnedCount(characterName) <= 0)
             return 0;
 
+        data.EnsureInitialized();
         return data.companionStars.TryGetValue(
             characterName,
             out int stars)
@@ -259,6 +268,7 @@ public class CompanionManager : MonoBehaviour
         if (data == null || character == null)
             return false;
 
+        data.EnsureInitialized();
         int stars = GetStars(character.characterName);
         int cost = GetPromotionCost(character.characterName);
         int owned = GetOwnedCount(character.characterName);
@@ -267,7 +277,7 @@ public class CompanionManager : MonoBehaviour
 
         data.inventory.items[character.characterName] = owned - cost;
         data.companionStars[character.characterName] = stars + 1;
-        OnCompanionChanged?.Invoke();
+        InvokeCompanionChanged();
         return true;
     }
 
@@ -318,7 +328,7 @@ public class CompanionManager : MonoBehaviour
         SyncLegacyEquipment(data);
 
         if (changed)
-            OnCompanionChanged?.Invoke();
+            InvokeCompanionChanged();
 
         return changed;
     }
@@ -395,5 +405,13 @@ public class CompanionManager : MonoBehaviour
             default:
                 return 0;
         }
+    }
+
+    private void InvokeCompanionChanged()
+    {
+        SafeEvent.Invoke(
+            OnCompanionChanged,
+            "Companion",
+            nameof(OnCompanionChanged));
     }
 }

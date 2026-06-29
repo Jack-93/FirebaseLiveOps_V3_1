@@ -35,7 +35,6 @@ public class MailboxManager : MonoBehaviour
         });
 
         await SaveAsync(data);
-        PlayerDataManager.Instance.NotifyPlayerDataChanged();
 
         Debug.Log("[Mailbox] Test Mail Added");
     }
@@ -50,6 +49,14 @@ public class MailboxManager : MonoBehaviour
             mail.amount <= 0)
         {
             Debug.LogWarning("[Mailbox] Invalid mail cannot be claimed.");
+            return false;
+        }
+
+        if (IsAlreadyClaimed(data, mail))
+        {
+            mail.isClaimed = true;
+            data.mailbox.Remove(mail);
+            await SaveAsync(data);
             return false;
         }
 
@@ -70,7 +77,6 @@ public class MailboxManager : MonoBehaviour
         data.mailbox.Remove(mail);
 
         await SaveAsync(data);
-        PlayerDataManager.Instance.NotifyPlayerDataChanged();
 
         Debug.Log($"[Mailbox] Claimed: {mail.title}");
         return true;
@@ -99,6 +105,13 @@ public class MailboxManager : MonoBehaviour
             if (mail == null || mail.isClaimed)
                 continue;
 
+            if (IsAlreadyClaimed(data, mail))
+            {
+                mail.isClaimed = true;
+                data.mailbox.RemoveAt(index);
+                continue;
+            }
+
             if (string.IsNullOrWhiteSpace(mail.itemName) ||
                 mail.amount <= 0)
             {
@@ -118,7 +131,6 @@ public class MailboxManager : MonoBehaviour
         }
 
         await SaveAsync(data);
-        PlayerDataManager.Instance.NotifyPlayerDataChanged();
 
         Debug.Log($"[Mailbox] Claim All Complete: {claimedCount}");
         return claimedCount;
@@ -162,6 +174,14 @@ public class MailboxManager : MonoBehaviour
         return data;
     }
 
+    private static bool IsAlreadyClaimed(PlayerData data, MailData mail)
+    {
+        return mail != null &&
+            mail.isGlobalMail &&
+            !string.IsNullOrEmpty(mail.mailId) &&
+            data.claimedMailIds.Contains(mail.mailId);
+    }
+
     private static void RememberClaimedMail(PlayerData data, MailData mail)
     {
         if (mail != null &&
@@ -173,9 +193,9 @@ public class MailboxManager : MonoBehaviour
         }
     }
 
-    private static async Task SaveAsync(PlayerData data)
+    private static Task SaveAsync(PlayerData data)
     {
-        if (FirestoreManager.Instance != null)
-            await FirestoreManager.Instance.SavePlayerDataAsync(data);
+        PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
+        return Task.CompletedTask;
     }
 }

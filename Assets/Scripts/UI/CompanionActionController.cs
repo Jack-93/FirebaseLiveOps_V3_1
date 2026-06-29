@@ -128,14 +128,24 @@ public sealed class CompanionActionController
         refreshBattle?.Invoke();
         refreshCollection?.Invoke();
         showToast?.Invoke(
-            $"{equipped.characterName} equipped. Attack +{bonus}%.");
+            $"{equipped.characterName} equipped. Attack " +
+            $"{CompactNumberFormatter.Format(bonus, "+")}%.");
     }
 
     private void RefreshPlayerData()
     {
-        battleManager?.RefreshPlayerStats();
-        PlayerDataManager.Instance?.NotifyPlayerDataChanged();
+        PlayerDataManager.Instance?.NotifyPlayerDataChanged(true);
         if (bootstrap != null)
             _ = bootstrap.SaveNowAsync();
+
+        try
+        {
+            battleManager?.RefreshPlayerStats();
+        }
+        catch (Exception exception)
+        {
+            showToast?.Invoke("Companion saved. Battle refresh failed.");
+            UnityEngine.Debug.LogException(exception);
+        }
     }
 }

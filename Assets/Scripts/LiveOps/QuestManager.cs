@@ -92,6 +92,7 @@ public class QuestManager : MonoBehaviour
         if (data == null)
             return false;
 
+        NormalizeProgress();
         int target = GetTarget(data);
         if (data.sequentialQuestProgress < target)
             return false;
@@ -126,11 +127,19 @@ public class QuestManager : MonoBehaviour
         if (data == null)
             return 0;
 
+        InventoryManager inventoryManager = InventoryManager.Instance;
+        if (inventoryManager == null)
+        {
+            Debug.LogError("[Quest] InventoryManager is missing.");
+            return 0;
+        }
+
+        data.EnsureInitialized();
         int claimed = 0;
         if (data.highestStage >= 5 &&
             ClaimOnce(data, "stage_5"))
         {
-            InventoryManager.Instance.AddItem(
+            inventoryManager.AddItem(
                 "Gem",
                 GameBalanceConfig.AchievementStageFiveGemReward,
                 false);
@@ -140,7 +149,7 @@ public class QuestManager : MonoBehaviour
         if (data.totalMonstersDefeated >= 50 &&
             ClaimOnce(data, "kills_50"))
         {
-            InventoryManager.Instance.AddItem(
+            inventoryManager.AddItem(
                 "GachaTicket",
                 GameBalanceConfig.AchievementKillFiftyTicketReward,
                 false);
@@ -170,10 +179,11 @@ public class QuestManager : MonoBehaviour
             KoreanQuestNames[index]);
         string current =
             $"{LocalizationManager.Text("Quest", "퀘스트")} " +
-            $"{index + 1}/5: {questName}\n" +
-            $"{data.sequentialQuestProgress}/{target}  " +
+            $"{CompactNumberFormatter.Format(index + 1)}/5: {questName}\n" +
+            $"{CompactNumberFormatter.Format(data.sequentialQuestProgress)}/" +
+            $"{CompactNumberFormatter.Format(target)}  " +
             $"{LocalizationManager.Text("Reward", "보상")}: " +
-            $"{QuestRewardGold} " +
+            $"{CompactNumberFormatter.Format(QuestRewardGold)} " +
             $"{LocalizationManager.Text("Gold", "골드")}\n" +
             (complete
                 ? LocalizationManager.Text(
@@ -187,7 +197,7 @@ public class QuestManager : MonoBehaviour
                 "Stage 5: Claimed",
                 "스테이지 5: 수령 완료")
             : $"{LocalizationManager.Text("Stage", "스테이지")} 5: " +
-              $"{Math.Min(data.highestStage, 5)}/5";
+              $"{CompactNumberFormatter.Format(Math.Min(data.highestStage, 5))}/5";
         string kills = data.claimedAchievementIds.Contains("kills_50")
             ? LocalizationManager.Text(
                 "50 kills: Claimed",
@@ -231,10 +241,17 @@ public class QuestManager : MonoBehaviour
         }
 
         int target = GetTarget(data);
-        data.sequentialQuestProgress = Mathf.Min(
+        if (data.sequentialQuestProgress >= target)
+            return;
+
+        int nextProgress = Mathf.Min(
             target,
             data.sequentialQuestProgress + amount);
-        PlayerDataManager.Instance.NotifyPlayerDataChanged();
+        if (nextProgress == data.sequentialQuestProgress)
+            return;
+
+        data.sequentialQuestProgress = nextProgress;
+        PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
     }
 
     private static int GetTarget(PlayerData data)
@@ -271,11 +288,10 @@ public class QuestManager : MonoBehaviour
         return true;
     }
 
-    private static async Task SaveAsync(PlayerData data)
+    private static Task SaveAsync(PlayerData data)
     {
-        PlayerDataManager.Instance.NotifyPlayerDataChanged();
-        if (FirestoreManager.Instance != null)
-            await FirestoreManager.Instance.SavePlayerDataAsync(data);
+        PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
+        return Task.CompletedTask;
     }
 
     private void OnDestroy()

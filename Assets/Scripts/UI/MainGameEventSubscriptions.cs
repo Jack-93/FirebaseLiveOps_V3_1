@@ -131,8 +131,6 @@ public sealed class MainGameEventSubscriptions : IDisposable
         if (battleHud == null)
             return;
 
-        battleManager.OnPlayerAttackPerformed +=
-            battleHud.HandlePlayerAttackVisual;
         battleManager.OnCompanionBasicAttackPerformed +=
             battleHud.HandleCompanionBasicAttackVisual;
         battleManager.OnEnemyAttackPerformed +=
@@ -156,8 +154,6 @@ public sealed class MainGameEventSubscriptions : IDisposable
         if (battleHud == null)
             return;
 
-        battleManager.OnPlayerAttackPerformed -=
-            battleHud.HandlePlayerAttackVisual;
         battleManager.OnCompanionBasicAttackPerformed -=
             battleHud.HandleCompanionBasicAttackVisual;
         battleManager.OnEnemyAttackPerformed -=

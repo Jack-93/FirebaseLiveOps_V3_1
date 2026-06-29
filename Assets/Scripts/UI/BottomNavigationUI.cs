@@ -14,16 +14,18 @@ public enum BottomNavigationTab
 
 public sealed class BottomNavigationUI
 {
-    private readonly Button battleButton;
-    private readonly Button growthButton;
-    private readonly Button gachaButton;
-    private readonly Button collectionButton;
-    private readonly Button moreButton;
+    private RectTransform bottom;
+    private Button battleButton;
+    private Button growthButton;
+    private Button gachaButton;
+    private Button collectionButton;
+    private Button moreButton;
 
-    public RectTransform GrowthBadge { get; }
-    public RectTransform GachaBadge { get; }
-    public RectTransform CollectionBadge { get; }
-    public RectTransform MoreBadge { get; }
+    public GameObject GameObject => bottom == null ? null : bottom.gameObject;
+    public RectTransform GrowthBadge { get; private set; }
+    public RectTransform GachaBadge { get; private set; }
+    public RectTransform CollectionBadge { get; private set; }
+    public RectTransform MoreBadge { get; private set; }
 
     private static readonly Color PanelLight =
         new Color32(52, 68, 96, 255);
@@ -40,9 +42,37 @@ public sealed class BottomNavigationUI
         Action showGrowth,
         Action showGacha,
         Action showCollection,
+        Action showMore,
+        bool usePrefab = true)
+    {
+        if (usePrefab &&
+            RuntimeUiBinder.TryInstantiatePrefab(
+                "BottomNavigation",
+                root,
+                out bottom))
+        {
+            Bind(showBattle, showGrowth, showGacha, showCollection, showMore);
+            return;
+        }
+
+        BuildGenerated(
+            root,
+            showBattle,
+            showGrowth,
+            showGacha,
+            showCollection,
+            showMore);
+    }
+
+    public void BuildGenerated(
+        RectTransform root,
+        Action showBattle,
+        Action showGrowth,
+        Action showGacha,
+        Action showCollection,
         Action showMore)
     {
-        RectTransform bottom = RuntimeUiFactory.CreatePanel(
+        bottom = RuntimeUiFactory.CreatePanel(
             "BottomNavigation",
             root,
             new Color32(24, 35, 58, 210),
@@ -118,6 +148,43 @@ public sealed class BottomNavigationUI
         SetNavigationColor(
             moreButton,
             active == BottomNavigationTab.More);
+    }
+
+    private void Bind(
+        Action showBattle,
+        Action showGrowth,
+        Action showGacha,
+        Action showCollection,
+        Action showMore)
+    {
+        battleButton = RuntimeUiBinder.FindButton(bottom, "BattleNav");
+        growthButton = RuntimeUiBinder.FindButton(bottom, "GrowthNav");
+        gachaButton = RuntimeUiBinder.FindButton(bottom, "GachaNav");
+        collectionButton =
+            RuntimeUiBinder.FindButton(bottom, "CollectionNav");
+        moreButton = RuntimeUiBinder.FindButton(bottom, "MoreNav");
+
+        RuntimeUiBinder.ReplaceButtonAction(
+            battleButton,
+            () => showBattle?.Invoke());
+        RuntimeUiBinder.ReplaceButtonAction(
+            growthButton,
+            () => showGrowth?.Invoke());
+        RuntimeUiBinder.ReplaceButtonAction(
+            gachaButton,
+            () => showGacha?.Invoke());
+        RuntimeUiBinder.ReplaceButtonAction(
+            collectionButton,
+            () => showCollection?.Invoke());
+        RuntimeUiBinder.ReplaceButtonAction(
+            moreButton,
+            () => showMore?.Invoke());
+
+        GrowthBadge = RuntimeUiBinder.FindRect(bottom, "GrowthNavBadge");
+        GachaBadge = RuntimeUiBinder.FindRect(bottom, "GachaNavBadge");
+        CollectionBadge =
+            RuntimeUiBinder.FindRect(bottom, "CollectionNavBadge");
+        MoreBadge = RuntimeUiBinder.FindRect(bottom, "MoreNavBadge");
     }
 
     private static RectTransform CreateBadge(Button button, string name)

@@ -11,6 +11,10 @@ public class CharacterData : ScriptableObject
 
     public Sprite icon;
     public Sprite battleSprite;
+    public Sprite basicProjectileSprite;
+    public Sprite skillProjectileSprite;
+    public Color basicProjectileTint = Color.white;
+    public Color skillProjectileTint = Color.white;
     public RuntimeAnimatorController battleAnimator;
     public CompanionElement element;
     public CompanionRole role;

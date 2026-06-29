@@ -12,6 +12,10 @@ public class PlayerData
     public int level;
     public int gold;
     public bool tutorialCompleted;
+    public bool tutorialGachaClaimed;
+    public bool tutorialGachaTicketsGranted;
+    public List<string> pendingTutorialGachaResults;
+    public Dictionary<string, int> pendingTutorialGachaOwnedBefore;
 
     public InventoryData inventory;
 
@@ -76,6 +80,10 @@ public class PlayerData
         level = 1;
         gold = 1000;
         tutorialCompleted = false;
+        tutorialGachaClaimed = false;
+        tutorialGachaTicketsGranted = false;
+        pendingTutorialGachaResults = new List<string>();
+        pendingTutorialGachaOwnedBefore = new Dictionary<string, int>();
 
         inventory = new InventoryData();
 
@@ -138,6 +146,15 @@ public class PlayerData
 
         if (inventory.items == null)
             inventory.items = new Dictionary<string, int>();
+
+        if (pendingTutorialGachaResults == null)
+            pendingTutorialGachaResults = new List<string>();
+
+        if (pendingTutorialGachaOwnedBefore == null)
+        {
+            pendingTutorialGachaOwnedBefore =
+                new Dictionary<string, int>();
+        }
 
         if (mailbox == null)
             mailbox = new List<MailData>();

@@ -5,6 +5,10 @@ using UnityEngine;
 
 public class TutorialManager : MonoBehaviour
 {
+    public const int TutorialGachaTicketCount = 10;
+
+    public static TutorialManager Instance;
+
     public event Action OnTutorialChanged;
 
     public bool IsComplete =>
@@ -27,14 +31,42 @@ public class TutorialManager : MonoBehaviour
     public int CurrentStoryCutIndex =>
         PlayerDataManager.Instance?.playerData?.storyIntroCutIndex ?? 0;
 
-    public IReadOnlyList<StoryIntroCut> StoryCuts =>
+    public bool ShouldShowTutorialTicketGift
+    {
+        get
+        {
+            PlayerData data = PlayerDataManager.Instance?.playerData;
+            return data != null &&
+                data.storyIntroCompleted &&
+                !data.tutorialCompleted &&
+                data.tutorialStep == 0 &&
+                !data.tutorialGachaTicketsGranted &&
+                !data.tutorialGachaClaimed;
+        }
+    }
+
+    public bool IsWaitingForTutorialGacha
+    {
+        get
+        {
+            PlayerData data = PlayerDataManager.Instance?.playerData;
+            return data != null &&
+                data.storyIntroCompleted &&
+                !data.tutorialCompleted &&
+                data.tutorialStep == 0 &&
+                data.tutorialGachaTicketsGranted &&
+                !data.tutorialGachaClaimed;
+        }
+    }
+
+    public List<StoryIntroCut> StoryCuts =>
         StoryIntroDatabase.GetCuts();
 
     public StoryIntroCut CurrentStoryCut
     {
         get
         {
-            IReadOnlyList<StoryIntroCut> cuts = StoryCuts;
+            List<StoryIntroCut> cuts = StoryCuts;
             if (cuts.Count == 0)
                 return null;
 
@@ -46,33 +78,40 @@ public class TutorialManager : MonoBehaviour
         }
     }
 
-    public string CurrentMessage
+    public string CurrentMessage =>
+        GetCleanTutorialMessage(CurrentStep);
+
+    private string GetCleanTutorialMessage(int step)
     {
-        get
+        switch (step)
         {
-            switch (CurrentStep)
-            {
-                case 0:
+            case 0:
+                if (ShouldShowTutorialTicketGift)
+                {
                     return LocalizationManager.Text(
-                        "Begin the telephone pole defense operation.",
-                        "전봇대 방어 작전을 시작하세요.");
-                case 1:
-                    return LocalizationManager.Text(
-                        "Charge power once to support your companions.",
-                        "전력 충전을 한 번 눌러 동료를 지원하세요.");
-                case 2:
-                    return LocalizationManager.Text(
-                        "Open Growth and upgrade Attack once.",
-                        "성장에서 공격력을 한 번 강화하세요.");
-                case 3:
-                    return LocalizationManager.Text(
-                        "Return to Battle and defeat one enemy.",
-                        "전투로 돌아가 적 한 마리를 처치하세요.");
-                default:
-                    return LocalizationManager.Text(
-                        "Tutorial complete. Keep advancing.",
-                        "튜토리얼 완료. 계속 전진하세요.");
-            }
+                        "Gift: 10 recruitment tickets. Tap Next to receive them.",
+                        "\uC120\uBB3C: \uBAA8\uC9D1 \uD2F0\uCF13 10\uC7A5. \uB2E4\uC74C\uC744 \uB20C\uB7EC \uBC1B\uC73C\uC138\uC694.");
+                }
+
+                return LocalizationManager.Text(
+                    "Use the tickets to recruit 10 companions.",
+                    "\uBC1B\uC740 \uD2F0\uCF13\uC73C\uB85C 10\uD68C \uBAA8\uC9D1\uC744 \uB20C\uB7EC \uB3D9\uB8CC\uB97C \uBAA8\uC9D1\uD558\uC138\uC694.");
+            case 1:
+                return LocalizationManager.Text(
+                    "Charge power once.",
+                    "\uC804\uB825\uC744 \uD55C \uBC88 \uCDA9\uC804\uD558\uC138\uC694.");
+            case 2:
+                return LocalizationManager.Text(
+                    "Open Growth and upgrade Attack once.",
+                    "\uC131\uC7A5\uC5D0\uC11C \uACF5\uACA9\uB825\uC744 \uD55C \uBC88 \uAC15\uD654\uD558\uC138\uC694.");
+            case 3:
+                return LocalizationManager.Text(
+                    "Return to Battle and defeat one enemy.",
+                    "\uC804\uD22C\uB85C \uB3CC\uC544\uAC00 \uACE0\uC591\uC774\uB97C \uD55C \uB9C8\uB9AC \uCC98\uCE58\uD558\uC138\uC694.");
+            default:
+                return LocalizationManager.Text(
+                    "Tutorial complete. Keep advancing.",
+                    "\uD29C\uD1A0\uB9AC\uC5BC \uC644\uB8CC. \uACC4\uC18D \uC804\uC9C4\uD558\uC138\uC694.");
         }
     }
 
@@ -80,10 +119,21 @@ public class TutorialManager : MonoBehaviour
     private GrowthManager growthManager;
     private bool isBound;
 
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+            return;
+
+        Instance = this;
+    }
+
     public void Initialize(
         BattleManager battle,
         GrowthManager growth)
     {
+        if (Instance == null)
+            Instance = this;
+
         battleManager = battle;
         growthManager = growth;
 
@@ -98,7 +148,7 @@ public class TutorialManager : MonoBehaviour
         battleManager.SetRunning(
             !ShouldShowStoryIntro &&
             (IsComplete || CurrentStep >= 1));
-        OnTutorialChanged?.Invoke();
+        NotifyTutorialChanged();
     }
 
     public void AdvanceStoryIntro()
@@ -111,7 +161,7 @@ public class TutorialManager : MonoBehaviour
             return;
         }
 
-        IReadOnlyList<StoryIntroCut> cuts = StoryCuts;
+        List<StoryIntroCut> cuts = StoryCuts;
         if (cuts.Count == 0 ||
             data.storyIntroCutIndex >= cuts.Count - 1)
         {
@@ -121,11 +171,11 @@ public class TutorialManager : MonoBehaviour
 
         data.storyIntroCutIndex++;
         PlayerDataManager.Instance.NotifyPlayerDataChanged();
-        OnTutorialChanged?.Invoke();
+        NotifyTutorialChanged();
         _ = SaveAsync();
     }
 
-    public void SkipStoryIntro()
+    public void PreviousStoryIntro()
     {
         PlayerData data = PlayerDataManager.Instance?.playerData;
         if (data == null ||
@@ -135,7 +185,14 @@ public class TutorialManager : MonoBehaviour
             return;
         }
 
-        CompleteStoryIntro(data);
+        int previousIndex = Math.Max(0, data.storyIntroCutIndex - 1);
+        if (previousIndex == data.storyIntroCutIndex)
+            return;
+
+        data.storyIntroCutIndex = previousIndex;
+        PlayerDataManager.Instance.NotifyPlayerDataChanged();
+        NotifyTutorialChanged();
+        _ = SaveAsync();
     }
 
     public void BeginTutorial()
@@ -147,10 +204,19 @@ public class TutorialManager : MonoBehaviour
         data.storyIntroCompleted = true;
         data.storyIntroCutIndex =
             Math.Max(0, StoryCuts.Count - 1);
-        data.tutorialStep = 1;
-        battleManager?.SetRunning(true);
-        PlayerDataManager.Instance.NotifyPlayerDataChanged();
-        OnTutorialChanged?.Invoke();
+        if (data.tutorialGachaClaimed)
+        {
+            data.tutorialStep = Math.Max(1, data.tutorialStep);
+            battleManager?.SetRunning(true);
+        }
+        else
+        {
+            data.tutorialStep = 0;
+            battleManager?.SetRunning(false);
+        }
+
+        PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
+        NotifyTutorialChanged();
         _ = SaveAsync();
     }
 
@@ -160,7 +226,7 @@ public class TutorialManager : MonoBehaviour
         data.storyIntroCutIndex =
             Math.Max(0, StoryCuts.Count - 1);
         PlayerDataManager.Instance.NotifyPlayerDataChanged();
-        OnTutorialChanged?.Invoke();
+        NotifyTutorialChanged();
         _ = SaveAsync();
     }
 
@@ -178,7 +244,7 @@ public class TutorialManager : MonoBehaviour
         data.tutorialStep = 3;
         battleManager.SetRunning(true);
         PlayerDataManager.Instance.NotifyPlayerDataChanged();
-        OnTutorialChanged?.Invoke();
+        NotifyTutorialChanged();
         _ = SaveAsync();
     }
 
@@ -194,7 +260,7 @@ public class TutorialManager : MonoBehaviour
 
         data.tutorialStep = 2;
         PlayerDataManager.Instance.NotifyPlayerDataChanged();
-        OnTutorialChanged?.Invoke();
+        NotifyTutorialChanged();
         _ = SaveAsync();
     }
 
@@ -211,18 +277,67 @@ public class TutorialManager : MonoBehaviour
         data.tutorialStep = 3;
         data.tutorialCompleted = true;
         PlayerDataManager.Instance.NotifyPlayerDataChanged();
-        OnTutorialChanged?.Invoke();
+        NotifyTutorialChanged();
         _ = SaveAsync();
+    }
+
+    public bool ClaimTutorialGachaTickets()
+    {
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        if (!ShouldShowTutorialTicketGift || data == null)
+            return false;
+
+        data.EnsureInitialized();
+        data.inventory.items["GachaTicket"] =
+            GachaEconomy.GetItemCount(data, "GachaTicket") +
+            TutorialGachaTicketCount;
+        data.tutorialGachaTicketsGranted = true;
+        data.pendingTutorialGachaResults.Clear();
+        data.pendingTutorialGachaOwnedBefore.Clear();
+
+        PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
+        NotifyTutorialChanged();
+        _ = SaveAsync();
+        return true;
+    }
+
+    public bool TryCompleteTutorialGacha(int pullCount)
+    {
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        if (data == null ||
+            pullCount != TutorialGachaTicketCount ||
+            !IsWaitingForTutorialGacha)
+        {
+            return false;
+        }
+
+        data.EnsureInitialized();
+        data.tutorialGachaClaimed = true;
+        data.tutorialStep = 1;
+        data.pendingTutorialGachaResults.Clear();
+        data.pendingTutorialGachaOwnedBefore.Clear();
+
+        CompanionManager.Instance?.TryEquipBestOwned(out _);
+        CompanionManager.Instance?.Initialize();
+        battleManager?.SetRunning(true);
+        battleManager?.RefreshPlayerStats();
+
+        NotifyTutorialChanged();
+        return true;
     }
 
     private async Task SaveAsync()
     {
         try
         {
-            if (FirestoreManager.Instance != null)
+            PlayerData data = PlayerDataManager.Instance?.playerData;
+            if (PlayerDataSaveScheduler.Instance != null)
             {
-                await FirestoreManager.Instance.SavePlayerDataAsync(
-                    PlayerDataManager.Instance.playerData);
+                await PlayerDataSaveScheduler.Instance.SaveNowAsync(data);
+            }
+            else if (FirestoreManager.Instance != null)
+            {
+                await FirestoreManager.Instance.SavePlayerDataAsync(data);
             }
         }
         catch (Exception exception)
@@ -233,6 +348,9 @@ public class TutorialManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (Instance == this)
+            Instance = null;
+
         if (!isBound)
             return;
 
@@ -244,5 +362,13 @@ public class TutorialManager : MonoBehaviour
             battleManager.OnPowerChargePerformed -= HandlePowerCharge;
             battleManager.OnEnemyDefeated -= HandleEnemyDefeated;
         }
+    }
+
+    private void NotifyTutorialChanged()
+    {
+        SafeEvent.Invoke(
+            OnTutorialChanged,
+            "Tutorial",
+            nameof(OnTutorialChanged));
     }
 }

@@ -35,7 +35,7 @@ public sealed class GrowthActionController
         if (data.gold < cost)
         {
             showToast?.Invoke(
-                $"Need {(cost - data.gold):N0} more Gold.");
+                $"Need {CompactNumberFormatter.Format(cost - data.gold)} more Gold.");
             return;
         }
 
@@ -51,7 +51,7 @@ public sealed class GrowthActionController
         refreshTopBar?.Invoke();
         showToast?.Invoke(
             $"{GetUpgradeDisplayName(type)} Lv." +
-            $"{growthManager.GetLevel(type)}");
+            $"{CompactNumberFormatter.Format(growthManager.GetLevel(type))}");
     }
 
     private static string GetUpgradeDisplayName(UpgradeType type)

@@ -43,6 +43,14 @@ public class FirestoreManager : MonoBehaviour
 
             if (!snapshot.Exists)
             {
+                if (TryLoadLocalData(user.UserId, out PlayerData localData))
+                {
+                    await SavePlayerDataAsync(localData);
+                    Debug.LogWarning(
+                        "[Firestore] Restored missing server data from local cache.");
+                    return localData;
+                }
+
                 PlayerData newData = new PlayerData
                 {
                     uid = user.UserId
@@ -50,6 +58,7 @@ public class FirestoreManager : MonoBehaviour
 
                 await SavePlayerDataAsync(newData);
                 PlayerDataLocalCache.Save(newData);
+                LastSaveError = "";
                 Debug.Log("[Firestore] New User Data Created");
                 return newData;
             }
@@ -57,24 +66,60 @@ public class FirestoreManager : MonoBehaviour
             PlayerData data =
                 PlayerDataConverter.FromDictionary(snapshot.ToDictionary());
             data.uid = user.UserId;
+
+            if (TryLoadLocalData(
+                    user.UserId,
+                    out PlayerData newerLocalData) &&
+                PlayerDataLocalCache.IsNewerThan(newerLocalData, data))
+            {
+                await SavePlayerDataAsync(newerLocalData);
+                Debug.LogWarning(
+                    "[Firestore] Local cache was newer than server data. " +
+                    "Server data restored from cache.");
+                return newerLocalData;
+            }
+
             PlayerDataLocalCache.Save(data);
+            LastSaveError = "";
 
             Debug.Log("[Firestore] Data Loaded");
             return data;
         }
         catch (Exception exception)
         {
+            LastSaveError = exception.Message;
             if (PlayerDataLocalCache.TryLoad(user.UserId, out PlayerData data))
             {
                 data.uid = user.UserId;
+                data.EnsureInitialized();
                 Debug.LogWarning(
                     "[Firestore] Loaded local cache after server load failed: " +
                     exception.Message);
                 return data;
             }
 
-            throw;
+            PlayerData fallbackData = new PlayerData
+            {
+                uid = user.UserId
+            };
+            fallbackData.EnsureInitialized();
+            PlayerDataLocalCache.Save(fallbackData);
+            Debug.LogWarning(
+                "[Firestore] Server load failed and no local cache was found. " +
+                "Starting from a local fallback save: " +
+                exception.Message);
+            return fallbackData;
         }
+    }
+
+    private static bool TryLoadLocalData(string uid, out PlayerData data)
+    {
+        if (!PlayerDataLocalCache.TryLoad(uid, out data))
+            return false;
+
+        data.uid = uid;
+        data.EnsureInitialized();
+        return true;
     }
 
     public async Task SavePlayerDataAsync(PlayerData data)
@@ -226,7 +271,17 @@ public class FirestoreManager : MonoBehaviour
 
     public async Task<int> LoadGlobalMailsAsync()
     {
-        await EnsureDatabaseAsync();
+        try
+        {
+            await EnsureDatabaseAsync();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning(
+                "[Mailbox] Global mails skipped because Firebase is unavailable: " +
+                exception.Message);
+            return 0;
+        }
 
         PlayerData playerData = PlayerDataManager.Instance?.playerData;
         if (playerData == null)
@@ -237,61 +292,80 @@ public class FirestoreManager : MonoBehaviour
 
         playerData.EnsureInitialized();
 
-        QuerySnapshot snapshot =
-            await db.Collection("global_mails").GetSnapshotAsync();
+        QuerySnapshot snapshot;
+        try
+        {
+            snapshot = await db.Collection("global_mails").GetSnapshotAsync();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning(
+                "[Mailbox] Global mails skipped because Firestore access failed: " +
+                exception.Message);
+            return 0;
+        }
         int addedCount = 0;
         int changedCount = 0;
 
         foreach (DocumentSnapshot document in snapshot.Documents)
         {
-            Dictionary<string, object> values = document.ToDictionary();
-
-            if (!GetBoolean(values, "isActive"))
-                continue;
-
-            if (playerData.claimedMailIds.Contains(document.Id))
+            try
             {
-                continue;
-            }
+                Dictionary<string, object> values = document.ToDictionary();
 
-            MailData existingMail =
-                FindMail(playerData, document.Id);
-            if (existingMail != null)
-            {
-                // Old saves did not persist the global-mail marker.
-                if (!existingMail.isGlobalMail)
+                if (!GetBoolean(values, "isActive"))
+                    continue;
+
+                if (playerData.claimedMailIds.Contains(document.Id))
                 {
-                    existingMail.isGlobalMail = true;
-                    changedCount++;
+                    continue;
                 }
 
-                continue;
-            }
+                MailData existingMail =
+                    FindMail(playerData, document.Id);
+                if (existingMail != null)
+                {
+                    // Old saves did not persist the global-mail marker.
+                    if (!existingMail.isGlobalMail)
+                    {
+                        existingMail.isGlobalMail = true;
+                        changedCount++;
+                    }
 
-            if (!TryGetNonEmptyString(values, "title", out string title) ||
-                !TryGetNonEmptyString(
-                    values,
-                    "itemName",
-                    out string itemName) ||
-                !TryGetPositiveInt(values, "amount", out int amount))
+                    continue;
+                }
+
+                if (!TryGetNonEmptyString(values, "title", out string title) ||
+                    !TryGetNonEmptyString(
+                        values,
+                        "itemName",
+                        out string itemName) ||
+                    !TryGetPositiveInt(values, "amount", out int amount))
+                {
+                    Debug.LogWarning(
+                        $"[Mailbox] Global mail {document.Id} is missing fields.");
+                    continue;
+                }
+
+                playerData.mailbox.Add(new MailData
+                {
+                    mailId = document.Id,
+                    isGlobalMail = true,
+                    title = title,
+                    itemName = itemName,
+                    amount = amount,
+                    isClaimed = false
+                });
+
+                addedCount++;
+                changedCount++;
+            }
+            catch (Exception exception)
             {
                 Debug.LogWarning(
-                    $"[Mailbox] Global mail {document.Id} is missing fields.");
-                continue;
+                    $"[Mailbox] Global mail {document.Id} skipped: " +
+                    exception.Message);
             }
-
-            playerData.mailbox.Add(new MailData
-            {
-                mailId = document.Id,
-                isGlobalMail = true,
-                title = title,
-                itemName = itemName,
-                amount = amount,
-                isClaimed = false
-            });
-
-            addedCount++;
-            changedCount++;
         }
 
         Debug.Log($"[Mailbox] Global mails loaded: {addedCount}");

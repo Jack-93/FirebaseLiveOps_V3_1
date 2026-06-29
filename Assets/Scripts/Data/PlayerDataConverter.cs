@@ -19,6 +19,19 @@ public static class PlayerDataConverter
             { "level", data.level },
             { "gold", data.gold },
             { "tutorialCompleted", data.tutorialCompleted },
+            { "tutorialGachaClaimed", data.tutorialGachaClaimed },
+            {
+                "tutorialGachaTicketsGranted",
+                data.tutorialGachaTicketsGranted
+            },
+            {
+                "pendingTutorialGachaResults",
+                new List<string>(data.pendingTutorialGachaResults)
+            },
+            {
+                "pendingTutorialGachaOwnedBefore",
+                ConvertIntDictionary(data.pendingTutorialGachaOwnedBefore)
+            },
             { "inventory", ConvertInventoryToDictionary(data.inventory) },
             { "pityCount", data.pityCount },
             { "mailbox", ConvertMailsToList(data.mailbox) },
@@ -109,6 +122,10 @@ public static class PlayerDataConverter
             level = GetInt(values, "level", 1),
             gold = GetInt(values, "gold", 1000),
             tutorialCompleted = GetBool(values, "tutorialCompleted", false),
+            tutorialGachaClaimed =
+                GetBool(values, "tutorialGachaClaimed", false),
+            tutorialGachaTicketsGranted =
+                GetBool(values, "tutorialGachaTicketsGranted", false),
             pityCount = GetInt(values, "pityCount", 0),
             lastLoginDate = GetString(values, "lastLoginDate", ""),
             lastRewardDate = GetString(values, "lastRewardDate", ""),
@@ -173,6 +190,22 @@ public static class PlayerDataConverter
          */
         if (values.TryGetValue("inventory", out object inventoryValue))
             data.inventory = ConvertInventory(inventoryValue);
+
+        if (values.TryGetValue(
+                "pendingTutorialGachaResults",
+                out object pendingTutorialResultsValue))
+        {
+            data.pendingTutorialGachaResults =
+                ConvertStrings(pendingTutorialResultsValue);
+        }
+
+        if (values.TryGetValue(
+                "pendingTutorialGachaOwnedBefore",
+                out object pendingTutorialOwnedValue))
+        {
+            data.pendingTutorialGachaOwnedBefore =
+                ConvertIntDictionary(pendingTutorialOwnedValue);
+        }
 
         if (values.TryGetValue("mailbox", out object mailboxValue))
             data.mailbox = ConvertMails(mailboxValue);

@@ -6,21 +6,46 @@ using UnityEngine.UI;
 
 public sealed class StoryIntroUI
 {
-    private readonly GameObject overlayObject;
-    private readonly TMP_Text counterText;
-    private readonly TMP_Text titleText;
-    private readonly TMP_Text bodyText;
-    private readonly TMP_Text artText;
-    private readonly TMP_Text buttonText;
-    private readonly Image artImage;
+    private GameObject overlayObject;
+    private TMP_Text counterText;
+    private TMP_Text titleText;
+    private TMP_Text bodyText;
+    private TMP_Text artText;
+    private Button previousButton;
+    private TMP_Text previousButtonText;
+    private TMP_Text buttonText;
+    private Image artImage;
 
     private static readonly Color PanelLight =
         new Color32(52, 68, 96, 255);
+    private static readonly Color DisabledText =
+        new Color32(160, 170, 190, 255);
+
+    public GameObject GameObject => overlayObject;
 
     public StoryIntroUI(
         RectTransform root,
         Action nextAction,
-        Action skipAction)
+        Action previousAction,
+        bool usePrefab = true)
+    {
+        if (usePrefab &&
+            RuntimeUiBinder.TryInstantiatePrefab(
+                "StoryIntroOverlay",
+                root,
+                out RectTransform overlay))
+        {
+            Bind(overlay, nextAction, previousAction);
+            return;
+        }
+
+        BuildGenerated(root, nextAction, previousAction);
+    }
+
+    public void BuildGenerated(
+        RectTransform root,
+        Action nextAction,
+        Action previousAction)
     {
         RectTransform overlay = RuntimeUiFactory.CreatePanel(
             "StoryIntroOverlay",
@@ -69,7 +94,7 @@ public sealed class StoryIntroUI
         counterText = RuntimeUiFactory.CreateText(
             "StoryIntroCounter",
             dialoguePanel,
-            "1 / 7",
+            "1/7",
             24,
             new Vector2(0.05f, 0.74f),
             new Vector2(0.24f, 0.94f),
@@ -79,7 +104,7 @@ public sealed class StoryIntroUI
         titleText = RuntimeUiFactory.CreateText(
             "StoryIntroTitle",
             dialoguePanel,
-            "전봇대 위의 세상",
+            "\uC804\uBD07\uB300 \uBC29\uC5B4 \uC791\uC804",
             36,
             new Vector2(0.25f, 0.7f),
             new Vector2(0.95f, 0.94f),
@@ -89,27 +114,29 @@ public sealed class StoryIntroUI
         bodyText = RuntimeUiFactory.CreateText(
             "StoryIntroBody",
             dialoguePanel,
-            "대사는 추후 확정",
+            "\uB300\uC0AC\uB294 \uCD94\uD6C4 \uD655\uC815",
             31,
             new Vector2(0.05f, 0.26f),
             new Vector2(0.95f, 0.68f),
             TextAlignmentOptions.Left,
             Color.white);
 
-        Button skipButton = RuntimeUiFactory.CreateButton(
-            "StoryIntroSkipButton",
+        previousButton = RuntimeUiFactory.CreateButton(
+            "StoryIntroPreviousButton",
             dialoguePanel,
-            "SKIP",
+            "\uC774\uC804",
             new Vector2(0.05f, 0.05f),
             new Vector2(0.31f, 0.23f),
             PanelLight,
-            () => skipAction?.Invoke());
-        skipButton.GetComponentInChildren<TMP_Text>().fontSizeMax = 21;
+            () => previousAction?.Invoke());
+        previousButtonText =
+            previousButton.GetComponentInChildren<TMP_Text>();
+        previousButtonText.fontSizeMax = 21;
 
         Button nextButton = RuntimeUiFactory.CreateButton(
             "StoryIntroNextButton",
             dialoguePanel,
-            "NEXT",
+            "\uB2E4\uC74C",
             new Vector2(0.64f, 0.05f),
             new Vector2(0.95f, 0.23f),
             new Color32(255, 201, 77, 255),
@@ -119,7 +146,7 @@ public sealed class StoryIntroUI
         RuntimeUiFactory.CreateText(
             "StoryIntroTapHint",
             dialoguePanel,
-            "화면을 눌러 다음 컷으로 이동",
+            "\uD654\uBA74\uC744 \uB204\uB974\uBA74 \uB2E4\uC74C \uCEF7\uC73C\uB85C \uC774\uB3D9",
             20,
             new Vector2(0.32f, 0.05f),
             new Vector2(0.63f, 0.23f),
@@ -133,47 +160,118 @@ public sealed class StoryIntroUI
     {
         if (tutorialManager == null)
         {
-            overlayObject.SetActive(false);
+            overlayObject?.SetActive(false);
             return;
         }
 
         bool shouldShow = tutorialManager.ShouldShowStoryIntro;
-        overlayObject.SetActive(shouldShow);
+        overlayObject?.SetActive(shouldShow);
         if (!shouldShow)
             return;
 
         StoryIntroCut cut = tutorialManager.CurrentStoryCut;
-        IReadOnlyList<StoryIntroCut> cuts = tutorialManager.StoryCuts;
+        List<StoryIntroCut> cuts = tutorialManager.StoryCuts;
         if (cut == null || cuts.Count == 0)
         {
-            overlayObject.SetActive(false);
+            overlayObject?.SetActive(false);
             return;
         }
 
-        counterText.text = $"{cut.cutIndex} / {cuts.Count}";
-        titleText.text = cut.title;
-        bodyText.text = string.IsNullOrWhiteSpace(cut.body)
-            ? "대사는 추후 확정"
-            : cut.body;
+        if (counterText != null)
+            counterText.text = $"{cut.cutIndex}/{cuts.Count}";
+        if (titleText != null)
+            titleText.text = cut.title;
+        if (bodyText != null)
+        {
+            bodyText.text = string.IsNullOrWhiteSpace(cut.body)
+                ? "\uB300\uC0AC\uB294 \uCD94\uD6C4 \uD655\uC815"
+                : cut.body;
+        }
 
         Sprite cutArt = LoadOptionalSprite(cut.artResourcePath);
         bool hasCutArt = cutArt != null;
-        artText.text = hasCutArt
-            ? string.Empty
-            : string.IsNullOrWhiteSpace(cut.artDirection)
-                ? "(아트 필요)"
-                : cut.artDirection;
+        if (artText != null)
+        {
+            artText.text = hasCutArt
+                ? string.Empty
+                : string.IsNullOrWhiteSpace(cut.artDirection)
+                    ? "(\uC544\uD2B8 \uD544\uC694)"
+                    : cut.artDirection;
+        }
 
-        artImage.sprite = cutArt;
-        artImage.type = Image.Type.Simple;
-        artImage.preserveAspect = true;
-        artImage.color = hasCutArt
-            ? Color.white
-            : TryParseColor(cut.placeholderColorHex, PanelLight);
+        if (artImage != null)
+        {
+            artImage.sprite = cutArt;
+            artImage.type = Image.Type.Simple;
+            artImage.preserveAspect = true;
+            artImage.color = hasCutArt
+                ? Color.white
+                : TryParseColor(cut.placeholderColorHex, PanelLight);
+        }
 
-        buttonText.text = cut.cutIndex >= cuts.Count
-            ? "작전 시작"
-            : "다음";
+        bool canGoPrevious = tutorialManager.CurrentStoryCutIndex > 0;
+        if (previousButton != null)
+            previousButton.interactable = canGoPrevious;
+        if (previousButtonText != null)
+        {
+            previousButtonText.color = canGoPrevious
+                ? Color.white
+                : DisabledText;
+        }
+
+        if (buttonText != null)
+        {
+            buttonText.text = cut.cutIndex >= cuts.Count
+                ? "\uC791\uC804 \uC2DC\uC791"
+                : "\uB2E4\uC74C";
+        }
+    }
+
+    private void Bind(
+        RectTransform overlay,
+        Action nextAction,
+        Action previousAction)
+    {
+        overlayObject = overlay.gameObject;
+        counterText = RuntimeUiBinder.FindText(overlay, "StoryIntroCounter");
+        titleText = RuntimeUiBinder.FindText(overlay, "StoryIntroTitle");
+        bodyText = RuntimeUiBinder.FindText(overlay, "StoryIntroBody");
+        artText = RuntimeUiBinder.FindText(overlay, "StoryIntroArtText");
+        artImage = RuntimeUiBinder.FindImage(
+            overlay,
+            "StoryIntroArtPlaceholder");
+
+        Button tapArea = overlay.GetComponent<Button>();
+        if (tapArea == null)
+            tapArea = overlay.gameObject.AddComponent<Button>();
+        tapArea.targetGraphic = overlay.GetComponent<Image>();
+        RuntimeUiBinder.ReplaceButtonAction(
+            tapArea,
+            () => nextAction?.Invoke());
+
+        previousButton = RuntimeUiBinder.FindButton(
+            overlay,
+            "StoryIntroPreviousButton");
+        previousButtonText =
+            previousButton == null
+                ? null
+                : previousButton.GetComponentInChildren<TMP_Text>();
+        RuntimeUiBinder.ReplaceButtonAction(
+            previousButton,
+            () => previousAction?.Invoke());
+
+        Button nextButton = RuntimeUiBinder.FindButton(
+            overlay,
+            "StoryIntroNextButton");
+        buttonText =
+            nextButton == null
+                ? null
+                : nextButton.GetComponentInChildren<TMP_Text>();
+        RuntimeUiBinder.ReplaceButtonAction(
+            nextButton,
+            () => nextAction?.Invoke());
+
+        overlayObject.SetActive(false);
     }
 
     private static Color TryParseColor(string htmlColor, Color fallback)

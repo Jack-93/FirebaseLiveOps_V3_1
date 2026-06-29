@@ -7,13 +7,20 @@ using UnityEngine.UI;
 
 public sealed class GachaPanelUI
 {
-    private readonly RectTransform panel;
-    private readonly TMP_Text currencyText;
-    private readonly TMP_Text pityText;
-    private readonly TMP_Text statusText;
-    private readonly Button singleButton;
-    private readonly Button tenButton;
-    private readonly GachaResultUI resultUI;
+    private const string NumberResourceRoot =
+        "PrototypeArt/Numbers/DamageGold";
+
+    private RectTransform panel;
+    private TMP_Text gemLabelText;
+    private TMP_Text ticketLabelText;
+    private TMP_Text pityLabelText;
+    private TMP_Text statusText;
+    private SpriteNumberText gemNumberText;
+    private SpriteNumberText ticketNumberText;
+    private SpriteNumberText pityNumberText;
+    private Button singleButton;
+    private Button tenButton;
+    private GachaResultUI resultUI;
     private bool resultModeVisible;
 
     public GameObject GameObject => panel.gameObject;
@@ -32,8 +39,22 @@ public sealed class GachaPanelUI
         new Color32(255, 201, 77, 255);
     private static readonly Color MutedText =
         new Color32(190, 203, 225, 255);
+    private const string GachaPanelPrefabResourcePath =
+        "Prefabs/UI/GachaPanel";
 
     public GachaPanelUI(
+        RectTransform root,
+        Action<int> rollGacha,
+        UnityAction clearResult,
+        bool usePrefab = true)
+    {
+        if (usePrefab && TryBuildFromPrefab(root, rollGacha, clearResult))
+            return;
+
+        BuildGenerated(root, rollGacha, clearResult);
+    }
+
+    public void BuildGenerated(
         RectTransform root,
         Action<int> rollGacha,
         UnityAction clearResult)
@@ -55,25 +76,55 @@ public sealed class GachaPanelUI
             TextAlignmentOptions.Center,
             Accent);
 
-        currencyText = RuntimeUiFactory.CreateText(
-            "GachaCurrency",
+        gemLabelText = RuntimeUiFactory.CreateText(
+            "GachaGemLabel",
             panel,
-            "Gem 0  Ticket 0",
+            "Gem",
             28,
             new Vector2(0.06f, 0.85f),
-            new Vector2(0.66f, 0.91f),
+            new Vector2(0.18f, 0.91f),
             TextAlignmentOptions.Left,
             Gold);
-
-        pityText = RuntimeUiFactory.CreateText(
-            "GachaPity",
+        gemNumberText = new SpriteNumberText(
             panel,
-            "SSR in 100",
+            "GachaGemNumberText",
+            NumberResourceRoot,
+            28f,
+            new Vector2(0.18f, 0.85f),
+            new Vector2(0.34f, 0.91f));
+        ticketLabelText = RuntimeUiFactory.CreateText(
+            "GachaTicketLabel",
+            panel,
+            "Ticket",
+            28,
+            new Vector2(0.37f, 0.85f),
+            new Vector2(0.5f, 0.91f),
+            TextAlignmentOptions.Left,
+            Gold);
+        ticketNumberText = new SpriteNumberText(
+            panel,
+            "GachaTicketNumberText",
+            NumberResourceRoot,
+            28f,
+            new Vector2(0.5f, 0.85f),
+            new Vector2(0.66f, 0.91f));
+
+        pityLabelText = RuntimeUiFactory.CreateText(
+            "GachaPityLabel",
+            panel,
+            "SSR in",
             27,
             new Vector2(0.67f, 0.85f),
-            new Vector2(0.94f, 0.91f),
+            new Vector2(0.82f, 0.91f),
             TextAlignmentOptions.Right,
             Color.white);
+        pityNumberText = new SpriteNumberText(
+            panel,
+            "GachaPityNumberText",
+            NumberResourceRoot,
+            27f,
+            new Vector2(0.82f, 0.85f),
+            new Vector2(0.94f, 0.91f));
 
         BuildBanner();
 
@@ -92,22 +143,92 @@ public sealed class GachaPanelUI
             TextAlignmentOptions.Center,
             MutedText);
 
-        singleButton = RuntimeUiFactory.CreateButton(
+        singleButton = CreateRecruitButton(
             "RecruitSingleButton",
             panel,
-            $"RECRUIT 1\nTicket 1 / Gem {GachaEconomy.SingleGemCost}",
+            1,
+            1,
+            GachaEconomy.SingleGemCost,
             new Vector2(0.06f, 0.045f),
             new Vector2(0.46f, 0.15f),
             PanelLight,
             () => rollGacha?.Invoke(1));
 
-        tenButton = RuntimeUiFactory.CreateButton(
+        tenButton = CreateRecruitButton(
             "RecruitTenButton",
             panel,
-            $"RECRUIT 10\nTicket 10 / Gem {GachaEconomy.TenGemCost}",
+            10,
+            10,
+            GachaEconomy.TenGemCost,
             new Vector2(0.54f, 0.045f),
             new Vector2(0.94f, 0.15f),
             Accent,
+            () => rollGacha?.Invoke(10));
+    }
+
+    private bool TryBuildFromPrefab(
+        RectTransform root,
+        Action<int> rollGacha,
+        UnityAction clearResult)
+    {
+        GameObject prefab =
+            Resources.Load<GameObject>(GachaPanelPrefabResourcePath);
+        if (prefab == null)
+            return false;
+
+        GameObject instance = UnityEngine.Object.Instantiate(
+            prefab,
+            root,
+            false);
+        instance.name = "GachaPanel";
+        panel = instance.GetComponent<RectTransform>();
+        if (panel == null)
+            return false;
+
+        BindPrefab(rollGacha, clearResult);
+        return true;
+    }
+
+    private void BindPrefab(
+        Action<int> rollGacha,
+        UnityAction clearResult)
+    {
+        gemLabelText =
+            RuntimeUiBinder.FindText(panel, "GachaGemLabel");
+        gemNumberText = new SpriteNumberText(
+            RuntimeUiBinder.FindRect(panel, "GachaGemNumberText"),
+            NumberResourceRoot,
+            28f);
+        ticketLabelText =
+            RuntimeUiBinder.FindText(panel, "GachaTicketLabel");
+        ticketNumberText = new SpriteNumberText(
+            RuntimeUiBinder.FindRect(panel, "GachaTicketNumberText"),
+            NumberResourceRoot,
+            28f);
+        pityLabelText =
+            RuntimeUiBinder.FindText(panel, "GachaPityLabel");
+        pityNumberText = new SpriteNumberText(
+            RuntimeUiBinder.FindRect(panel, "GachaPityNumberText"),
+            NumberResourceRoot,
+            27f);
+
+        resultUI = new GachaResultUI(
+            panel,
+            clearResult,
+            Accent,
+            true);
+
+        statusText =
+            RuntimeUiBinder.FindText(panel, "GachaStatus");
+        singleButton =
+            RuntimeUiBinder.FindButton(panel, "RecruitSingleButton");
+        RuntimeUiBinder.ReplaceButtonAction(
+            singleButton,
+            () => rollGacha?.Invoke(1));
+        tenButton =
+            RuntimeUiBinder.FindButton(panel, "RecruitTenButton");
+        RuntimeUiBinder.ReplaceButtonAction(
+            tenButton,
             () => rollGacha?.Invoke(10));
     }
 
@@ -116,15 +237,37 @@ public sealed class GachaPanelUI
         if (data == null)
             return;
 
-        currencyText.text =
-            $"{LocalizationManager.Translate("Gem")} " +
-            $"{GachaEconomy.GetItemCount(data, "Gem"):N0}   " +
-            $"{LocalizationManager.Translate("Ticket")} " +
-            $"{GachaEconomy.GetItemCount(data, "GachaTicket"):N0}";
+        if (gemLabelText != null)
+            gemLabelText.text = LocalizationManager.Translate("Gem");
+        gemNumberText.SetText(
+            CompactNumberFormatter.Format(
+                GachaEconomy.GetItemCount(data, "Gem")));
+        if (ticketLabelText != null)
+            ticketLabelText.text = LocalizationManager.Translate("Ticket");
+        ticketNumberText.SetText(
+            CompactNumberFormatter.Format(
+                GachaEconomy.GetItemCount(data, "GachaTicket")));
+
         int remaining = Mathf.Max(1, GachaManager.PityLimit - data.pityCount);
-        pityText.text =
-            $"{LocalizationManager.Translate("SSR in")} {remaining}";
+        if (pityLabelText != null)
+            pityLabelText.text = LocalizationManager.Translate("SSR in");
+        pityNumberText.SetText(CompactNumberFormatter.Format(remaining));
         resultUI?.SetPoint(data.pityCount);
+
+        if (TutorialManager.Instance?.IsWaitingForTutorialGacha == true)
+        {
+            SetStatus(
+                LocalizationManager.Text(
+                    "Use 10 tickets for 10x recruitment.",
+                    "\uD2F0\uCF13 10\uC7A5\uC73C\uB85C 10\uD68C \uBAA8\uC9D1\uC744 \uB20C\uB7EC\uC8FC\uC138\uC694."));
+        }
+        else if (TutorialManager.Instance?.ShouldShowTutorialTicketGift == true)
+        {
+            SetStatus(
+                LocalizationManager.Text(
+                    "Receive the tutorial ticket gift first.",
+                    "\uBA3C\uC800 \uD29C\uD1A0\uB9AC\uC5BC \uD2F0\uCF13 \uC120\uBB3C\uC744 \uBC1B\uC73C\uC138\uC694."));
+        }
     }
 
     public void ShowResults(
@@ -224,5 +367,90 @@ public sealed class GachaPanelUI
             new Vector2(0.93f, 0.24f),
             TextAlignmentOptions.Center,
             MutedText);
+    }
+
+    private static Button CreateRecruitButton(
+        string name,
+        RectTransform parent,
+        int rollCount,
+        int ticketCost,
+        int gemCost,
+        Vector2 anchorMin,
+        Vector2 anchorMax,
+        Color color,
+        UnityAction action)
+    {
+        Button button = RuntimeUiFactory.CreateButton(
+            name,
+            parent,
+            "RECRUIT",
+            anchorMin,
+            anchorMax,
+            color,
+            action);
+        TMP_Text label = button.GetComponentInChildren<TMP_Text>();
+        if (label != null)
+        {
+            RectTransform labelRect = label.GetComponent<RectTransform>();
+            labelRect.anchorMin = new Vector2(0.06f, 0.54f);
+            labelRect.anchorMax = new Vector2(0.55f, 0.94f);
+            label.alignment = TextAlignmentOptions.Right;
+            label.fontSizeMax = 22f;
+            label.fontSizeMin = 12f;
+        }
+
+        SpriteNumberText rollNumberText = new SpriteNumberText(
+            button.transform,
+            "RecruitRollNumberText",
+            NumberResourceRoot,
+            21f,
+            new Vector2(0.55f, 0.54f),
+            new Vector2(0.74f, 0.94f));
+        rollNumberText.SetText(CompactNumberFormatter.Format(rollCount));
+
+        RuntimeUiFactory.CreateText(
+            "TicketCostLabel",
+            button.transform,
+            "Ticket",
+            15,
+            new Vector2(0.06f, 0.08f),
+            new Vector2(0.24f, 0.48f),
+            TextAlignmentOptions.Left,
+            Color.white);
+        SpriteNumberText ticketNumberText = new SpriteNumberText(
+            button.transform,
+            "TicketCostNumberText",
+            NumberResourceRoot,
+            17f,
+            new Vector2(0.24f, 0.08f),
+            new Vector2(0.37f, 0.48f));
+        ticketNumberText.SetText(CompactNumberFormatter.Format(ticketCost));
+        RuntimeUiFactory.CreateText(
+            "CostSeparator",
+            button.transform,
+            "/",
+            15,
+            new Vector2(0.39f, 0.08f),
+            new Vector2(0.44f, 0.48f),
+            TextAlignmentOptions.Center,
+            Color.white);
+        RuntimeUiFactory.CreateText(
+            "GemCostLabel",
+            button.transform,
+            "Gem",
+            15,
+            new Vector2(0.46f, 0.08f),
+            new Vector2(0.6f, 0.48f),
+            TextAlignmentOptions.Left,
+            Color.white);
+        SpriteNumberText gemNumberText = new SpriteNumberText(
+            button.transform,
+            "GemCostNumberText",
+            NumberResourceRoot,
+            17f,
+            new Vector2(0.6f, 0.08f),
+            new Vector2(0.94f, 0.48f));
+        gemNumberText.SetText(CompactNumberFormatter.Format(gemCost));
+        return button;
     }
 }

@@ -8,7 +8,6 @@ public class BattleManager : MonoBehaviour
     public event Action OnBattleStateChanged;
     public event Action<int> OnEnemyDefeated;
     public event Action<int> OnStageCleared;
-    public event Action<int> OnPlayerAttackPerformed;
     public event Action<int, CharacterData, int> OnCompanionBasicAttackPerformed;
     public event Action<int> OnEnemyAttackPerformed;
     public event Action OnPlayerDefeated;
@@ -33,15 +32,17 @@ public class BattleManager : MonoBehaviour
     public float PowerChargeRatio =>
         PowerChargeLimit <= 0f ? 0f : PowerCharge / PowerChargeLimit;
     public float BossTimeRemaining { get; private set; }
-    public IReadOnlyList<float> SkillCooldowns => skillCooldowns;
+    public IList<float> SkillCooldowns => skillCooldowns;
     public static float CompanionSkillPowerCost => SkillPowerCost;
+    public static float PowerChargePerTapAmount => PowerChargePerTap;
+    public static float FullChargeCooldownBoost =>
+        SkillCooldownBoostOnFullCharge;
 
     public string EnemyName =>
         GameBalance.GetEnemyName(Data.currentStage, IsBoss);
 
     private PlayerData Data => PlayerDataManager.Instance?.playerData;
 
-    private float supportFallbackAttackTimer;
     private float enemyAttackTimer;
     private float recoveryTimer;
     private bool isRecovering;
@@ -57,7 +58,6 @@ public class BattleManager : MonoBehaviour
     private const float PowerChargePerTap = 12f;
     private const float SkillPowerCost = 35f;
     private const float SkillCooldownBoostOnFullCharge = 1.25f;
-    private const float EmptyPartyFallbackInterval = 2.4f;
 
     public void Initialize()
     {
@@ -93,7 +93,7 @@ public class BattleManager : MonoBehaviour
         data.currentStage = selected;
         data.stageEnemyIndex = 0;
         SpawnEnemy();
-        PlayerDataManager.Instance.NotifyPlayerDataChanged();
+        PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
         NotifyChanged();
         return true;
     }
@@ -105,7 +105,7 @@ public class BattleManager : MonoBehaviour
             return;
 
         data.autoAdvance = !data.autoAdvance;
-        PlayerDataManager.Instance.NotifyPlayerDataChanged();
+        PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
         NotifyChanged();
     }
 
@@ -168,7 +168,6 @@ public class BattleManager : MonoBehaviour
                 return;
         }
 
-        supportFallbackAttackTimer -= deltaTime;
         enemyAttackTimer -= deltaTime;
         TickCompanionBasicAttacks(deltaTime);
         TickCompanionSkillCooldowns(deltaTime);
@@ -180,27 +179,12 @@ public class BattleManager : MonoBehaviour
         }
     }
 
-    private void PlayerAttack()
-    {
-        LastPlayerDamage = Mathf.Max(
-            1,
-            Mathf.RoundToInt(GameBalance.GetPlayerAttack(Data) * 0.25f));
-        EnemyHealth = Math.Max(0, EnemyHealth - LastPlayerDamage);
-        OnPlayerAttackPerformed?.Invoke(LastPlayerDamage);
-
-        if (EnemyHealth <= 0)
-            DefeatEnemy();
-
-        NotifyChanged();
-    }
-
     private void TickCompanionBasicAttacks(float deltaTime)
     {
         CompanionManager companions = CompanionManager.Instance;
         if (companions == null)
             return;
 
-        bool hasCompanion = false;
         for (int slot = 0;
              slot < CompanionManager.PartySize;
              slot++)
@@ -213,21 +197,12 @@ public class BattleManager : MonoBehaviour
                 continue;
             }
 
-            hasCompanion = true;
             companionAttackTimers[slot] -= deltaTime;
             if (companionAttackTimers[slot] > 0f || EnemyHealth <= 0)
                 continue;
 
             CompanionBasicAttack(slot, character);
             companionAttackTimers[slot] = GetCompanionAttackDelay(slot);
-        }
-
-        if (!hasCompanion &&
-            supportFallbackAttackTimer <= 0f &&
-            EnemyHealth > 0)
-        {
-            PlayerAttack();
-            supportFallbackAttackTimer = EmptyPartyFallbackInterval;
         }
     }
 
@@ -236,7 +211,13 @@ public class BattleManager : MonoBehaviour
         int damage = GetCompanionBasicDamage(character);
         LastPlayerDamage = damage;
         EnemyHealth = Math.Max(0, EnemyHealth - damage);
-        OnCompanionBasicAttackPerformed?.Invoke(slot, character, damage);
+        SafeEvent.Invoke(
+            OnCompanionBasicAttackPerformed,
+            slot,
+            character,
+            damage,
+            "Battle",
+            nameof(OnCompanionBasicAttackPerformed));
 
         if (EnemyHealth <= 0)
             DefeatEnemy();
@@ -249,7 +230,11 @@ public class BattleManager : MonoBehaviour
         LastEnemyDamage =
             GameBalance.GetEnemyAttack(Data.currentStage, IsBoss);
         ApplyDamageToPlayer(LastEnemyDamage);
-        OnEnemyAttackPerformed?.Invoke(LastEnemyDamage);
+        SafeEvent.Invoke(
+            OnEnemyAttackPerformed,
+            LastEnemyDamage,
+            "Battle",
+            nameof(OnEnemyAttackPerformed));
         NotifyChanged();
     }
 
@@ -290,7 +275,12 @@ public class BattleManager : MonoBehaviour
                 Mathf.RoundToInt(EnemyMaxHealth * pattern.healPercent));
         }
 
-        OnBossPatternUsed?.Invoke(pattern, totalDamage);
+        SafeEvent.Invoke(
+            OnBossPatternUsed,
+            pattern,
+            totalDamage,
+            "Battle",
+            nameof(OnBossPatternUsed));
         NotifyChanged();
     }
 
@@ -303,7 +293,10 @@ public class BattleManager : MonoBehaviour
             IsRunning = false;
             isRecovering = true;
             recoveryTimer = 2f;
-            OnPlayerDefeated?.Invoke();
+            SafeEvent.Invoke(
+                OnPlayerDefeated,
+                "Battle",
+                nameof(OnPlayerDefeated));
         }
     }
 
@@ -348,7 +341,12 @@ public class BattleManager : MonoBehaviour
 
         PowerCharge = Mathf.Max(0f, PowerCharge - SkillPowerCost);
         UseCompanionSkill(slot, character);
-        OnPowerCharged?.Invoke(PowerCharge, PowerChargeLimit);
+        SafeEvent.Invoke(
+            OnPowerCharged,
+            PowerCharge,
+            PowerChargeLimit,
+            "Battle",
+            nameof(OnPowerCharged));
         return true;
     }
 
@@ -367,8 +365,16 @@ public class BattleManager : MonoBehaviour
             ReduceSkillCooldowns(SkillCooldownBoostOnFullCharge);
         }
 
-        OnPowerChargePerformed?.Invoke();
-        OnPowerCharged?.Invoke(PowerCharge, PowerChargeLimit);
+        SafeEvent.Invoke(
+            OnPowerChargePerformed,
+            "Battle",
+            nameof(OnPowerChargePerformed));
+        SafeEvent.Invoke(
+            OnPowerCharged,
+            PowerCharge,
+            PowerChargeLimit,
+            "Battle",
+            nameof(OnPowerCharged));
         NotifyChanged();
         return true;
     }
@@ -384,7 +390,13 @@ public class BattleManager : MonoBehaviour
         EnemyHealth = Math.Max(0, EnemyHealth - damage);
         skillCooldowns[slot] =
             Mathf.Max(1f, character.skillCooldown);
-        OnCompanionSkillUsed?.Invoke(slot, character, damage);
+        SafeEvent.Invoke(
+            OnCompanionSkillUsed,
+            slot,
+            character,
+            damage,
+            "Battle",
+            nameof(OnCompanionSkillUsed));
 
         if (EnemyHealth <= 0)
             DefeatEnemy();
@@ -449,9 +461,7 @@ public class BattleManager : MonoBehaviour
         data.totalMonstersDefeated++;
 
         bool defeatedBoss = IsBoss;
-        EquipmentManager.Instance?.TryGrantDrop(
-            clearedStage,
-            defeatedBoss);
+        TryGrantEquipmentDrop(clearedStage, defeatedBoss);
         if (defeatedBoss)
         {
             bool firstClear = clearedStage >= data.highestStage;
@@ -471,16 +481,41 @@ public class BattleManager : MonoBehaviour
             data.stageEnemyIndex++;
         }
 
-        PlayerDataManager.Instance.NotifyPlayerDataChanged();
-        OnEnemyDefeated?.Invoke(reward);
+        PlayerDataManager.Instance.NotifyPlayerDataChanged(!defeatedBoss);
+        SafeEvent.Invoke(
+            OnEnemyDefeated,
+            reward,
+            "Battle",
+            nameof(OnEnemyDefeated));
 
         if (defeatedBoss)
         {
-            OnStageCleared?.Invoke(clearedStage);
+            SafeEvent.Invoke(
+                OnStageCleared,
+                clearedStage,
+                "Battle",
+                nameof(OnStageCleared));
             _ = SaveProgressAsync();
         }
 
         SpawnEnemy();
+    }
+
+    private static void TryGrantEquipmentDrop(
+        int stage,
+        bool defeatedBoss)
+    {
+        try
+        {
+            EquipmentManager.Instance?.TryGrantDrop(stage, defeatedBoss);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning(
+                "[Battle] Equipment drop failed: " +
+                exception.Message);
+            Debug.LogException(exception);
+        }
     }
 
     private void SpawnEnemy()
@@ -499,7 +534,6 @@ public class BattleManager : MonoBehaviour
         bossPatternIndex = 0;
         bossPatternTimer = GetFirstBossPatternCooldown();
         ResetCompanionAttackTimers();
-        supportFallbackAttackTimer = 0.8f;
         enemyAttackTimer = IsBoss ? 1.15f : 1.55f;
     }
 
@@ -508,11 +542,13 @@ public class BattleManager : MonoBehaviour
         EnemyHealth = EnemyMaxHealth;
         BossTimeRemaining = GameBalance.BossTimeLimit;
         ResetCompanionAttackTimers();
-        supportFallbackAttackTimer = 0.8f;
         enemyAttackTimer = 1.15f;
         bossPatternIndex = 0;
         bossPatternTimer = GetFirstBossPatternCooldown();
-        OnBossChallengeFailed?.Invoke();
+        SafeEvent.Invoke(
+            OnBossChallengeFailed,
+            "Battle",
+            nameof(OnBossChallengeFailed));
         NotifyChanged();
     }
 
@@ -551,8 +587,14 @@ public class BattleManager : MonoBehaviour
     {
         try
         {
-            if (FirestoreManager.Instance != null)
+            if (PlayerDataSaveScheduler.Instance != null)
+            {
+                await PlayerDataSaveScheduler.Instance.SaveNowAsync(Data);
+            }
+            else if (FirestoreManager.Instance != null)
+            {
                 await FirestoreManager.Instance.SavePlayerDataAsync(Data);
+            }
         }
         catch (Exception exception)
         {
@@ -562,6 +604,9 @@ public class BattleManager : MonoBehaviour
 
     private void NotifyChanged()
     {
-        OnBattleStateChanged?.Invoke();
+        SafeEvent.Invoke(
+            OnBattleStateChanged,
+            "Battle",
+            nameof(OnBattleStateChanged));
     }
 }

@@ -29,11 +29,19 @@ public sealed class AccountActionController
         if (bootstrap == null)
             return;
 
-        refreshAccount?.Invoke();
-        AccountLinkResult result =
-            await bootstrap.LinkAccountAsync(provider);
-        refreshAccount?.Invoke();
-        refreshMore?.Invoke();
-        showToast?.Invoke(result.Message);
+        try
+        {
+            refreshAccount?.Invoke();
+            AccountLinkResult result =
+                await bootstrap.LinkAccountAsync(provider);
+            refreshAccount?.Invoke();
+            refreshMore?.Invoke();
+            showToast?.Invoke(result.Message);
+        }
+        catch (Exception exception)
+        {
+            UnityEngine.Debug.LogException(exception);
+            showToast?.Invoke("Account linking failed.");
+        }
     }
 }

@@ -28,6 +28,8 @@ public class MainGameBootstrap : MonoBehaviour
             "GameSettingsManager");
         EnsurePersistentManager<AudioManager>("AudioManager");
         EnsurePersistentManager<PlayerDataManager>("PlayerDataManager");
+        EnsurePersistentManager<PlayerDataSaveScheduler>(
+            "PlayerDataSaveScheduler");
         EnsurePersistentManager<FirebaseManager>("FirebaseManager");
         EnsurePersistentManager<FirestoreManager>("FirestoreManager");
         EnsurePersistentManager<PushNotificationManager>(
@@ -221,7 +223,7 @@ public class MainGameBootstrap : MonoBehaviour
         companionManager.Initialize();
 
         mainGameUI.SetLoading(true, "Checking rewards...");
-        await FirestoreManager.Instance.LoadGlobalMailsAsync();
+        await LoadGlobalMailsSafelyAsync();
 
         growthManager.Initialize(battleManager);
         battleManager.Initialize();
@@ -232,7 +234,7 @@ public class MainGameBootstrap : MonoBehaviour
             EquipmentManager.Instance);
         EventMissionManager.Instance.Initialize(battleManager);
 
-        await FirestoreManager.Instance.SavePlayerDataAsync(data);
+        await SaveNowAsync();
 
         IsReady = true;
         autosaveTimer = 60f;
@@ -281,10 +283,15 @@ public class MainGameBootstrap : MonoBehaviour
 
         data.lastOnlineUnixTime =
             DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        if (PlayerDataSaveScheduler.Instance != null)
+        {
+            await PlayerDataSaveScheduler.Instance.SaveNowAsync(data);
+            return;
+        }
+
         PlayerDataLocalCache.Save(data);
         if (FirestoreManager.Instance == null)
             return;
-
         await FirestoreManager.Instance.SavePlayerDataAsync(data);
     }
 
@@ -324,8 +331,11 @@ public class MainGameBootstrap : MonoBehaviour
             if (data != null && user != null)
             {
                 data.uid = user.UserId;
-                await FirestoreManager.Instance.SavePlayerDataAsync(data);
-                PlayerDataManager.Instance.NotifyPlayerDataChanged();
+                data.lastOnlineUnixTime =
+                    DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                PlayerDataLocalCache.Save(data);
+                await SaveLinkedAccountDataSafelyAsync(data);
+                PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
             }
         }
 
@@ -350,14 +360,13 @@ public class MainGameBootstrap : MonoBehaviour
         if (paused && IsReady)
         {
             SaveLocalSnapshot();
-            _ = SaveInBackgroundAsync();
+            _ = FlushPendingSaveAsync();
         }
         else if (!paused &&
             IsReady &&
-            FirestoreManager.Instance != null &&
-            FirestoreManager.Instance.HasPendingSave)
+            HasPendingRemoteSave())
         {
-            _ = SaveInBackgroundAsync();
+            _ = FlushPendingSaveAsync();
         }
     }
 
@@ -366,7 +375,7 @@ public class MainGameBootstrap : MonoBehaviour
         isQuitting = true;
         SaveLocalSnapshot();
         if (IsReady)
-            _ = SaveInBackgroundAsync();
+            _ = FlushPendingSaveAsync();
     }
 
     private static void SaveLocalSnapshot()
@@ -397,6 +406,78 @@ public class MainGameBootstrap : MonoBehaviour
             if (!isQuitting)
                 mainGameUI?.RefreshAll();
         }
+    }
+
+    private async Task FlushPendingSaveAsync()
+    {
+        try
+        {
+            if (PlayerDataSaveScheduler.Instance != null)
+            {
+                await PlayerDataSaveScheduler.Instance.FlushPendingSaveAsync();
+            }
+            else
+            {
+                await SaveNowAsync();
+            }
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning(
+                "[MainGame] Pending save flush deferred: " +
+                exception.Message);
+        }
+        finally
+        {
+            if (!isQuitting)
+                mainGameUI?.RefreshAll();
+        }
+    }
+
+    private static async Task LoadGlobalMailsSafelyAsync()
+    {
+        try
+        {
+            if (FirestoreManager.Instance != null)
+                await FirestoreManager.Instance.LoadGlobalMailsAsync();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning(
+                "[MainGame] Global mail check skipped: " +
+                exception.Message);
+        }
+    }
+
+    private static async Task SaveLinkedAccountDataSafelyAsync(
+        PlayerData data)
+    {
+        try
+        {
+            if (PlayerDataSaveScheduler.Instance != null)
+            {
+                await PlayerDataSaveScheduler.Instance.SaveNowAsync(data);
+            }
+            else if (FirestoreManager.Instance != null)
+            {
+                await FirestoreManager.Instance.SavePlayerDataAsync(data);
+            }
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning(
+                "[MainGame] Linked account save deferred: " +
+                exception.Message);
+        }
+    }
+
+    private static bool HasPendingRemoteSave()
+    {
+        return
+            (PlayerDataSaveScheduler.Instance != null &&
+             PlayerDataSaveScheduler.Instance.HasPendingRemoteSave) ||
+            (FirestoreManager.Instance != null &&
+             FirestoreManager.Instance.HasPendingSave);
     }
 
     private static int CalculateOfflineGold(PlayerData data, long now)

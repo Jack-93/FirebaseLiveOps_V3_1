@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Text;
 using TMPro;
 using UnityEngine;
@@ -6,6 +7,9 @@ using UnityEngine.UI;
 
 public sealed class BattleSkillControlsUI
 {
+    private const string NumberResourceRoot =
+        "PrototypeArt/Numbers/DamageGold";
+
     private readonly BattleManager battleManager;
     private readonly CompanionManager companionManager;
     private readonly Action<string> showToast;
@@ -16,15 +20,29 @@ public sealed class BattleSkillControlsUI
 
     private TMP_Text skillStatusText;
     private TMP_Text powerChargeButtonText;
+    private TMP_Text powerChargeSlashText;
     private Button powerChargeButton;
+    private Image powerChargeButtonImage;
+    private SpriteNumberText powerChargeCurrentNumberText;
+    private SpriteNumberText powerChargeMaxNumberText;
+    private SpriteNumberText powerChargeTapNumberText;
+    private readonly Button[] skillButtons =
+        new Button[CompanionManager.PartySize];
     private readonly TMP_Text[] skillButtonTexts =
         new TMP_Text[CompanionManager.PartySize];
+    private readonly SpriteNumberText[] skillStateNumberTexts =
+        new SpriteNumberText[CompanionManager.PartySize];
     private readonly Image[] skillButtonImages =
         new Image[CompanionManager.PartySize];
     private readonly Image[] skillPortraitImages =
         new Image[CompanionManager.PartySize];
+    private readonly Image[] skillReadyGlowImages =
+        new Image[CompanionManager.PartySize];
     private readonly RectTransform[] skillCooldownOverlays =
         new RectTransform[CompanionManager.PartySize];
+    private readonly RectTransform[] skillReadyGlowRects =
+        new RectTransform[CompanionManager.PartySize];
+    private float readyPulseTime;
 
     public BattleSkillControlsUI(
         BattleManager battleManager,
@@ -67,6 +85,10 @@ public sealed class BattleSkillControlsUI
             ChargePower);
         powerChargeButtonText =
             powerChargeButton.GetComponentInChildren<TMP_Text>();
+        powerChargeButtonImage =
+            powerChargeButton.targetGraphic as Image;
+        ConfigurePowerChargeButtonText();
+        BuildPowerChargeNumbers();
 
         for (int slot = 0; slot < CompanionManager.PartySize; slot++)
         {
@@ -74,11 +96,37 @@ public sealed class BattleSkillControlsUI
         }
     }
 
+    public void Bind(RectTransform parent)
+    {
+        skillStatusText =
+            RuntimeUiBinder.FindText(parent, "SkillStatus");
+        powerChargeButton =
+            RuntimeUiBinder.FindButton(parent, "PowerChargeButton");
+        RuntimeUiBinder.ReplaceButtonAction(
+            powerChargeButton,
+            ChargePower);
+        powerChargeButtonText = powerChargeButton == null
+            ? null
+            : powerChargeButton.GetComponentInChildren<TMP_Text>(true);
+        powerChargeButtonImage = powerChargeButton == null
+            ? null
+            : powerChargeButton.targetGraphic as Image;
+        powerChargeSlashText =
+            RuntimeUiBinder.FindText(parent, "PowerChargeSlashText");
+        BindPowerChargeNumbers();
+
+        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
+            BindSkillButton(parent, slot);
+    }
+
     public void Refresh()
     {
-        if (skillStatusText == null || companionManager == null)
+        if (skillStatusText == null ||
+            companionManager == null ||
+            battleManager == null)
             return;
 
+        readyPulseTime += Time.deltaTime;
         RefreshPowerButton();
         RefreshSkillButtons();
         RefreshSkillStatusText();
@@ -96,10 +144,22 @@ public sealed class BattleSkillControlsUI
             new Vector2(left + 0.1f, 0.2f),
             panelLight,
             () => UseCompanionSkill(capturedSlot));
+        skillButtons[slot] = skillButton;
         skillButtonTexts[slot] =
             skillButton.GetComponentInChildren<TMP_Text>();
         skillButtonImages[slot] =
             skillButton.targetGraphic as Image;
+        skillReadyGlowImages[slot] = RuntimeUiFactory.CreateSpriteImage(
+            "ReadyGlow",
+            skillButton.transform,
+            PrototypeUiArt.SkillFrame,
+            new Vector2(-0.08f, -0.08f),
+            new Vector2(1.08f, 1.08f));
+        skillReadyGlowImages[slot].type = Image.Type.Simple;
+        skillReadyGlowImages[slot].preserveAspect = true;
+        skillReadyGlowImages[slot].color = Color.clear;
+        skillReadyGlowRects[slot] =
+            skillReadyGlowImages[slot].GetComponent<RectTransform>();
         skillPortraitImages[slot] = RuntimeUiFactory.CreateSpriteImage(
             "Portrait",
             skillButton.transform,
@@ -116,6 +176,7 @@ public sealed class BattleSkillControlsUI
             .GetComponent<Image>()
             .raycastTarget = false;
         skillCooldownOverlays[slot].gameObject.SetActive(false);
+        skillReadyGlowImages[slot].transform.SetAsLastSibling();
 
         TMP_Text label = skillButtonTexts[slot];
         if (label == null)
@@ -127,23 +188,91 @@ public sealed class BattleSkillControlsUI
         label.fontSizeMax = 18f;
         label.fontSizeMin = 10f;
         label.transform.SetAsLastSibling();
+
+        skillStateNumberTexts[slot] = new SpriteNumberText(
+            skillButton.transform,
+            "SkillStateNumberText",
+            NumberResourceRoot,
+            17f,
+            new Vector2(0.12f, 0.03f),
+            new Vector2(0.88f, 0.28f));
+        skillStateNumberTexts[slot].SetActive(false);
+    }
+
+    private void BindSkillButton(RectTransform parent, int slot)
+    {
+        int capturedSlot = slot;
+        Button skillButton = RuntimeUiBinder.FindButton(
+            parent,
+            $"CompanionSkillButton{slot + 1}");
+        skillButtons[slot] = skillButton;
+        RuntimeUiBinder.ReplaceButtonAction(
+            skillButton,
+            () => UseCompanionSkill(capturedSlot));
+
+        skillButtonTexts[slot] = skillButton == null
+            ? null
+            : skillButton.GetComponentInChildren<TMP_Text>(true);
+        skillButtonImages[slot] = skillButton == null
+            ? null
+            : skillButton.targetGraphic as Image;
+        skillReadyGlowImages[slot] = skillButton == null
+            ? null
+            : RuntimeUiBinder.FindImage(skillButton.transform, "ReadyGlow");
+        skillReadyGlowRects[slot] =
+            skillReadyGlowImages[slot] == null
+                ? null
+                : skillReadyGlowImages[slot].GetComponent<RectTransform>();
+        skillPortraitImages[slot] = skillButton == null
+            ? null
+            : RuntimeUiBinder.FindImage(skillButton.transform, "Portrait");
+        skillCooldownOverlays[slot] = skillButton == null
+            ? null
+            : RuntimeUiBinder.FindRect(
+                skillButton.transform,
+                "CooldownOverlay");
+        skillStateNumberTexts[slot] = skillButton == null
+            ? null
+            : new SpriteNumberText(
+                RuntimeUiBinder.FindRect(
+                    skillButton.transform,
+                    "SkillStateNumberText"),
+                NumberResourceRoot,
+                17f);
     }
 
     private void RefreshPowerButton()
     {
+        if (battleManager == null)
+            return;
+
+        bool fullPower =
+            battleManager.PowerCharge >= battleManager.PowerChargeMax;
         if (powerChargeButtonText != null)
         {
-            powerChargeButtonText.text =
-                $"{LocalizationManager.Translate("CHARGE POWER")}\n" +
-                "+12";
+            powerChargeButtonText.text = fullPower
+                ? LocalizationManager.Text(
+                    "FULL POWER",
+                    "\uC804\uB825 \uCD5C\uB300") +
+                  "\n" +
+                  LocalizationManager.Text(
+                    "COOLDOWN DOWN",
+                    "\uC7AC\uC0AC\uC6A9 \uAC10\uC18C")
+                : LocalizationManager.Text(
+                    "CHARGE POWER",
+                    "\uC804\uB825 \uCDA9\uC804");
         }
+        RefreshPowerChargeNumbers(fullPower);
 
-        if (powerChargeButton != null && battleManager != null)
+        if (powerChargeButton != null)
         {
             powerChargeButton.interactable =
                 battleManager.IsRunning &&
                 !battleManager.IsRecovering;
         }
+
+        if (powerChargeButtonImage != null)
+            powerChargeButtonImage.color = fullPower ? gold : success;
     }
 
     private void RefreshSkillStatusText()
@@ -163,11 +292,12 @@ public sealed class BattleSkillControlsUI
                 slot < battleManager.SkillCooldowns.Count
                     ? battleManager.SkillCooldowns[slot]
                     : 0f;
+            bool hasPower =
+                battleManager.PowerCharge >=
+                BattleManager.CompanionSkillPowerCost;
             builder.Append(
-                cooldown <= 0f
-                    ? $"{character.characterName}: " +
-                      LocalizationManager.Translate("READY")
-                    : $"{character.characterName}: {cooldown:0.0}s");
+                $"{character.characterName}: " +
+                GetSkillStateLabel(cooldown, hasPower));
         }
 
         bool hasSkillStatus = builder.Length > 0;
@@ -195,25 +325,50 @@ public sealed class BattleSkillControlsUI
                 character != null &&
                 cooldown <= 0f &&
                 hasPower;
+            bool powerBlocked =
+                character != null &&
+                cooldown <= 0f &&
+                !hasPower;
+            bool hasCharacter = character != null;
 
             if (skillButtonTexts[slot] != null)
             {
                 skillButtonTexts[slot].text = character == null
-                    ? "EMPTY"
+                    ? LocalizationManager.Text("EMPTY", "\uBE48 \uC2AC\uB86F")
                     : ready
-                        ? $"{character.characterName}\nREADY"
+                        ? $"{character.characterName}\n" +
+                          $"{LocalizationManager.Text("READY", "\uC900\uBE44")}"
                         : cooldown > 0f
-                            ? $"{character.characterName}\n{cooldown:0.0}s"
-                            : $"{character.characterName}\nPWR " +
-                              $"{BattleManager.CompanionSkillPowerCost:0}";
+                            ? $"{character.characterName}\nCD"
+                            : $"{character.characterName}\n" +
+                              $"{LocalizationManager.Text("CHARGE", "\uCDA9\uC804")}";
+                skillButtonTexts[slot].color =
+                    ready ? Color.white :
+                    powerBlocked ? new Color32(185, 205, 230, 255) :
+                    character == null ? new Color32(130, 142, 162, 255) :
+                    Color.white;
+            }
+            RefreshSkillButtonNumber(slot, character, ready, cooldown);
+
+            if (skillButtons[slot] != null)
+            {
+                skillButtons[slot].interactable =
+                    hasCharacter &&
+                    battleManager.IsRunning &&
+                    !battleManager.IsRecovering;
             }
 
             if (skillButtonImages[slot] != null)
                 skillButtonImages[slot].color =
-                    ready ? accent : panelLight;
+                    ready
+                        ? Color.Lerp(accent, gold, GetReadyPulse())
+                        : powerBlocked
+                            ? success
+                            : panelLight;
 
             RefreshSkillPortrait(slot, character);
             RefreshCooldownOverlay(slot, character, cooldown);
+            RefreshReadyGlow(slot, ready);
         }
     }
 
@@ -249,6 +404,179 @@ public sealed class BattleSkillControlsUI
         skillCooldownOverlays[slot].anchorMin =
             new Vector2(0f, 1f - ratio);
         skillCooldownOverlays[slot].anchorMax = Vector2.one;
+    }
+
+    private void RefreshReadyGlow(int slot, bool ready)
+    {
+        Image glow = skillReadyGlowImages[slot];
+        RectTransform rect = skillReadyGlowRects[slot];
+        if (glow == null || rect == null)
+            return;
+
+        glow.gameObject.SetActive(ready);
+        if (!ready)
+            return;
+
+        float pulse = GetReadyPulse();
+        glow.color = new Color(
+            gold.r,
+            gold.g,
+            gold.b,
+            Mathf.Lerp(0.45f, 0.95f, pulse));
+        rect.localScale =
+            Vector3.one * Mathf.Lerp(0.96f, 1.12f, pulse);
+        glow.transform.SetAsLastSibling();
+        skillButtonTexts[slot]?.transform.SetAsLastSibling();
+    }
+
+    private float GetReadyPulse()
+    {
+        return (Mathf.Sin(readyPulseTime * 6f) + 1f) * 0.5f;
+    }
+
+    private void ConfigurePowerChargeButtonText()
+    {
+        if (powerChargeButtonText == null)
+            return;
+
+        RectTransform rect =
+            powerChargeButtonText.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.06f, 0.42f);
+        rect.anchorMax = new Vector2(0.94f, 0.94f);
+        powerChargeButtonText.fontSizeMax = 20f;
+        powerChargeButtonText.fontSizeMin = 12f;
+    }
+
+    private void BuildPowerChargeNumbers()
+    {
+        if (powerChargeButton == null)
+            return;
+
+        powerChargeCurrentNumberText = new SpriteNumberText(
+            powerChargeButton.transform,
+            "PowerChargeCurrentNumberText",
+            NumberResourceRoot,
+            18f,
+            new Vector2(0.08f, 0.08f),
+            new Vector2(0.31f, 0.39f));
+        powerChargeSlashText = RuntimeUiFactory.CreateText(
+            "PowerChargeSlashText",
+            powerChargeButton.transform,
+            "/",
+            18,
+            new Vector2(0.31f, 0.08f),
+            new Vector2(0.38f, 0.39f),
+            TextAlignmentOptions.Center,
+            Color.white);
+        powerChargeMaxNumberText = new SpriteNumberText(
+            powerChargeButton.transform,
+            "PowerChargeMaxNumberText",
+            NumberResourceRoot,
+            18f,
+            new Vector2(0.38f, 0.08f),
+            new Vector2(0.61f, 0.39f));
+        powerChargeTapNumberText = new SpriteNumberText(
+            powerChargeButton.transform,
+            "PowerChargeTapNumberText",
+            NumberResourceRoot,
+            18f,
+            new Vector2(0.64f, 0.08f),
+            new Vector2(0.94f, 0.39f));
+    }
+
+    private void BindPowerChargeNumbers()
+    {
+        if (powerChargeButton == null)
+            return;
+
+        powerChargeCurrentNumberText = new SpriteNumberText(
+            RuntimeUiBinder.FindRect(
+                powerChargeButton.transform,
+                "PowerChargeCurrentNumberText"),
+            NumberResourceRoot,
+            18f);
+        powerChargeMaxNumberText = new SpriteNumberText(
+            RuntimeUiBinder.FindRect(
+                powerChargeButton.transform,
+                "PowerChargeMaxNumberText"),
+            NumberResourceRoot,
+            18f);
+        powerChargeTapNumberText = new SpriteNumberText(
+            RuntimeUiBinder.FindRect(
+                powerChargeButton.transform,
+                "PowerChargeTapNumberText"),
+            NumberResourceRoot,
+            18f);
+    }
+
+    private void RefreshPowerChargeNumbers(bool fullPower)
+    {
+        powerChargeCurrentNumberText?.SetActive(!fullPower);
+        powerChargeMaxNumberText?.SetActive(!fullPower);
+        if (powerChargeSlashText != null)
+            powerChargeSlashText.gameObject.SetActive(!fullPower);
+
+        if (!fullPower)
+        {
+            powerChargeCurrentNumberText?.SetText(
+                CompactNumberFormatter.Format(
+                    Mathf.RoundToInt(battleManager.PowerCharge)));
+            powerChargeMaxNumberText?.SetText(
+                CompactNumberFormatter.Format(
+                    Mathf.RoundToInt(battleManager.PowerChargeMax)));
+            powerChargeTapNumberText?.SetText(
+                CompactNumberFormatter.Format(
+                    Mathf.RoundToInt(
+                        BattleManager.PowerChargePerTapAmount),
+                    "+"));
+            return;
+        }
+
+        powerChargeTapNumberText?.SetText(
+            "-" +
+            BattleManager.FullChargeCooldownBoost.ToString(
+                "0.##",
+                CultureInfo.InvariantCulture));
+    }
+
+    private void RefreshSkillButtonNumber(
+        int slot,
+        CharacterData character,
+        bool ready,
+        float cooldown)
+    {
+        SpriteNumberText numberText = skillStateNumberTexts[slot];
+        if (numberText == null)
+            return;
+
+        bool showNumber = character != null && !ready;
+        numberText.SetActive(showNumber);
+        if (!showNumber)
+            return;
+
+        numberText.SetAsLastSibling();
+        numberText.SetText(cooldown > 0f
+            ? cooldown.ToString("0.0", CultureInfo.InvariantCulture)
+            : CompactNumberFormatter.Format(
+                Mathf.RoundToInt(
+                    BattleManager.CompanionSkillPowerCost)));
+    }
+
+    private static string GetSkillStateLabel(float cooldown, bool hasPower)
+    {
+        if (cooldown > 0f)
+            return LocalizationManager.Text(
+                "COOLDOWN",
+                "\uC7AC\uC0AC\uC6A9");
+
+        if (!hasPower)
+        {
+            return LocalizationManager.Text(
+                "POWER NEEDED",
+                "\uC804\uB825 \uD544\uC694");
+        }
+
+        return LocalizationManager.Text("READY", "\uC900\uBE44");
     }
 
     private void UseCompanionSkill(int slot)

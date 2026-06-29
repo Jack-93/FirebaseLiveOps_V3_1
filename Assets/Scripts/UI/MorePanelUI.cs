@@ -5,13 +5,13 @@ using UnityEngine.UI;
 
 public sealed class MorePanelUI
 {
-    private readonly RectTransform panel;
-    private readonly TMP_Text inventoryText;
-    private readonly TMP_Text companionText;
-    private readonly TMP_Text dailyRewardText;
-    private readonly TMP_Text accountText;
+    private RectTransform panel;
+    private TMP_Text inventoryText;
+    private TMP_Text companionText;
+    private TMP_Text dailyRewardText;
+    private TMP_Text accountText;
 
-    public GameObject GameObject => panel.gameObject;
+    public GameObject GameObject => panel == null ? null : panel.gameObject;
     public RectTransform DailyRewardBadge { get; private set; }
     public RectTransform QuestMenuBadge { get; private set; }
     public RectTransform EventMenuBadge { get; private set; }
@@ -34,6 +34,57 @@ public sealed class MorePanelUI
         new Color32(190, 203, 225, 255);
 
     public MorePanelUI(
+        RectTransform root,
+        Action claimAllMail,
+        Action showEquipment,
+        Action showCollection,
+        Action autoEquip,
+        Action claimDailyReward,
+        Action showQuests,
+        Action showEvent,
+        Action showShop,
+        Action save,
+        Action showSettings,
+        Action showAccount,
+        bool usePrefab = true)
+    {
+        if (usePrefab &&
+            RuntimeUiBinder.TryInstantiatePrefab(
+                "MorePanel",
+                root,
+                out panel))
+        {
+            Bind(
+                claimAllMail,
+                showEquipment,
+                showCollection,
+                autoEquip,
+                claimDailyReward,
+                showQuests,
+                showEvent,
+                showShop,
+                save,
+                showSettings,
+                showAccount);
+            return;
+        }
+
+        BuildGenerated(
+            root,
+            claimAllMail,
+            showEquipment,
+            showCollection,
+            autoEquip,
+            claimDailyReward,
+            showQuests,
+            showEvent,
+            showShop,
+            save,
+            showSettings,
+            showAccount);
+    }
+
+    public void BuildGenerated(
         RectTransform root,
         Action claimAllMail,
         Action showEquipment,
@@ -137,24 +188,27 @@ public sealed class MorePanelUI
     {
         if (data == null)
         {
-            inventoryText.text =
-                MorePanelSummaryFormatter.InventoryUnavailable;
-            companionText.text = string.Empty;
-            dailyRewardText.text = string.Empty;
-            accountText.text = string.Empty;
+            SetText(inventoryText, MorePanelSummaryFormatter.InventoryUnavailable);
+            SetText(companionText, string.Empty);
+            SetText(dailyRewardText, string.Empty);
+            SetText(accountText, string.Empty);
             return;
         }
 
-        inventoryText.text =
+        SetText(
+            inventoryText,
             MorePanelSummaryFormatter.FormatInventory(
                 data,
-                companionManager);
-        companionText.text =
-            MorePanelSummaryFormatter.FormatCompanions(companionManager);
-        accountText.text =
-            MorePanelSummaryFormatter.FormatAccount(data, accounts);
-        dailyRewardText.text =
-            MorePanelSummaryFormatter.FormatDailyReward(dailyRewards);
+                companionManager));
+        SetText(
+            companionText,
+            MorePanelSummaryFormatter.FormatCompanions(companionManager));
+        SetText(
+            accountText,
+            MorePanelSummaryFormatter.FormatAccount(data, accounts));
+        SetText(
+            dailyRewardText,
+            MorePanelSummaryFormatter.FormatDailyReward(dailyRewards));
     }
 
     private RectTransform BuildInventoryCard(
@@ -322,5 +376,56 @@ public sealed class MorePanelUI
             new Vector2(0.94f, 0.12f),
             Accent,
             () => showAccount?.Invoke());
+    }
+
+    private void Bind(
+        Action claimAllMail,
+        Action showEquipment,
+        Action showCollection,
+        Action autoEquip,
+        Action claimDailyReward,
+        Action showQuests,
+        Action showEvent,
+        Action showShop,
+        Action save,
+        Action showSettings,
+        Action showAccount)
+    {
+        inventoryText = RuntimeUiBinder.FindText(panel, "InventoryText");
+        companionText = RuntimeUiBinder.FindText(panel, "CompanionText");
+        dailyRewardText = RuntimeUiBinder.FindText(panel, "DailyRewardText");
+        accountText = RuntimeUiBinder.FindText(panel, "AccountText");
+
+        Replace("ClaimMailButton", claimAllMail);
+        Replace("EquipmentButton", showEquipment);
+        Replace("CollectionButton", showCollection);
+        Replace("BestCompanionButton", autoEquip);
+        Replace("DailyRewardButton", claimDailyReward);
+        Replace("QuestButton", showQuests);
+        Replace("EventButton", showEvent);
+        Replace("ShopButton", showShop);
+        Replace("SaveButton", save);
+        Replace("SettingsButton", showSettings);
+        Replace("AccountButton", showAccount);
+
+        DailyRewardBadge =
+            RuntimeUiBinder.FindRect(panel, "DailyRewardBadge");
+        QuestMenuBadge =
+            RuntimeUiBinder.FindRect(panel, "QuestMenuBadge");
+        EventMenuBadge =
+            RuntimeUiBinder.FindRect(panel, "EventMenuBadge");
+    }
+
+    private void Replace(string buttonName, Action action)
+    {
+        RuntimeUiBinder.ReplaceButtonAction(
+            RuntimeUiBinder.FindButton(panel, buttonName),
+            () => action?.Invoke());
+    }
+
+    private static void SetText(TMP_Text text, string value)
+    {
+        if (text != null)
+            text.text = value;
     }
 }

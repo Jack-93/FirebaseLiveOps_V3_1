@@ -103,7 +103,7 @@ public static class RuntimeUiFactory
         text.color = color;
         text.textWrappingMode = TextWrappingModes.Normal;
         text.raycastTarget = false;
-        GameFont.Apply(text);
+        GameFont.Apply(text, name);
         return text;
     }
 

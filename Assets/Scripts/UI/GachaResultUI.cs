@@ -6,19 +6,154 @@ using UnityEngine.UI;
 
 public sealed class GachaResultUI
 {
-    private readonly TMP_Text placeholderText;
-    private readonly TMP_Text pointText;
-    private readonly Button confirmButton;
+    private const string NumberResourceRoot =
+        "PrototypeArt/Numbers/DamageGold";
+
+    private TMP_Text placeholderText;
+    private TMP_Text pointText;
+    private SpriteNumberText pointNumberText;
+    private Button confirmButton;
     private readonly RectTransform[] cards = new RectTransform[10];
     private readonly Image[] portraits = new Image[10];
     private readonly Image[] frames = new Image[10];
     private readonly TMP_Text[] labels = new TMP_Text[10];
     private readonly TMP_Text[] badges = new TMP_Text[10];
     private readonly TMP_Text[] counts = new TMP_Text[10];
+    private readonly SpriteNumberText[] countNumberTexts =
+        new SpriteNumberText[10];
 
     public bool IsVisible { get; private set; }
 
     public GachaResultUI(
+        RectTransform panel,
+        UnityAction onConfirm,
+        Color accent)
+    {
+        Build(panel, onConfirm, accent);
+    }
+
+    public GachaResultUI(
+        RectTransform panel,
+        UnityAction onConfirm,
+        Color accent,
+        bool bindExisting)
+    {
+        if (bindExisting)
+            Bind(panel, onConfirm);
+        else
+            Build(panel, onConfirm, accent);
+    }
+
+    public void SetPoint(int point)
+    {
+        if (pointText == null || pointNumberText == null)
+            return;
+
+        pointText.text = LocalizationManager.Text(
+            "Point",
+            "\uD3EC\uC778\uD2B8");
+        pointNumberText.SetText(CompactNumberFormatter.Format(point));
+    }
+
+    public void ShowResults(
+        List<CharacterData> results,
+        Dictionary<string, int> ownedBefore)
+    {
+        Dictionary<string, int> shownCounts =
+            new Dictionary<string, int>();
+        IsVisible = results != null && results.Count > 0;
+        if (placeholderText != null)
+            placeholderText.gameObject.SetActive(!IsVisible);
+        if (confirmButton != null)
+            confirmButton.gameObject.SetActive(IsVisible);
+
+        for (int index = 0; index < cards.Length; index++)
+        {
+            bool hasResult = results != null && index < results.Count;
+            if (cards[index] != null)
+                cards[index].gameObject.SetActive(hasResult);
+            if (!hasResult)
+                continue;
+
+            CharacterData character = results[index];
+            if (character == null)
+                continue;
+
+            if (!shownCounts.ContainsKey(character.characterName))
+                shownCounts[character.characterName] = 0;
+            shownCounts[character.characterName]++;
+
+            bool alreadyOwned =
+                ownedBefore != null &&
+                ownedBefore.TryGetValue(
+                    character.characterName,
+                    out int owned) &&
+                owned > 0;
+            bool isNew = !alreadyOwned &&
+                shownCounts[character.characterName] == 1;
+            bool duplicateResult =
+                alreadyOwned ||
+                shownCounts[character.characterName] > 1;
+
+            Sprite portrait = character.icon ?? character.battleSprite;
+            if (portraits[index] != null)
+            {
+                portraits[index].sprite = portrait;
+                portraits[index].color =
+                    portrait == null
+                        ? GetRarityFallbackColor(character.rarity)
+                        : Color.white;
+            }
+
+            if (frames[index] != null)
+                frames[index].color = GetGachaCardColor(character.rarity);
+
+            if (labels[index] != null)
+            {
+                labels[index].text =
+                    $"[{character.rarity}]\n{character.characterName}";
+            }
+
+            bool showBadge = isNew || character.rarity != "R";
+            if (badges[index] != null)
+            {
+                badges[index].gameObject.SetActive(showBadge);
+                badges[index].text = isNew
+                    ? LocalizationManager.Text(
+                        "NEW",
+                        "\uC2E0\uADDC")
+                    : character.rarity;
+            }
+
+            if (counts[index] != null)
+                counts[index].text = "x";
+            countNumberTexts[index]?.SetText(
+                duplicateResult ? "5" : "1");
+        }
+    }
+
+    public void Clear()
+    {
+        IsVisible = false;
+        if (confirmButton != null)
+            confirmButton.gameObject.SetActive(false);
+        if (placeholderText != null)
+        {
+            placeholderText.gameObject.SetActive(true);
+            placeholderText.text = LocalizationManager.Text(
+                "Recruit companions to see results.",
+                "\uB3D9\uB8CC\uB97C \uBAA8\uC9D1\uD558\uBA74 " +
+                "\uACB0\uACFC\uAC00 \uD45C\uC2DC\uB429\uB2C8\uB2E4.");
+        }
+
+        for (int index = 0; index < cards.Length; index++)
+        {
+            if (cards[index] != null)
+                cards[index].gameObject.SetActive(false);
+        }
+    }
+
+    private void Build(
         RectTransform panel,
         UnityAction onConfirm,
         Color accent)
@@ -45,12 +180,19 @@ public sealed class GachaResultUI
         pointText = RuntimeUiFactory.CreateText(
             "RecruitPointText",
             resultCard,
-            "Point 0",
+            "Point",
             22,
             new Vector2(0.76f, 0.01f),
-            new Vector2(0.97f, 0.08f),
+            new Vector2(0.88f, 0.08f),
             TextAlignmentOptions.Right,
             new Color32(36, 66, 95, 255));
+        pointNumberText = new SpriteNumberText(
+            resultCard,
+            "RecruitPointNumberText",
+            NumberResourceRoot,
+            20f,
+            new Vector2(0.88f, 0.01f),
+            new Vector2(0.97f, 0.08f));
 
         confirmButton = RuntimeUiFactory.CreateButton(
             "GachaResultConfirmButton",
@@ -63,85 +205,30 @@ public sealed class GachaResultUI
         confirmButton.gameObject.SetActive(false);
     }
 
-    public void SetPoint(int point)
+    private void Bind(
+        RectTransform panel,
+        UnityAction onConfirm)
     {
-        if (pointText == null)
-            return;
+        RectTransform resultCard =
+            RuntimeUiBinder.FindRect(panel, "GachaResultCard");
+        placeholderText =
+            RuntimeUiBinder.FindText(resultCard, "GachaResultText");
+        pointText =
+            RuntimeUiBinder.FindText(resultCard, "RecruitPointText");
+        pointNumberText = new SpriteNumberText(
+            RuntimeUiBinder.FindRect(
+                resultCard,
+                "RecruitPointNumberText"),
+            NumberResourceRoot,
+            20f);
 
-        pointText.text =
-            $"{LocalizationManager.Text("Point", "포인트")} {point}";
-    }
+        confirmButton =
+            RuntimeUiBinder.FindButton(panel, "GachaResultConfirmButton");
+        RuntimeUiBinder.ReplaceButtonAction(confirmButton, onConfirm);
+        if (confirmButton != null)
+            confirmButton.gameObject.SetActive(false);
 
-    public void ShowResults(
-        List<CharacterData> results,
-        Dictionary<string, int> ownedBefore)
-    {
-        Dictionary<string, int> shownCounts =
-            new Dictionary<string, int>();
-        IsVisible = results != null && results.Count > 0;
-        placeholderText.gameObject.SetActive(!IsVisible);
-        confirmButton.gameObject.SetActive(IsVisible);
-
-        for (int index = 0; index < cards.Length; index++)
-        {
-            bool hasResult = results != null && index < results.Count;
-            cards[index].gameObject.SetActive(hasResult);
-            if (!hasResult)
-                continue;
-
-            CharacterData character = results[index];
-            if (character == null)
-                continue;
-
-            if (!shownCounts.ContainsKey(character.characterName))
-                shownCounts[character.characterName] = 0;
-            shownCounts[character.characterName]++;
-
-            bool alreadyOwned =
-                ownedBefore != null &&
-                ownedBefore.TryGetValue(
-                    character.characterName,
-                    out int owned) &&
-                owned > 0;
-            bool isNew = !alreadyOwned &&
-                shownCounts[character.characterName] == 1;
-            bool duplicateResult =
-                alreadyOwned ||
-                shownCounts[character.characterName] > 1;
-
-            Sprite portrait = character.icon ?? character.battleSprite;
-            portraits[index].sprite = portrait;
-            portraits[index].color =
-                portrait == null
-                    ? GetRarityFallbackColor(character.rarity)
-                    : Color.white;
-            frames[index].color = GetGachaCardColor(character.rarity);
-            labels[index].text =
-                $"[{character.rarity}]\n{character.characterName}";
-
-            bool showBadge = isNew || character.rarity != "R";
-            badges[index].gameObject.SetActive(showBadge);
-            badges[index].text = isNew
-                ? LocalizationManager.Text("NEW", "신규")
-                : character.rarity;
-
-            counts[index].text = duplicateResult ? "x5" : "x1";
-        }
-    }
-
-    public void Clear()
-    {
-        IsVisible = false;
-        confirmButton.gameObject.SetActive(false);
-        placeholderText.gameObject.SetActive(true);
-        placeholderText.text = LocalizationManager.Text(
-            "Recruit companions to see results.",
-            "동료를 모집하면 결과가 표시됩니다.");
-
-        for (int index = 0; index < cards.Length; index++)
-        {
-            cards[index].gameObject.SetActive(false);
-        }
+        BindGrid(resultCard);
     }
 
     private void BuildGrid(RectTransform parent)
@@ -205,13 +292,49 @@ public sealed class GachaResultUI
             counts[index] = RuntimeUiFactory.CreateText(
                 "Count",
                 card,
-                "x1",
+                "x",
                 22,
                 new Vector2(0.58f, 0.18f),
-                new Vector2(0.94f, 0.38f),
+                new Vector2(0.72f, 0.38f),
                 TextAlignmentOptions.Right,
                 new Color32(39, 52, 72, 255));
+            countNumberTexts[index] = new SpriteNumberText(
+                card,
+                "CountNumberText",
+                NumberResourceRoot,
+                20f,
+                new Vector2(0.72f, 0.18f),
+                new Vector2(0.94f, 0.38f));
 
+            card.gameObject.SetActive(false);
+        }
+    }
+
+    private void BindGrid(RectTransform parent)
+    {
+        for (int index = 0; index < cards.Length; index++)
+        {
+            RectTransform card = RuntimeUiBinder.FindRect(
+                parent,
+                $"GachaResultSlot{index + 1}");
+            cards[index] = card;
+            if (card == null)
+                continue;
+
+            frames[index] =
+                RuntimeUiBinder.FindImage(card, "Frame");
+            portraits[index] =
+                RuntimeUiBinder.FindImage(card, "Portrait");
+            badges[index] =
+                RuntimeUiBinder.FindText(card, "NewBadge");
+            labels[index] =
+                RuntimeUiBinder.FindText(card, "Name");
+            counts[index] =
+                RuntimeUiBinder.FindText(card, "Count");
+            countNumberTexts[index] = new SpriteNumberText(
+                RuntimeUiBinder.FindRect(card, "CountNumberText"),
+                NumberResourceRoot,
+                20f);
             card.gameObject.SetActive(false);
         }
     }

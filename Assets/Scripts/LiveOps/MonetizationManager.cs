@@ -145,7 +145,7 @@ public class MonetizationManager : MonoBehaviour
         }
 
         initialized = true;
-        OnMonetizationChanged?.Invoke();
+        InvokeMonetizationChanged();
     }
 
     public async Task<string> PurchaseAsync(RealMoneyProduct product)
@@ -164,7 +164,9 @@ public class MonetizationManager : MonoBehaviour
             return "Player data is not ready.";
         data.EnsureInitialized();
 
-        string productId = GetProductId(product);
+        if (!ProductIds.TryGetValue(product, out string productId))
+            return "Invalid product.";
+
         if (product == RealMoneyProduct.StarterPack &&
             data.ownedPurchaseProducts.Contains(productId))
         {
@@ -172,7 +174,7 @@ public class MonetizationManager : MonoBehaviour
         }
 
         IsBusy = true;
-        OnMonetizationChanged?.Invoke();
+        InvokeMonetizationChanged();
 
         try
         {
@@ -194,11 +196,14 @@ public class MonetizationManager : MonoBehaviour
                 data.processedPurchaseIds,
                 result.TransactionId,
                 100);
-            if (product == RealMoneyProduct.StarterPack)
+            if (product == RealMoneyProduct.StarterPack &&
+                !data.ownedPurchaseProducts.Contains(productId))
+            {
                 data.ownedPurchaseProducts.Add(productId);
+            }
 
-            PlayerDataManager.Instance.NotifyPlayerDataChanged();
-            await SaveAsync(data);
+            PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
+            await SaveRewardStateAsync(data, "purchase");
             return $"{GetProductName(product)} purchased.";
         }
         catch (Exception exception)
@@ -209,7 +214,7 @@ public class MonetizationManager : MonoBehaviour
         finally
         {
             IsBusy = false;
-            OnMonetizationChanged?.Invoke();
+            InvokeMonetizationChanged();
         }
     }
 
@@ -230,9 +235,10 @@ public class MonetizationManager : MonoBehaviour
         PlayerData data = PlayerDataManager.Instance?.playerData;
         if (data == null)
             return "Player data is not ready.";
+        data.EnsureInitialized();
 
         IsBusy = true;
-        OnMonetizationChanged?.Invoke();
+        InvokeMonetizationChanged();
 
         try
         {
@@ -252,8 +258,8 @@ public class MonetizationManager : MonoBehaviour
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             AddLimited(data.processedAdRewardIds, result.RewardId, 100);
 
-            PlayerDataManager.Instance.NotifyPlayerDataChanged();
-            await SaveAsync(data);
+            PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
+            await SaveRewardStateAsync(data, "rewarded ad");
             return $"Ad reward: {RewardedAdGemAmount} Gems.";
         }
         catch (Exception exception)
@@ -264,7 +270,7 @@ public class MonetizationManager : MonoBehaviour
         finally
         {
             IsBusy = false;
-            OnMonetizationChanged?.Invoke();
+            InvokeMonetizationChanged();
         }
     }
 
@@ -306,7 +312,8 @@ public class MonetizationManager : MonoBehaviour
         int watched = data?.rewardedAdsWatchedToday ?? 0;
         string store = StoreReady ? "Store ready" : "Store SDK pending";
         string ads = adProvider?.IsReady == true
-            ? $"Rewarded ads {watched}/{DailyRewardedAdLimit}"
+            ? $"Rewarded ads {CompactNumberFormatter.Format(watched)}/" +
+              $"{CompactNumberFormatter.Format(DailyRewardedAdLimit)}"
             : "Ad SDK pending";
         return $"{store}  |  {ads}";
     }
@@ -422,8 +429,39 @@ public class MonetizationManager : MonoBehaviour
 
     private static async Task SaveAsync(PlayerData data)
     {
-        if (FirestoreManager.Instance != null)
+        if (PlayerDataSaveScheduler.Instance != null)
+        {
+            await PlayerDataSaveScheduler.Instance.SaveNowAsync(data);
+        }
+        else if (FirestoreManager.Instance != null)
+        {
             await FirestoreManager.Instance.SavePlayerDataAsync(data);
+        }
+    }
+
+    private static async Task SaveRewardStateAsync(
+        PlayerData data,
+        string context)
+    {
+        PlayerDataLocalCache.Save(data);
+        try
+        {
+            await SaveAsync(data);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning(
+                $"[Monetization] {context} save deferred: " +
+                exception.Message);
+        }
+    }
+
+    private void InvokeMonetizationChanged()
+    {
+        SafeEvent.Invoke(
+            OnMonetizationChanged,
+            "Monetization",
+            nameof(OnMonetizationChanged));
     }
 }
 

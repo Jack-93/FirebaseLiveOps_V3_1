@@ -138,7 +138,7 @@ public class AccountLinkManager : MonoBehaviour
         }
 
         IsBusy = true;
-        OnAccountChanged?.Invoke();
+        InvokeAccountChanged();
 
         try
         {
@@ -168,7 +168,7 @@ public class AccountLinkManager : MonoBehaviour
         finally
         {
             IsBusy = false;
-            OnAccountChanged?.Invoke();
+            InvokeAccountChanged();
         }
     }
 
@@ -230,7 +230,7 @@ public class AccountLinkManager : MonoBehaviour
         }
 
         await user.LinkWithCredentialAsync(credential);
-        OnAccountChanged?.Invoke();
+        InvokeAccountChanged();
         return AccountLinkResult.Completed(
             $"{provider} account linked. Your game data is preserved.");
     }
@@ -331,5 +331,13 @@ public class AccountLinkManager : MonoBehaviour
         return exception?.InnerException == null
             ? null
             : FindFirebaseException(exception.InnerException);
+    }
+
+    private void InvokeAccountChanged()
+    {
+        SafeEvent.Invoke(
+            OnAccountChanged,
+            "AccountLink",
+            nameof(OnAccountChanged));
     }
 }

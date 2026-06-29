@@ -5,10 +5,10 @@ using UnityEngine.UI;
 
 public sealed class TitleScreenUI
 {
-    private readonly GameObject overlay;
-    private readonly TMP_Text statusText;
-    private readonly Button googleButton;
-    private readonly Button guestButton;
+    private GameObject overlay;
+    private TMP_Text statusText;
+    private Button googleButton;
+    private Button guestButton;
 
     private static readonly Color Background =
         new Color32(17, 24, 39, 255);
@@ -21,7 +21,28 @@ public sealed class TitleScreenUI
     private static readonly Color MutedText =
         new Color32(190, 203, 225, 255);
 
+    public GameObject GameObject => overlay;
+
     public TitleScreenUI(
+        RectTransform root,
+        Action startGoogle,
+        Action startGuest,
+        bool usePrefab = true)
+    {
+        if (usePrefab &&
+            RuntimeUiBinder.TryInstantiatePrefab(
+                "TitleOverlay",
+                root,
+                out RectTransform overlayRect))
+        {
+            Bind(overlayRect, startGoogle, startGuest);
+            return;
+        }
+
+        BuildGenerated(root, startGoogle, startGuest);
+    }
+
+    public void BuildGenerated(
         RectTransform root,
         Action startGoogle,
         Action startGuest)
@@ -133,21 +154,46 @@ public sealed class TitleScreenUI
 
     public void Show(string status)
     {
-        overlay.SetActive(true);
+        overlay?.SetActive(true);
         SetBusy(false, status);
     }
 
     public void Hide()
     {
-        overlay.SetActive(false);
+        overlay?.SetActive(false);
     }
 
     public void SetBusy(bool busy, string status)
     {
-        statusText.text = string.IsNullOrWhiteSpace(status)
-            ? "Android build uses Google login or guest play."
-            : status;
-        googleButton.interactable = !busy;
-        guestButton.interactable = !busy;
+        if (statusText != null)
+        {
+            statusText.text = string.IsNullOrWhiteSpace(status)
+                ? "Android build uses Google login or guest play."
+                : status;
+        }
+        if (googleButton != null)
+            googleButton.interactable = !busy;
+        if (guestButton != null)
+            guestButton.interactable = !busy;
+    }
+
+    private void Bind(
+        RectTransform overlayRect,
+        Action startGoogle,
+        Action startGuest)
+    {
+        overlay = overlayRect.gameObject;
+        statusText = RuntimeUiBinder.FindText(overlayRect, "TitleStatus");
+        googleButton =
+            RuntimeUiBinder.FindButton(overlayRect, "TitleGoogleButton");
+        guestButton =
+            RuntimeUiBinder.FindButton(overlayRect, "TitleGuestButton");
+        RuntimeUiBinder.ReplaceButtonAction(
+            googleButton,
+            () => startGoogle?.Invoke());
+        RuntimeUiBinder.ReplaceButtonAction(
+            guestButton,
+            () => startGuest?.Invoke());
+        overlay.SetActive(false);
     }
 }

@@ -83,4 +83,39 @@ public sealed class BattleQuickButtonsUI
             "EquipmentQuickBadge",
             badgeColor);
     }
+
+    public void Bind(RectTransform parent)
+    {
+        Button questQuickButton =
+            RuntimeUiBinder.FindButton(parent, "QuestQuickButton");
+        RuntimeUiBinder.ReplaceButtonAction(
+            questQuickButton,
+            () => onQuest?.Invoke());
+        QuestQuickBadge =
+            RuntimeUiBinder.FindRect(parent, "QuestQuickBadge");
+
+        Button eventQuickButton =
+            RuntimeUiBinder.FindButton(parent, "EventQuickButton");
+        RuntimeUiBinder.ReplaceButtonAction(
+            eventQuickButton,
+            () => onEvent?.Invoke());
+        EventQuickBadge =
+            RuntimeUiBinder.FindRect(parent, "EventQuickBadge");
+
+        Button shopQuickButton =
+            RuntimeUiBinder.FindButton(parent, "ShopQuickButton");
+        RuntimeUiBinder.ReplaceButtonAction(
+            shopQuickButton,
+            () => onShop?.Invoke());
+        ShopQuickBadge =
+            RuntimeUiBinder.FindRect(parent, "ShopQuickBadge");
+
+        Button equipmentQuickButton =
+            RuntimeUiBinder.FindButton(parent, "EquipmentQuickButton");
+        RuntimeUiBinder.ReplaceButtonAction(
+            equipmentQuickButton,
+            () => onEquipment?.Invoke());
+        EquipmentQuickBadge =
+            RuntimeUiBinder.FindRect(parent, "EquipmentQuickBadge");
+    }
 }

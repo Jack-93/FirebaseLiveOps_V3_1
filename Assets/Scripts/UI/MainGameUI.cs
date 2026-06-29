@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -235,7 +236,8 @@ public class MainGameUI : MonoBehaviour
         gachaFlow = new GachaFlowController(
             gachaPanelUI,
             companionManager,
-            RefreshGacha);
+            RefreshGacha,
+            ShowBattle);
     }
 
     private void BuildMorePanel(RectTransform root)
@@ -404,7 +406,7 @@ public class MainGameUI : MonoBehaviour
         storyIntroUI = new StoryIntroUI(
             root,
             GetTutorialFlow().HandleStoryIntroNext,
-            GetTutorialFlow().HandleStoryIntroSkip);
+            GetTutorialFlow().HandleStoryIntroPrevious);
     }
 
     private void BuildOfflinePopup(RectTransform root)
@@ -683,6 +685,7 @@ public class MainGameUI : MonoBehaviour
                 tutorialManager,
                 ShowBattle,
                 ShowGrowth,
+                ShowGacha,
                 RefreshTutorial);
         }
 

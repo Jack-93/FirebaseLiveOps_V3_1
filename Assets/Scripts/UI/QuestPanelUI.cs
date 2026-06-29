@@ -4,12 +4,20 @@ using UnityEngine;
 
 public sealed class QuestPanelUI
 {
-    private readonly RectTransform panel;
-    private readonly TMP_Text questText;
-    private readonly TMP_Text progressText;
-    private readonly RectTransform progressFill;
+    private const string NumberResourceRoot =
+        "PrototypeArt/Numbers/DamageGold";
 
-    public GameObject GameObject => panel.gameObject;
+    private RectTransform panel;
+    private TMP_Text questText;
+    private TMP_Text questProgressLabelText;
+    private TMP_Text objectiveProgressLabelText;
+    private SpriteNumberText questIndexNumberText;
+    private SpriteNumberText questCountNumberText;
+    private SpriteNumberText progressNumberText;
+    private SpriteNumberText targetNumberText;
+    private RectTransform progressFill;
+
+    public GameObject GameObject => panel == null ? null : panel.gameObject;
 
     private static readonly Color OverlayBackground =
         new Color32(12, 18, 30, 218);
@@ -27,6 +35,26 @@ public sealed class QuestPanelUI
         new Color32(190, 203, 225, 255);
 
     public QuestPanelUI(
+        RectTransform root,
+        Action showMore,
+        Action claimQuest,
+        Action claimAchievements,
+        bool usePrefab = true)
+    {
+        if (usePrefab &&
+            RuntimeUiBinder.TryInstantiatePrefab(
+                "QuestPanel",
+                root,
+                out panel))
+        {
+            Bind(showMore, claimQuest, claimAchievements);
+            return;
+        }
+
+        BuildGenerated(root, showMore, claimQuest, claimAchievements);
+    }
+
+    public void BuildGenerated(
         RectTransform root,
         Action showMore,
         Action claimQuest,
@@ -101,15 +129,70 @@ public sealed class QuestPanelUI
             Success,
             new Vector2(0.07f, 0.32f),
             new Vector2(0.93f, 0.39f));
-        progressText = RuntimeUiFactory.CreateText(
-            "QuestProgressText",
+        questProgressLabelText = RuntimeUiFactory.CreateText(
+            "QuestProgressLabelText",
             card,
-            "0 / 0",
-            22,
+            "Quest",
+            18,
             new Vector2(0.07f, 0.31f),
-            new Vector2(0.93f, 0.4f),
+            new Vector2(0.19f, 0.4f),
+            TextAlignmentOptions.Left,
+            Color.white);
+        questIndexNumberText = new SpriteNumberText(
+            card,
+            "QuestIndexNumberText",
+            NumberResourceRoot,
+            20f,
+            new Vector2(0.19f, 0.31f),
+            new Vector2(0.27f, 0.4f));
+        RuntimeUiFactory.CreateText(
+            "QuestProgressSlashText",
+            card,
+            "/",
+            20,
+            new Vector2(0.27f, 0.31f),
+            new Vector2(0.3f, 0.4f),
             TextAlignmentOptions.Center,
             Color.white);
+        questCountNumberText = new SpriteNumberText(
+            card,
+            "QuestCountNumberText",
+            NumberResourceRoot,
+            20f,
+            new Vector2(0.3f, 0.31f),
+            new Vector2(0.38f, 0.4f));
+        objectiveProgressLabelText = RuntimeUiFactory.CreateText(
+            "ObjectiveProgressLabelText",
+            card,
+            "Progress",
+            18,
+            new Vector2(0.42f, 0.31f),
+            new Vector2(0.56f, 0.4f),
+            TextAlignmentOptions.Left,
+            Color.white);
+        progressNumberText = new SpriteNumberText(
+            card,
+            "ObjectiveProgressNumberText",
+            NumberResourceRoot,
+            20f,
+            new Vector2(0.56f, 0.31f),
+            new Vector2(0.66f, 0.4f));
+        RuntimeUiFactory.CreateText(
+            "ObjectiveProgressSlashText",
+            card,
+            "/",
+            20,
+            new Vector2(0.66f, 0.31f),
+            new Vector2(0.69f, 0.4f),
+            TextAlignmentOptions.Center,
+            Color.white);
+        targetNumberText = new SpriteNumberText(
+            card,
+            "ObjectiveTargetNumberText",
+            NumberResourceRoot,
+            20f,
+            new Vector2(0.69f, 0.31f),
+            new Vector2(0.82f, 0.4f));
 
         RuntimeUiFactory.CreateButton(
             "ClaimQuestButton",
@@ -134,12 +217,12 @@ public sealed class QuestPanelUI
     {
         if (questManager == null)
         {
-            questText.text = QuestPanelFormatter.DataUnavailable;
+            SetText(questText, QuestPanelFormatter.DataUnavailable);
             SetProgress(QuestPanelFormatter.BuildProgress(null));
             return;
         }
 
-        questText.text = questManager.GetStatusText();
+        SetText(questText, questManager.GetStatusText());
         RefreshProgress(data);
     }
 
@@ -160,6 +243,71 @@ public sealed class QuestPanelUI
             progressFill,
             progress.Progress,
             progress.Target);
-        progressText.text = progress.Text;
+        SetText(
+            questProgressLabelText,
+            LocalizationManager.Translate("Quest"));
+        SetText(
+            objectiveProgressLabelText,
+            LocalizationManager.Translate("Progress"));
+        questIndexNumberText?.SetText(
+            CompactNumberFormatter.Format(progress.QuestIndex + 1));
+        questCountNumberText?.SetText(
+            CompactNumberFormatter.Format(
+                Mathf.Max(1, QuestManager.QuestCount)));
+        progressNumberText?.SetText(
+            CompactNumberFormatter.Format(progress.Progress));
+        targetNumberText?.SetText(
+            CompactNumberFormatter.Format(progress.Target));
+    }
+
+    private void Bind(
+        Action showMore,
+        Action claimQuest,
+        Action claimAchievements)
+    {
+        questText = RuntimeUiBinder.FindText(panel, "QuestText");
+        progressFill =
+            RuntimeUiBinder.FindProgressFill(panel, "QuestProgressBar");
+        questProgressLabelText =
+            RuntimeUiBinder.FindText(panel, "QuestProgressLabelText");
+        objectiveProgressLabelText =
+            RuntimeUiBinder.FindText(panel, "ObjectiveProgressLabelText");
+        questIndexNumberText = RuntimeUiBinder.BindNumber(
+            panel,
+            "QuestIndexNumberText",
+            NumberResourceRoot,
+            20f);
+        questCountNumberText = RuntimeUiBinder.BindNumber(
+            panel,
+            "QuestCountNumberText",
+            NumberResourceRoot,
+            20f);
+        progressNumberText = RuntimeUiBinder.BindNumber(
+            panel,
+            "ObjectiveProgressNumberText",
+            NumberResourceRoot,
+            20f);
+        targetNumberText = RuntimeUiBinder.BindNumber(
+            panel,
+            "ObjectiveTargetNumberText",
+            NumberResourceRoot,
+            20f);
+
+        Replace("QuestBackButton", showMore);
+        Replace("ClaimQuestButton", claimQuest);
+        Replace("ClaimAchievementButton", claimAchievements);
+    }
+
+    private void Replace(string buttonName, Action action)
+    {
+        RuntimeUiBinder.ReplaceButtonAction(
+            RuntimeUiBinder.FindButton(panel, buttonName),
+            () => action?.Invoke());
+    }
+
+    private static void SetText(TMP_Text text, string value)
+    {
+        if (text != null)
+            text.text = value;
     }
 }

@@ -37,24 +37,12 @@ public static class BattleHudUiFactory
         RectTransform pad = RuntimeUiFactory.CreatePanel(
             name,
             parent,
-            new Color(tint.r, tint.g, tint.b, 0.18f),
+            new Color(tint.r, tint.g, tint.b, 0f),
             anchor - halfSize,
             anchor + halfSize);
 
         Image background = pad.GetComponent<Image>();
         background.raycastTarget = false;
-
-        Image frame = RuntimeUiFactory.CreateSpriteImage(
-            "PadArt",
-            pad,
-            PrototypeUiArt.PanelFrame,
-            Vector2.zero,
-            Vector2.one);
-        frame.type = Image.Type.Sliced;
-        frame.preserveAspect = false;
-        frame.fillCenter = false;
-        if (frame.sprite != null)
-            frame.color = new Color(tint.r, tint.g, tint.b, 0.55f);
 
         return pad;
     }

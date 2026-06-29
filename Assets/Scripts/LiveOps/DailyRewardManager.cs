@@ -37,27 +37,31 @@ public class DailyRewardManager : MonoBehaviour
         return data.loginDay >= 7 ? 1 : data.loginDay + 1;
     }
 
-    public async Task<bool> ClaimRewardAsync()
+    public Task<bool> ClaimRewardAsync()
     {
         PlayerData data = PlayerDataManager.Instance?.playerData;
         if (data == null || !CanClaimReward())
         {
             Debug.Log("[DailyReward] Already Claimed or data is not ready.");
-            return false;
+            return Task.FromResult(false);
         }
 
+        if (InventoryManager.Instance == null)
+        {
+            Debug.LogError("[DailyReward] InventoryManager is missing.");
+            return Task.FromResult(false);
+        }
+
+        data.EnsureInitialized();
         data.loginDay = GetNextRewardDay();
         GiveReward(data.loginDay);
         data.lastRewardDate = DateTime.UtcNow.ToString("yyyy-MM-dd");
 
-        if (FirestoreManager.Instance != null)
-            await FirestoreManager.Instance.SavePlayerDataAsync(data);
-
-        PlayerDataManager.Instance.NotifyPlayerDataChanged();
-        AnalyticsManager.Instance?.LogDailyReward();
+        PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
+        LogDailyRewardSafely();
 
         Debug.Log($"[DailyReward] Day {data.loginDay} Claimed");
-        return true;
+        return Task.FromResult(true);
     }
 
     public async void ClaimReward()
@@ -88,5 +92,19 @@ public class DailyRewardManager : MonoBehaviour
             false);
 
         Debug.Log($"[DailyReward] Day {day} Reward Given");
+    }
+
+    private static void LogDailyRewardSafely()
+    {
+        try
+        {
+            AnalyticsManager.Instance?.LogDailyReward();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning(
+                "[DailyReward] Analytics logging failed: " +
+                exception.Message);
+        }
     }
 }

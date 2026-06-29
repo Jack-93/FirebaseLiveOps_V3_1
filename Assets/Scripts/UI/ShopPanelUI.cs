@@ -4,11 +4,20 @@ using UnityEngine;
 
 public sealed class ShopPanelUI
 {
-    private readonly RectTransform panel;
-    private readonly TMP_Text shopText;
-    private readonly ShopProductButtonsUI productButtons;
+    private const string NumberResourceRoot =
+        "PrototypeArt/Numbers/DamageGold";
 
-    public GameObject GameObject => panel.gameObject;
+    private RectTransform panel;
+    private TMP_Text shopText;
+    private TMP_Text gemsLabelText;
+    private TMP_Text goldLabelText;
+    private TMP_Text ticketsLabelText;
+    private SpriteNumberText gemsNumberText;
+    private SpriteNumberText goldNumberText;
+    private SpriteNumberText ticketsNumberText;
+    private ShopProductButtonsUI productButtons;
+
+    public GameObject GameObject => panel == null ? null : panel.gameObject;
 
     private static readonly Color OverlayBackground =
         new Color32(12, 18, 30, 218);
@@ -26,6 +35,48 @@ public sealed class ShopPanelUI
         new Color32(190, 203, 225, 255);
 
     public ShopPanelUI(
+        RectTransform root,
+        Action showMore,
+        Action buyStarterPack,
+        Action buySmallGemPack,
+        Action buyLargeGemPack,
+        Action watchRewardedAd,
+        Action buyGoldPouch,
+        Action buyTicketBundle,
+        Action buyGrowthChest,
+        bool usePrefab = true)
+    {
+        if (usePrefab &&
+            RuntimeUiBinder.TryInstantiatePrefab(
+                "ShopPanel",
+                root,
+                out panel))
+        {
+            Bind(
+                showMore,
+                buyStarterPack,
+                buySmallGemPack,
+                buyLargeGemPack,
+                watchRewardedAd,
+                buyGoldPouch,
+                buyTicketBundle,
+                buyGrowthChest);
+            return;
+        }
+
+        BuildGenerated(
+            root,
+            showMore,
+            buyStarterPack,
+            buySmallGemPack,
+            buyLargeGemPack,
+            watchRewardedAd,
+            buyGoldPouch,
+            buyTicketBundle,
+            buyGrowthChest);
+    }
+
+    public void BuildGenerated(
         RectTransform root,
         Action showMore,
         Action buyStarterPack,
@@ -89,13 +140,62 @@ public sealed class ShopPanelUI
             TextAlignmentOptions.Left,
             Gold);
 
+        gemsLabelText = RuntimeUiFactory.CreateText(
+            "ShopGemsLabel",
+            card,
+            "Gems",
+            21,
+            new Vector2(0.07f, 0.82f),
+            new Vector2(0.18f, 0.89f),
+            TextAlignmentOptions.Left,
+            Color.white);
+        gemsNumberText = new SpriteNumberText(
+            card,
+            "ShopGemsNumberText",
+            NumberResourceRoot,
+            22f,
+            new Vector2(0.18f, 0.82f),
+            new Vector2(0.33f, 0.89f));
+        goldLabelText = RuntimeUiFactory.CreateText(
+            "ShopGoldLabel",
+            card,
+            "Gold",
+            21,
+            new Vector2(0.36f, 0.82f),
+            new Vector2(0.47f, 0.89f),
+            TextAlignmentOptions.Left,
+            Color.white);
+        goldNumberText = new SpriteNumberText(
+            card,
+            "ShopGoldNumberText",
+            NumberResourceRoot,
+            22f,
+            new Vector2(0.47f, 0.82f),
+            new Vector2(0.64f, 0.89f));
+        ticketsLabelText = RuntimeUiFactory.CreateText(
+            "ShopTicketsLabel",
+            card,
+            "Tickets",
+            21,
+            new Vector2(0.67f, 0.82f),
+            new Vector2(0.8f, 0.89f),
+            TextAlignmentOptions.Left,
+            Color.white);
+        ticketsNumberText = new SpriteNumberText(
+            card,
+            "ShopTicketsNumberText",
+            NumberResourceRoot,
+            22f,
+            new Vector2(0.8f, 0.82f),
+            new Vector2(0.93f, 0.89f));
+
         shopText = RuntimeUiFactory.CreateText(
             "ShopText",
             card,
             ShopPanelSummaryFormatter.DataUnavailable,
-            24,
-            new Vector2(0.07f, 0.78f),
-            new Vector2(0.93f, 0.89f),
+            21,
+            new Vector2(0.07f, 0.76f),
+            new Vector2(0.93f, 0.82f),
             TextAlignmentOptions.TopLeft,
             Color.white);
 
@@ -114,14 +214,99 @@ public sealed class ShopPanelUI
     {
         if (data == null)
         {
-            shopText.text = ShopPanelSummaryFormatter.DataUnavailable;
-            productButtons.SetRealMoneyButtonsInteractable(false);
+            SetText(shopText, ShopPanelSummaryFormatter.DataUnavailable);
+            SetWalletVisible(false);
+            productButtons?.SetRealMoneyButtonsInteractable(false);
             return;
         }
 
-        shopText.text = ShopPanelSummaryFormatter.FormatWallet(
-            data,
-            monetization);
-        productButtons.Refresh(data, monetization);
+        SetWalletVisible(true);
+        RefreshWallet(data);
+        SetText(
+            shopText,
+            monetization?.GetStoreStatus() ??
+            ShopPanelSummaryFormatter.MonetizationUnavailable);
+        productButtons?.Refresh(data, monetization);
+    }
+
+    private void RefreshWallet(PlayerData data)
+    {
+        SetText(gemsLabelText, LocalizationManager.Translate("Gems"));
+        gemsNumberText?.SetText(
+            CompactNumberFormatter.Format(
+                GachaEconomy.GetItemCount(data, "Gem")));
+        SetText(goldLabelText, LocalizationManager.Translate("Gold"));
+        goldNumberText?.SetText(
+            CompactNumberFormatter.Format(data.gold));
+        SetText(ticketsLabelText, LocalizationManager.Translate("Tickets"));
+        ticketsNumberText?.SetText(
+            CompactNumberFormatter.Format(
+                GachaEconomy.GetItemCount(data, "GachaTicket")));
+    }
+
+    private void SetWalletVisible(bool visible)
+    {
+        SetTextActive(gemsLabelText, visible);
+        SetTextActive(goldLabelText, visible);
+        SetTextActive(ticketsLabelText, visible);
+        gemsNumberText?.SetActive(visible);
+        goldNumberText?.SetActive(visible);
+        ticketsNumberText?.SetActive(visible);
+    }
+
+    private void Bind(
+        Action showMore,
+        Action buyStarterPack,
+        Action buySmallGemPack,
+        Action buyLargeGemPack,
+        Action watchRewardedAd,
+        Action buyGoldPouch,
+        Action buyTicketBundle,
+        Action buyGrowthChest)
+    {
+        RectTransform card = RuntimeUiBinder.FindRect(panel, "ShopCard");
+        gemsLabelText = RuntimeUiBinder.FindText(panel, "ShopGemsLabel");
+        goldLabelText = RuntimeUiBinder.FindText(panel, "ShopGoldLabel");
+        ticketsLabelText =
+            RuntimeUiBinder.FindText(panel, "ShopTicketsLabel");
+        gemsNumberText = BindNumber("ShopGemsNumberText", 22f);
+        goldNumberText = BindNumber("ShopGoldNumberText", 22f);
+        ticketsNumberText = BindNumber("ShopTicketsNumberText", 22f);
+        shopText = RuntimeUiBinder.FindText(panel, "ShopText");
+        RuntimeUiBinder.ReplaceButtonAction(
+            RuntimeUiBinder.FindButton(panel, "ShopBackButton"),
+            () => showMore?.Invoke());
+
+        productButtons = new ShopProductButtonsUI(
+            card,
+            buyStarterPack,
+            buySmallGemPack,
+            buyLargeGemPack,
+            watchRewardedAd,
+            buyGoldPouch,
+            buyTicketBundle,
+            buyGrowthChest,
+            true);
+    }
+
+    private SpriteNumberText BindNumber(string name, float height)
+    {
+        return RuntimeUiBinder.BindNumber(
+            panel,
+            name,
+            NumberResourceRoot,
+            height);
+    }
+
+    private static void SetText(TMP_Text text, string value)
+    {
+        if (text != null)
+            text.text = value;
+    }
+
+    private static void SetTextActive(TMP_Text text, bool active)
+    {
+        if (text != null)
+            text.gameObject.SetActive(active);
     }
 }

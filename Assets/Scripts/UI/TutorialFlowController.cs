@@ -1,22 +1,24 @@
 using System;
-using System.Collections.Generic;
 
 public sealed class TutorialFlowController
 {
     private readonly TutorialManager tutorialManager;
     private readonly Action showBattle;
     private readonly Action showGrowth;
+    private readonly Action showGacha;
     private readonly Action refreshTutorial;
 
     public TutorialFlowController(
         TutorialManager tutorialManager,
         Action showBattle,
         Action showGrowth,
+        Action showGacha,
         Action refreshTutorial)
     {
         this.tutorialManager = tutorialManager;
         this.showBattle = showBattle;
         this.showGrowth = showGrowth;
+        this.showGacha = showGacha;
         this.refreshTutorial = refreshTutorial;
     }
 
@@ -28,11 +30,13 @@ public sealed class TutorialFlowController
         switch (tutorialManager.CurrentStep)
         {
             case 0:
-                tutorialManager.BeginTutorial();
-                showBattle?.Invoke();
+                if (tutorialManager.ShouldShowTutorialTicketGift)
+                    tutorialManager.ClaimTutorialGachaTickets();
+
+                showGacha?.Invoke();
+                refreshTutorial?.Invoke();
                 break;
             case 1:
-                showBattle?.Invoke();
                 break;
             case 2:
                 showGrowth?.Invoke();
@@ -51,7 +55,7 @@ public sealed class TutorialFlowController
             return;
         }
 
-        IReadOnlyList<StoryIntroCut> cuts = tutorialManager.StoryCuts;
+        var cuts = tutorialManager.StoryCuts;
         bool isLastCut =
             cuts.Count == 0 ||
             tutorialManager.CurrentStoryCutIndex >= cuts.Count - 1;
@@ -61,16 +65,20 @@ public sealed class TutorialFlowController
         if (isLastCut)
         {
             tutorialManager.BeginTutorial();
-            showBattle?.Invoke();
+            refreshTutorial?.Invoke();
         }
     }
 
-    public void HandleStoryIntroSkip()
+    public void HandleStoryIntroPrevious()
     {
-        if (tutorialManager == null)
+        if (tutorialManager == null ||
+            !tutorialManager.ShouldShowStoryIntro)
+        {
             return;
+        }
 
-        tutorialManager.SkipStoryIntro();
+        tutorialManager.PreviousStoryIntro();
         refreshTutorial?.Invoke();
     }
+
 }

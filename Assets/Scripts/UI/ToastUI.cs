@@ -3,11 +3,28 @@ using UnityEngine;
 
 public sealed class ToastUI
 {
-    private readonly GameObject panel;
-    private readonly TMP_Text text;
+    private GameObject panel;
+    private TMP_Text text;
     private float timer;
 
-    public ToastUI(RectTransform root)
+    public GameObject GameObject => panel;
+
+    public ToastUI(RectTransform root, bool usePrefab = true)
+    {
+        if (usePrefab &&
+            RuntimeUiBinder.TryInstantiatePrefab(
+                "ToastPanel",
+                root,
+                out RectTransform toast))
+        {
+            Bind(toast);
+            return;
+        }
+
+        BuildGenerated(root);
+    }
+
+    public void BuildGenerated(RectTransform root)
     {
         RectTransform toast = RuntimeUiFactory.CreatePanel(
             "ToastPanel",
@@ -32,8 +49,9 @@ public sealed class ToastUI
 
     public void Show(string message)
     {
-        text.text = message;
-        panel.SetActive(true);
+        if (text != null)
+            text.text = message;
+        panel?.SetActive(true);
         timer = 2f;
     }
 
@@ -44,6 +62,13 @@ public sealed class ToastUI
 
         timer -= deltaTime;
         if (timer <= 0f)
-            panel.SetActive(false);
+            panel?.SetActive(false);
+    }
+
+    private void Bind(RectTransform toast)
+    {
+        panel = toast.gameObject;
+        text = RuntimeUiBinder.FindText(toast, "ToastText");
+        panel.SetActive(false);
     }
 }

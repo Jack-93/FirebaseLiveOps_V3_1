@@ -5,11 +5,11 @@ using UnityEngine.UI;
 
 public sealed class AccountPanelUI
 {
-    private readonly RectTransform panel;
-    private readonly TMP_Text accountDetailText;
-    private readonly Button googleLinkButton;
+    private RectTransform panel;
+    private TMP_Text accountDetailText;
+    private Button googleLinkButton;
 
-    public GameObject GameObject => panel.gameObject;
+    public GameObject GameObject => panel == null ? null : panel.gameObject;
 
     private static readonly Color OverlayBackground =
         new Color32(12, 18, 30, 218);
@@ -27,6 +27,26 @@ public sealed class AccountPanelUI
         new Color32(190, 203, 225, 255);
 
     public AccountPanelUI(
+        RectTransform root,
+        Action showMore,
+        Action linkGoogle,
+        Action startNewGuest,
+        bool usePrefab = true)
+    {
+        if (usePrefab &&
+            RuntimeUiBinder.TryInstantiatePrefab(
+                "AccountPanel",
+                root,
+                out panel))
+        {
+            Bind(showMore, linkGoogle, startNewGuest);
+            return;
+        }
+
+        BuildGenerated(root, showMore, linkGoogle, startNewGuest);
+    }
+
+    public void BuildGenerated(
         RectTransform root,
         Action showMore,
         Action linkGoogle,
@@ -137,14 +157,18 @@ public sealed class AccountPanelUI
     {
         if (accounts == null)
         {
-            accountDetailText.text = LocalizationManager.Text(
-                "Account service is unavailable.",
-                "계정 서비스를 사용할 수 없습니다.");
-            googleLinkButton.interactable = false;
+            SetText(
+                accountDetailText,
+                LocalizationManager.Text(
+                    "Account service is unavailable.",
+                    "\uACC4\uC815 \uC11C\uBE44\uC2A4\uB97C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."));
+            if (googleLinkButton != null)
+                googleLinkButton.interactable = false;
             return;
         }
 
-        accountDetailText.text =
+        SetText(
+            accountDetailText,
             accounts.GetAccountSummary() + "\n\n" +
             SaveStatusFormatter.FormatDetailed(FirestoreManager.Instance) +
             "\n\n" +
@@ -152,10 +176,40 @@ public sealed class AccountPanelUI
             FirebaseManager.GetDiagnosticsStatus() + "\n" +
             (PushNotificationManager.Instance != null
                 ? PushNotificationManager.Instance.GetTokenStatus()
-                : "FCM: Pending");
+                : "FCM: Pending"));
 
-        googleLinkButton.interactable =
-            !accounts.IsBusy &&
-            !accounts.IsLinked(AccountLinkProvider.Google);
+        if (googleLinkButton != null)
+        {
+            googleLinkButton.interactable =
+                !accounts.IsBusy &&
+                !accounts.IsLinked(AccountLinkProvider.Google);
+        }
+    }
+
+    private void Bind(
+        Action showMore,
+        Action linkGoogle,
+        Action startNewGuest)
+    {
+        accountDetailText =
+            RuntimeUiBinder.FindText(panel, "AccountDetailText");
+        googleLinkButton =
+            RuntimeUiBinder.FindButton(panel, "GoogleLinkButton");
+        Replace("AccountBackButton", showMore);
+        Replace("GoogleLinkButton", linkGoogle);
+        Replace("NewGuestButton", startNewGuest);
+    }
+
+    private void Replace(string buttonName, Action action)
+    {
+        RuntimeUiBinder.ReplaceButtonAction(
+            RuntimeUiBinder.FindButton(panel, buttonName),
+            () => action?.Invoke());
+    }
+
+    private static void SetText(TMP_Text text, string value)
+    {
+        if (text != null)
+            text.text = value;
     }
 }

@@ -32,8 +32,19 @@ public class PlayerDataManager : MonoBehaviour
         Debug.Log("[PlayerData] Data Set");
     }
 
-    public void NotifyPlayerDataChanged()
+    public void NotifyPlayerDataChanged(bool requestSave = false)
     {
-        OnPlayerDataChanged?.Invoke();
+        if (requestSave)
+            PlayerDataSaveScheduler.Instance?.RequestSave(playerData);
+
+        InvokePlayerDataChanged();
+    }
+
+    private void InvokePlayerDataChanged()
+    {
+        SafeEvent.Invoke(
+            OnPlayerDataChanged,
+            "PlayerData",
+            nameof(OnPlayerDataChanged));
     }
 }

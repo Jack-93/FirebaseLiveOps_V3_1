@@ -4,14 +4,25 @@ using UnityEngine;
 
 public sealed class EventPanelUI
 {
-    private readonly RectTransform panel;
-    private readonly TMP_Text eventText;
-    private readonly TMP_Text progressText;
-    private readonly RectTransform killFill;
-    private readonly RectTransform gachaFill;
-    private readonly RectTransform pointFill;
+    private const string NumberResourceRoot =
+        "PrototypeArt/Numbers/DamageGold";
 
-    public GameObject GameObject => panel.gameObject;
+    private RectTransform panel;
+    private TMP_Text eventText;
+    private TMP_Text killLabelText;
+    private TMP_Text gachaLabelText;
+    private TMP_Text pointLabelText;
+    private SpriteNumberText killCurrentNumberText;
+    private SpriteNumberText killTargetNumberText;
+    private SpriteNumberText gachaCurrentNumberText;
+    private SpriteNumberText gachaTargetNumberText;
+    private SpriteNumberText pointCurrentNumberText;
+    private SpriteNumberText pointTargetNumberText;
+    private RectTransform killFill;
+    private RectTransform gachaFill;
+    private RectTransform pointFill;
+
+    public GameObject GameObject => panel == null ? null : panel.gameObject;
 
     private static readonly Color OverlayBackground =
         new Color32(12, 18, 30, 218);
@@ -31,6 +42,25 @@ public sealed class EventPanelUI
         new Color32(190, 203, 225, 255);
 
     public EventPanelUI(
+        RectTransform root,
+        Action showMore,
+        Action claimReward,
+        bool usePrefab = true)
+    {
+        if (usePrefab &&
+            RuntimeUiBinder.TryInstantiatePrefab(
+                "EventPanel",
+                root,
+                out panel))
+        {
+            Bind(showMore, claimReward);
+            return;
+        }
+
+        BuildGenerated(root, showMore, claimReward);
+    }
+
+    public void BuildGenerated(
         RectTransform root,
         Action showMore,
         Action claimReward)
@@ -98,15 +128,28 @@ public sealed class EventPanelUI
             TextAlignmentOptions.TopLeft,
             Color.white);
 
-        progressText = RuntimeUiFactory.CreateText(
-            "EventProgressText",
+        CreateProgressLine(
             card,
-            "0 / 0",
-            21,
-            new Vector2(0.07f, 0.41f),
-            new Vector2(0.93f, 0.48f),
-            TextAlignmentOptions.Left,
-            MutedText);
+            "Kills",
+            0.405f,
+            out killLabelText,
+            out killCurrentNumberText,
+            out killTargetNumberText);
+        CreateProgressLine(
+            card,
+            "Gacha",
+            0.345f,
+            out gachaLabelText,
+            out gachaCurrentNumberText,
+            out gachaTargetNumberText);
+        CreateProgressLine(
+            card,
+            "Points",
+            0.285f,
+            out pointLabelText,
+            out pointCurrentNumberText,
+            out pointTargetNumberText);
+
         killFill = RuntimeProgressBar.Create(
             card,
             "EventKillProgressBar",
@@ -140,12 +183,12 @@ public sealed class EventPanelUI
     {
         if (eventManager == null)
         {
-            eventText.text = EventPanelFormatter.DataUnavailable;
+            SetText(eventText, EventPanelFormatter.DataUnavailable);
             SetEmptyProgress();
             return;
         }
 
-        eventText.text = eventManager.GetStatusText();
+        SetText(eventText, eventManager.GetStatusText());
         RefreshProgress(data);
     }
 
@@ -169,8 +212,29 @@ public sealed class EventPanelUI
             pointFill,
             data.eventMissionPoints,
             EventMissionManager.RewardPointTarget);
-
-        progressText.text = EventPanelFormatter.FormatProgress(data);
+        SetProgressLine(
+            killLabelText,
+            killCurrentNumberText,
+            killTargetNumberText,
+            "Kills",
+            Math.Min(data.eventKillCount, EventMissionManager.KillTarget),
+            EventMissionManager.KillTarget);
+        SetProgressLine(
+            gachaLabelText,
+            gachaCurrentNumberText,
+            gachaTargetNumberText,
+            "Gacha",
+            Math.Min(data.eventGachaCount, EventMissionManager.GachaTarget),
+            EventMissionManager.GachaTarget);
+        SetProgressLine(
+            pointLabelText,
+            pointCurrentNumberText,
+            pointTargetNumberText,
+            "Points",
+            Math.Min(
+                data.eventMissionPoints,
+                EventMissionManager.RewardPointTarget),
+            EventMissionManager.RewardPointTarget);
     }
 
     private void SetEmptyProgress()
@@ -178,6 +242,126 @@ public sealed class EventPanelUI
         RuntimeProgressBar.Set(killFill, 0, 1);
         RuntimeProgressBar.Set(gachaFill, 0, 1);
         RuntimeProgressBar.Set(pointFill, 0, 1);
-        progressText.text = EventPanelFormatter.EmptyProgress;
+        SetProgressLine(
+            killLabelText,
+            killCurrentNumberText,
+            killTargetNumberText,
+            "Kills",
+            0,
+            1);
+        SetProgressLine(
+            gachaLabelText,
+            gachaCurrentNumberText,
+            gachaTargetNumberText,
+            "Gacha",
+            0,
+            1);
+        SetProgressLine(
+            pointLabelText,
+            pointCurrentNumberText,
+            pointTargetNumberText,
+            "Points",
+            0,
+            1);
+    }
+
+    private void Bind(Action showMore, Action claimReward)
+    {
+        eventText = RuntimeUiBinder.FindText(panel, "EventText");
+        killLabelText = RuntimeUiBinder.FindText(panel, "EventKillsLabel");
+        gachaLabelText = RuntimeUiBinder.FindText(panel, "EventGachaLabel");
+        pointLabelText = RuntimeUiBinder.FindText(panel, "EventPointsLabel");
+        killCurrentNumberText = BindNumber("EventKillsCurrentNumberText");
+        killTargetNumberText = BindNumber("EventKillsTargetNumberText");
+        gachaCurrentNumberText = BindNumber("EventGachaCurrentNumberText");
+        gachaTargetNumberText = BindNumber("EventGachaTargetNumberText");
+        pointCurrentNumberText = BindNumber("EventPointsCurrentNumberText");
+        pointTargetNumberText = BindNumber("EventPointsTargetNumberText");
+        killFill =
+            RuntimeUiBinder.FindProgressFill(panel, "EventKillProgressBar");
+        gachaFill =
+            RuntimeUiBinder.FindProgressFill(panel, "EventGachaProgressBar");
+        pointFill =
+            RuntimeUiBinder.FindProgressFill(panel, "EventPointProgressBar");
+        Replace("EventBackButton", showMore);
+        Replace("ClaimEventRewardButton", claimReward);
+    }
+
+    private SpriteNumberText BindNumber(string name)
+    {
+        return RuntimeUiBinder.BindNumber(
+            panel,
+            name,
+            NumberResourceRoot,
+            18f);
+    }
+
+    private void Replace(string buttonName, Action action)
+    {
+        RuntimeUiBinder.ReplaceButtonAction(
+            RuntimeUiBinder.FindButton(panel, buttonName),
+            () => action?.Invoke());
+    }
+
+    private static void CreateProgressLine(
+        RectTransform card,
+        string label,
+        float yMin,
+        out TMP_Text labelText,
+        out SpriteNumberText currentNumberText,
+        out SpriteNumberText targetNumberText)
+    {
+        float yMax = yMin + 0.045f;
+        labelText = RuntimeUiFactory.CreateText(
+            "Event" + label + "Label",
+            card,
+            label,
+            18,
+            new Vector2(0.07f, yMin),
+            new Vector2(0.22f, yMax),
+            TextAlignmentOptions.Left,
+            MutedText);
+        currentNumberText = new SpriteNumberText(
+            card,
+            "Event" + label + "CurrentNumberText",
+            NumberResourceRoot,
+            18f,
+            new Vector2(0.22f, yMin),
+            new Vector2(0.34f, yMax));
+        RuntimeUiFactory.CreateText(
+            "Event" + label + "Slash",
+            card,
+            "/",
+            18,
+            new Vector2(0.34f, yMin),
+            new Vector2(0.37f, yMax),
+            TextAlignmentOptions.Center,
+            Color.white);
+        targetNumberText = new SpriteNumberText(
+            card,
+            "Event" + label + "TargetNumberText",
+            NumberResourceRoot,
+            18f,
+            new Vector2(0.37f, yMin),
+            new Vector2(0.5f, yMax));
+    }
+
+    private static void SetProgressLine(
+        TMP_Text labelText,
+        SpriteNumberText currentNumberText,
+        SpriteNumberText targetNumberText,
+        string label,
+        int current,
+        int target)
+    {
+        SetText(labelText, LocalizationManager.Translate(label));
+        currentNumberText?.SetText(CompactNumberFormatter.Format(current));
+        targetNumberText?.SetText(CompactNumberFormatter.Format(target));
+    }
+
+    private static void SetText(TMP_Text text, string value)
+    {
+        if (text != null)
+            text.text = value;
     }
 }

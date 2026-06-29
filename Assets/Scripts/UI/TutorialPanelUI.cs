@@ -5,12 +5,34 @@ using UnityEngine.UI;
 
 public sealed class TutorialPanelUI
 {
-    private readonly GameObject panelObject;
-    private readonly TMP_Text objectiveTitleText;
-    private readonly TMP_Text tutorialText;
-    private readonly TMP_Text tutorialButtonText;
+    private GameObject panelObject;
+    private TMP_Text objectiveTitleText;
+    private TMP_Text tutorialText;
+    private RectTransform tutorialTextRect;
+    private Button tutorialButton;
+    private TMP_Text tutorialButtonText;
 
-    public TutorialPanelUI(RectTransform root, Action action)
+    public GameObject GameObject => panelObject;
+
+    public TutorialPanelUI(
+        RectTransform root,
+        Action action,
+        bool usePrefab = true)
+    {
+        if (usePrefab &&
+            RuntimeUiBinder.TryInstantiatePrefab(
+                "TutorialPanel",
+                root,
+                out RectTransform panel))
+        {
+            Bind(panel, action);
+            return;
+        }
+
+        BuildGenerated(root, action);
+    }
+
+    public void BuildGenerated(RectTransform root, Action action)
     {
         RectTransform panel = RuntimeUiFactory.CreatePanel(
             "TutorialPanel",
@@ -39,8 +61,9 @@ public sealed class TutorialPanelUI
             new Vector2(0.72f, 0.58f),
             TextAlignmentOptions.Left,
             new Color32(190, 203, 225, 255));
+        tutorialTextRect = tutorialText.GetComponent<RectTransform>();
 
-        Button button = RuntimeUiFactory.CreateButton(
+        tutorialButton = RuntimeUiFactory.CreateButton(
             "TutorialAction",
             panel,
             "START",
@@ -48,7 +71,8 @@ public sealed class TutorialPanelUI
             new Vector2(0.97f, 0.82f),
             new Color32(255, 201, 77, 255),
             () => action?.Invoke());
-        tutorialButtonText = button.GetComponentInChildren<TMP_Text>();
+        tutorialButtonText =
+            tutorialButton.GetComponentInChildren<TMP_Text>();
     }
 
     public void Refresh(
@@ -60,31 +84,88 @@ public sealed class TutorialPanelUI
 
         if (shouldHideForStoryIntro)
         {
-            panelObject.SetActive(false);
+            panelObject?.SetActive(false);
             return;
         }
 
-        panelObject.SetActive(!tutorialManager.IsComplete);
+        panelObject?.SetActive(!tutorialManager.IsComplete);
         if (tutorialManager.IsComplete)
             return;
 
-        objectiveTitleText.text =
-            tutorialManager.CurrentStep == 0
-                ? "WELCOME"
-                : "NEXT OBJECTIVE";
-        tutorialText.text = tutorialManager.CurrentMessage;
-        tutorialButtonText.text =
-            GetButtonLabel(tutorialManager.CurrentStep);
+        if (objectiveTitleText != null)
+        {
+            objectiveTitleText.text =
+                tutorialManager.CurrentStep == 0
+                    ? LocalizationManager.Text(
+                        "WELCOME",
+                        "\uC791\uC804 \uC2DC\uC791")
+                    : LocalizationManager.Text(
+                        "NEXT OBJECTIVE",
+                        "\uB2E4\uC74C \uBAA9\uD45C");
+        }
+
+        if (tutorialText != null)
+            tutorialText.text = tutorialManager.CurrentMessage;
+
+        bool showActionButton =
+            ShouldShowActionButton(tutorialManager.CurrentStep);
+        if (tutorialButton != null)
+            tutorialButton.gameObject.SetActive(showActionButton);
+        if (tutorialTextRect != null)
+        {
+            tutorialTextRect.anchorMax = showActionButton
+                ? new Vector2(0.72f, 0.58f)
+                : new Vector2(0.96f, 0.58f);
+        }
+
+        if (showActionButton && tutorialButtonText != null)
+            tutorialButtonText.text = GetButtonLabel(tutorialManager);
     }
 
-    private static string GetButtonLabel(int step)
+    private static bool ShouldShowActionButton(int step)
     {
-        return step switch
+        return step != 1;
+    }
+
+    private void Bind(RectTransform panel, Action action)
+    {
+        panelObject = panel.gameObject;
+        objectiveTitleText =
+            RuntimeUiBinder.FindText(panel, "ObjectiveTitle");
+        tutorialText = RuntimeUiBinder.FindText(panel, "TutorialText");
+        tutorialTextRect =
+            RuntimeUiBinder.FindRect(panel, "TutorialText");
+        tutorialButton =
+            RuntimeUiBinder.FindButton(panel, "TutorialAction");
+        tutorialButtonText =
+            tutorialButton == null
+                ? null
+                : tutorialButton.GetComponentInChildren<TMP_Text>();
+        RuntimeUiBinder.ReplaceButtonAction(
+            tutorialButton,
+            () => action?.Invoke());
+    }
+
+    private static string GetButtonLabel(TutorialManager tutorialManager)
+    {
+        return tutorialManager.CurrentStep switch
         {
-            0 => "START",
-            1 => "CHARGE",
-            2 => "GROWTH",
-            _ => "BATTLE"
+            0 when tutorialManager.ShouldShowTutorialTicketGift =>
+                LocalizationManager.Text(
+                    "NEXT",
+                    "\uB2E4\uC74C"),
+            0 => LocalizationManager.Text(
+                "RECRUIT",
+                "\uBAA8\uC9D1\uC73C\uB85C"),
+            1 => LocalizationManager.Text(
+                "BATTLE",
+                "\uC804\uD22C\uB85C"),
+            2 => LocalizationManager.Text(
+                "GROWTH",
+                "\uC131\uC7A5\uC73C\uB85C"),
+            _ => LocalizationManager.Text(
+                "BATTLE",
+                "\uC804\uD22C\uB85C")
         };
     }
 }

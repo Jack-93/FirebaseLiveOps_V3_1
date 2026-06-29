@@ -67,35 +67,59 @@ public sealed class RewardActionController
 
     public async void ClaimCurrentQuest()
     {
-        bool claimed = QuestManager.Instance != null &&
-            await QuestManager.Instance.ClaimCurrentQuestAsync();
-        showToast?.Invoke(claimed
-            ? "Quest reward collected. Next quest started."
-            : "Current quest is not complete.");
-        refreshQuests?.Invoke();
+        try
+        {
+            bool claimed = QuestManager.Instance != null &&
+                await QuestManager.Instance.ClaimCurrentQuestAsync();
+            showToast?.Invoke(claimed
+                ? "Quest reward collected. Next quest started."
+                : "Current quest is not complete.");
+            refreshQuests?.Invoke();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+            showToast?.Invoke("Quest reward claim failed.");
+        }
     }
 
     public async void ClaimAchievements()
     {
-        int claimed = QuestManager.Instance == null
-            ? 0
-            : await QuestManager.Instance
-                .ClaimAvailableAchievementsAsync();
-        showToast?.Invoke(claimed > 0
-            ? $"{claimed} achievement reward(s) collected."
-            : "No achievement rewards available.");
-        refreshQuests?.Invoke();
+        try
+        {
+            int claimed = QuestManager.Instance == null
+                ? 0
+                : await QuestManager.Instance
+                    .ClaimAvailableAchievementsAsync();
+            showToast?.Invoke(claimed > 0
+                ? $"{claimed} achievement reward(s) collected."
+                : "No achievement rewards available.");
+            refreshQuests?.Invoke();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+            showToast?.Invoke("Achievement reward claim failed.");
+        }
     }
 
     public async void ClaimEventReward()
     {
-        bool claimed = EventMissionManager.Instance != null &&
-            await EventMissionManager.Instance.ClaimRewardAsync();
-        showToast?.Invoke(claimed
-            ? "Event reward collected."
-            : "Event missions are not complete.");
-        refreshTopBar?.Invoke();
-        refreshMore?.Invoke();
-        refreshEvent?.Invoke();
+        try
+        {
+            bool claimed = EventMissionManager.Instance != null &&
+                await EventMissionManager.Instance.ClaimRewardAsync();
+            showToast?.Invoke(claimed
+                ? "Event reward collected."
+                : "Event missions are not complete.");
+            refreshTopBar?.Invoke();
+            refreshMore?.Invoke();
+            refreshEvent?.Invoke();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+            showToast?.Invoke("Event reward claim failed.");
+        }
     }
 }

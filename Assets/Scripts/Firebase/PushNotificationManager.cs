@@ -94,10 +94,12 @@ public class PushNotificationManager : MonoBehaviour
         data.fcmToken = token;
         data.fcmTokenUpdatedUnixTime =
             DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        PlayerDataManager.Instance.NotifyPlayerDataChanged();
+        PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
 
-        if (FirestoreManager.Instance != null)
-            _ = FirestoreManager.Instance.SavePlayerDataAsync(data);
+        if (PlayerDataSaveScheduler.Instance != null)
+            _ = PlayerDataSaveScheduler.Instance.SaveNowAsync(data);
+        else if (FirestoreManager.Instance != null)
+            FirestoreManager.Instance.SavePlayerData(data);
 
         Debug.Log("[Messaging] FCM token saved.");
     }

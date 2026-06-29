@@ -51,14 +51,9 @@ public class InventoryManager : MonoBehaviour
             $"[Inventory] {itemName} +{amount}"
         );
 
-        if (savePlayerData && FirestoreManager.Instance != null)
-        {
-            FirestoreManager.Instance
-                .SavePlayerData(
-                    data);
-        }
-
-        OnInventoryChanged?.Invoke();
+        if (savePlayerData)
+            PlayerDataManager.Instance?.NotifyPlayerDataChanged(true);
+        NotifyInventoryChanged();
     }
 
     public void RemoveItem(
@@ -94,13 +89,16 @@ public class InventoryManager : MonoBehaviour
             $"[Inventory] {itemName} - {amount}"
         );
 
-        if (savePlayerData && FirestoreManager.Instance != null)
-        {
-            FirestoreManager.Instance
-                .SavePlayerData(
-                    data);
-        }
+        if (savePlayerData)
+            PlayerDataManager.Instance?.NotifyPlayerDataChanged(true);
+        NotifyInventoryChanged();
+    }
 
-        OnInventoryChanged?.Invoke();
+    private void NotifyInventoryChanged()
+    {
+        SafeEvent.Invoke(
+            OnInventoryChanged,
+            "Inventory",
+            nameof(OnInventoryChanged));
     }
 }

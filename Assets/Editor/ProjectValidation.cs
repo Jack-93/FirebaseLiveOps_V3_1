@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using TMPro;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UI;
 
 public static class ProjectValidation
 {
@@ -9,6 +12,8 @@ public static class ProjectValidation
     public static void Run()
     {
         ValidatePlayerDataRoundTrip();
+        ValidateSaveSafety();
+        ValidateSavePathOwnership();
         ValidateLegacyMailCompatibility();
         ValidateCoreProgression();
         ValidateBalanceConfiguration();
@@ -88,6 +93,22 @@ public static class ProjectValidation
                 enemy + " battle enemy art is missing.");
         }
 
+        string[] enemyAnimationFolders =
+        {
+            "CatScout/Idle",
+            "CatScout/Attack",
+            "CatForest/Idle",
+            "CatRooftop/Attack",
+            "CatRainBoss/Skill"
+        };
+        foreach (string folder in enemyAnimationFolders)
+        {
+            ValidatePrototypeSpriteFolder(
+                "Assets/Resources/PrototypeArt/Enemies/Animations/" +
+                folder,
+                folder + " enemy animation frames are missing.");
+        }
+
         Require(
             BattleLayoutConfig.CompanionAnchors.Length ==
             CompanionManager.PartySize,
@@ -117,6 +138,8 @@ public static class ProjectValidation
             level = 7,
             gold = 1234,
             tutorialCompleted = true,
+            tutorialGachaClaimed = true,
+            tutorialGachaTicketsGranted = true,
             storyIntroCompleted = true,
             storyIntroCutIndex = 6,
             pityCount = 42,
@@ -177,6 +200,10 @@ public static class ProjectValidation
             PlayerDataConverter.FromDictionary(encoded);
 
         Require(decoded.uid == source.uid, "UID round trip failed.");
+        Require(decoded.tutorialGachaClaimed,
+            "Tutorial free gacha flag round trip failed.");
+        Require(decoded.tutorialGachaTicketsGranted,
+            "Tutorial gacha ticket gift flag round trip failed.");
         Require(decoded.nickname == source.nickname,
             "Nickname round trip failed.");
         Require(decoded.inventory.items["Gem"] == 777,
@@ -213,6 +240,67 @@ public static class ProjectValidation
             "Companion party round trip failed.");
         Require(decoded.companionStars["Astra"] == 3,
             "Companion stars round trip failed.");
+    }
+
+    private static void ValidateSaveSafety()
+    {
+        PlayerData olderServer = new PlayerData
+        {
+            uid = "validation-user",
+            lastOnlineUnixTime = 100
+        };
+        PlayerData newerLocal = new PlayerData
+        {
+            uid = "validation-user",
+            lastOnlineUnixTime = 101
+        };
+        PlayerData sameAgeLocal = new PlayerData
+        {
+            uid = "validation-user",
+            lastOnlineUnixTime = 100
+        };
+
+        Require(
+            PlayerDataLocalCache.IsNewerThan(newerLocal, olderServer),
+            "Newer local cache should be preferred over server data.");
+        Require(
+            !PlayerDataLocalCache.IsNewerThan(sameAgeLocal, olderServer),
+            "Equal local cache age should not override server data.");
+        Require(
+            !PlayerDataLocalCache.IsNewerThan(null, olderServer),
+            "Missing local cache should not override server data.");
+        Require(
+            !PlayerDataLocalCache.IsNewerThan(newerLocal, null),
+            "Missing server data must be handled explicitly.");
+    }
+
+    private static void ValidateSavePathOwnership()
+    {
+        HashSet<string> allowed = new HashSet<string>
+        {
+            "Assets/Scripts/Battle/BattleManager.cs",
+            "Assets/Scripts/Core/MainGameBootstrap.cs",
+            "Assets/Scripts/Data/PlayerDataSaveScheduler.cs",
+            "Assets/Scripts/Firebase/FirestoreManager.cs",
+            "Assets/Scripts/LiveOps/MonetizationManager.cs",
+            "Assets/Scripts/Tutorial/TutorialManager.cs"
+        };
+
+        foreach (string file in Directory.GetFiles(
+            "Assets/Scripts",
+            "*.cs",
+            SearchOption.AllDirectories))
+        {
+            string normalized = file.Replace('\\', '/');
+            if (allowed.Contains(normalized))
+                continue;
+
+            string text = File.ReadAllText(file);
+            Require(
+                !text.Contains("SavePlayerDataAsync("),
+                "Gameplay save must go through PlayerDataSaveScheduler: " +
+                normalized);
+        }
     }
 
     private static void ValidateLegacyMailCompatibility()
@@ -329,6 +417,22 @@ public static class ProjectValidation
             "Assets/Resources/PrototypeArt/Banners/" +
             "StandardRecruitment.png",
             "StandardRecruitment gacha banner art is missing.");
+        ValidatePrototypeSpriteAsset(
+            "Assets/Resources/PrototypeArt/UI/KenneyIcons/Game/" +
+            "Game_gear.png",
+            "Kenney game icon subset is missing.");
+        ValidatePrototypeSpriteAsset(
+            "Assets/Resources/PrototypeArt/UI/KenneyIcons/Board/" +
+            "Board_cards_stack.png",
+            "Kenney board icon subset is missing.");
+        ValidatePrototypeSpriteAsset(
+            "Assets/Resources/PrototypeArt/UI/ThemeIcons/" +
+            "ThemeElectric_01.png",
+            "Electric theme icon prototype is missing.");
+        ValidatePrototypeSpriteAsset(
+            "Assets/Resources/PrototypeArt/Enemies/" +
+            "CatScout.png",
+            "Last Tick cat enemy art is missing.");
     }
 
     private static void ValidateUiSpriteBorder(
@@ -358,6 +462,15 @@ public static class ProjectValidation
     {
         Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
         Require(sprite != null, missingMessage);
+    }
+
+    private static void ValidatePrototypeSpriteFolder(
+        string assetFolderPath,
+        string missingMessage)
+    {
+        string[] guids =
+            AssetDatabase.FindAssets("t:Sprite", new[] { assetFolderPath });
+        Require(guids != null && guids.Length > 0, missingMessage);
     }
 
     private static void ValidateGachaEconomy()
@@ -400,16 +513,20 @@ public static class ProjectValidation
 
     private static void ValidateStoryIntro()
     {
-        IReadOnlyList<StoryIntroCut> cuts =
+        List<StoryIntroCut> cuts =
             StoryIntroDatabase.GetCuts();
 
         Require(cuts.Count >= 5 && cuts.Count <= 7,
             "Story intro tutorial should contain five to seven cuts.");
-        Require(StoryIntroDatabase.PlayerRole == "참새 이등병",
+        Require(
+            StoryIntroDatabase.PlayerRole ==
+            "\uCC38\uC0C8 \uC774\uB4F1\uBCD1",
             "Player role story setting is invalid.");
-        Require(StoryIntroDatabase.EnemyFaction == "고양이",
+        Require(
+            StoryIntroDatabase.EnemyFaction == "\uACE0\uC591\uC774",
             "Enemy faction story setting is invalid.");
-        Require(StoryIntroDatabase.WarObjective == "전봇대",
+        Require(
+            StoryIntroDatabase.WarObjective == "\uC804\uBD07\uB300",
             "War objective story setting is invalid.");
 
         for (int i = 0; i < cuts.Count; i++)
@@ -423,11 +540,15 @@ public static class ProjectValidation
                 "Story intro cut title is missing.");
             Require(!string.IsNullOrWhiteSpace(cut.body),
                 "Story intro cut body is missing.");
-            Require(!cut.body.Contains("추후 확정"),
+            Require(
+                !cut.body.Contains(
+                    "\uB300\uC0AC\uB294 \uCD94\uD6C4 \uD655\uC815"),
                 "Story intro cut body must contain draft dialogue.");
             Require(!string.IsNullOrWhiteSpace(cut.artDirection),
                 "Story intro art direction is missing.");
-            Require(cut.artDirection.Contains("아트 필요"),
+            Require(
+                cut.artDirection.Contains(
+                    "\uC544\uD2B8 \uD544\uC694"),
                 "Story intro cut must mark pending art clearly.");
             Require(!string.IsNullOrWhiteSpace(cut.artResourcePath),
                 "Story intro cut art resource path is missing.");
@@ -453,6 +574,10 @@ public static class ProjectValidation
         playerManager.playerData.stageEnemyIndex =
             GameBalance.EnemiesPerStage - 1;
 
+        CompanionManager.Instance = null;
+        GachaManager.Instance = null;
+        InventoryManager.Instance = null;
+
         GameObject runtimeObject =
             new GameObject("ValidationRuntime");
         BattleManager battle =
@@ -463,11 +588,22 @@ public static class ProjectValidation
             runtimeObject.AddComponent<TutorialManager>();
         CompanionManager companion =
             runtimeObject.AddComponent<CompanionManager>();
+        GachaManager gacha =
+            runtimeObject.AddComponent<GachaManager>();
+        InventoryManager inventory =
+            runtimeObject.AddComponent<InventoryManager>();
+        InventoryManager.Instance = inventory;
         MainGameUI ui =
             runtimeObject.AddComponent<MainGameUI>();
 
         try
         {
+            CharacterDatabase characterDatabase =
+                AssetDatabase.LoadAssetAtPath<CharacterDatabase>(
+                    "Assets/Resources/CharacterDatabase.asset");
+            Require(gacha.Initialize(characterDatabase),
+                "Gacha database was not initialized.");
+
             int attackWithoutCompanion =
                 GameBalance.GetPlayerAttack(playerManager.playerData);
             Require(companion.Initialize(),
@@ -509,12 +645,121 @@ public static class ProjectValidation
                 "Growth panel was not created.");
             Require(safeArea.Find("BottomNavigation") != null,
                 "Bottom navigation was not created.");
+            Transform storyIntro =
+                FindDescendant(safeArea, "StoryIntroOverlay");
+            Require(storyIntro != null,
+                "Story intro overlay was not created.");
+            Transform previousButtonTransform =
+                FindDescendant(storyIntro, "StoryIntroPreviousButton");
+            Require(
+                previousButtonTransform != null,
+                "Story intro previous button was not created.");
+            Button previousButton =
+                previousButtonTransform.GetComponent<Button>();
+            Require(previousButton != null,
+                "Story intro previous button has no Button component.");
+            Require(
+                FindDescendant(storyIntro, "StoryIntroSkipButton") == null,
+                "Story intro skip button should not exist.");
+            Transform storyCounter =
+                FindDescendant(storyIntro, "StoryIntroCounter");
+            Require(
+                storyCounter != null &&
+                storyCounter.GetComponent<TMP_Text>()?.text == "1/7",
+                "Story intro counter should show current and total cuts.");
+
+            playerManager.playerData.storyIntroCutIndex = 2;
+            ui.RefreshAll();
+            Require(previousButton.interactable,
+                "Story intro previous button should be interactable after first cut.");
+            previousButton.onClick.Invoke();
+            Require(playerManager.playerData.storyIntroCutIndex == 1,
+                "Story intro previous button click failed.");
+            previousButton.onClick.Invoke();
+            previousButton.onClick.Invoke();
+            Require(playerManager.playerData.storyIntroCutIndex == 0,
+                "Story intro previous transition should stop at first cut.");
+            ui.RefreshAll();
+            Require(!previousButton.interactable,
+                "Story intro previous button should be disabled on first cut.");
+
+            int tutorialTicketsBefore =
+                GachaEconomy.GetItemCount(
+                    playerManager.playerData,
+                    "GachaTicket");
 
             tutorial.BeginTutorial();
             Require(playerManager.playerData.storyIntroCompleted,
                 "Tutorial start should complete the story intro.");
+            Require(playerManager.playerData.tutorialStep == 0,
+                "Tutorial should wait for ticket gift confirmation.");
+            Require(!playerManager.playerData.tutorialGachaClaimed,
+                "Tutorial gacha should not auto-claim after story.");
+            Require(!playerManager.playerData.tutorialGachaTicketsGranted,
+                "Tutorial tickets should not be granted before the gift button.");
+            Require(
+                playerManager.playerData.pendingTutorialGachaResults.Count == 0,
+                "Tutorial gacha results should not exist before click.");
+
+            ui.RefreshAll();
+            Transform tutorialAction =
+                FindDescendant(safeArea, "TutorialAction");
+            Require(tutorialAction != null,
+                "Tutorial action button was not created.");
+            Require(tutorialAction.gameObject.activeSelf,
+                "Tutorial ticket gift action should be visible.");
+            Button tutorialActionButton =
+                tutorialAction.GetComponent<Button>();
+            Require(tutorialActionButton != null,
+                "Tutorial action button has no Button component.");
+            tutorialActionButton.onClick.Invoke();
+
+            Require(playerManager.playerData.tutorialGachaTicketsGranted,
+                "Tutorial tickets were not granted by gift button.");
+            Require(playerManager.playerData.tutorialStep == 0,
+                "Tutorial ticket gift should keep recruitment step active.");
+            Require(!playerManager.playerData.tutorialGachaClaimed,
+                "Tutorial gacha should wait for manual 10x recruitment.");
+            Require(
+                GachaEconomy.GetItemCount(
+                    playerManager.playerData,
+                    "GachaTicket") ==
+                tutorialTicketsBefore +
+                TutorialManager.TutorialGachaTicketCount,
+                "Tutorial ticket gift amount is wrong.");
+
+            Transform recruitTenTransform =
+                FindDescendant(safeArea, "RecruitTenButton");
+            Require(recruitTenTransform != null,
+                "Recruit ten button was not created.");
+            Button recruitTenButton =
+                recruitTenTransform.GetComponent<Button>();
+            Require(recruitTenButton != null,
+                "Recruit ten button has no Button component.");
+            recruitTenButton.onClick.Invoke();
+
             Require(playerManager.playerData.tutorialStep == 1,
-                "Tutorial start transition failed.");
+                "Tutorial 10x recruitment did not advance to power charge.");
+            Require(playerManager.playerData.tutorialGachaClaimed,
+                "Tutorial gacha was not completed by 10x recruitment.");
+            Require(
+                GachaEconomy.GetItemCount(
+                    playerManager.playerData,
+                    "GachaTicket") == tutorialTicketsBefore,
+                "Tutorial 10x recruitment did not spend granted tickets.");
+            Require(
+                playerManager.playerData.pendingTutorialGachaResults.Count == 0,
+                "Tutorial gacha should not store pending free results.");
+            Require(
+                playerManager.playerData.equippedCompanions.Exists(
+                    companionName => !string.IsNullOrEmpty(companionName)),
+                "Tutorial gacha did not keep a companion equipped.");
+
+            ui.RefreshAll();
+            Require(
+                tutorialAction != null &&
+                !tutorialAction.gameObject.activeSelf,
+                "Power charge tutorial should not show a battle button.");
 
             Require(battle.ChargePower(),
                 "Tutorial power charge action failed.");
@@ -561,6 +806,8 @@ public static class ProjectValidation
             UnityEngine.Object.DestroyImmediate(playerObject);
             PlayerDataManager.Instance = null;
             CompanionManager.Instance = null;
+            GachaManager.Instance = null;
+            InventoryManager.Instance = null;
         }
     }
 
@@ -613,5 +860,20 @@ public static class ProjectValidation
     {
         if (!condition)
             throw new InvalidOperationException(message);
+    }
+
+    private static Transform FindDescendant(Transform root, string name)
+    {
+        if (root == null || string.IsNullOrEmpty(name))
+            return null;
+
+        foreach (Transform child in root.GetComponentsInChildren<Transform>(
+            true))
+        {
+            if (child.name == name)
+                return child;
+        }
+
+        return null;
     }
 }

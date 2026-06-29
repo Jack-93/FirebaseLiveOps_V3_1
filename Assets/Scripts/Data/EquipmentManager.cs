@@ -74,28 +74,35 @@ public class EquipmentManager : MonoBehaviour
 
         InventoryManager.Instance?.AddItem(itemName, 1, false);
         AutoEquip(data, itemName, weaponDrop, tier);
-        OnEquipmentDropped?.Invoke(itemName);
-        OnEquipmentChanged?.Invoke();
+        SafeEvent.Invoke(
+            OnEquipmentDropped,
+            itemName,
+            "Equipment",
+            nameof(OnEquipmentDropped));
+        SafeEvent.Invoke(
+            OnEquipmentChanged,
+            "Equipment",
+            nameof(OnEquipmentChanged));
     }
 
-    public async Task<bool> TryUpgradeAsync(EquipmentSlot slot)
+    public Task<bool> TryUpgradeAsync(EquipmentSlot slot)
     {
         PlayerData data = PlayerDataManager.Instance?.playerData;
         if (data == null)
-            return false;
+            return Task.FromResult(false);
 
         string equipped = slot == EquipmentSlot.Weapon
             ? data.equippedWeapon
             : data.equippedArmor;
         if (string.IsNullOrEmpty(equipped))
-            return false;
+            return Task.FromResult(false);
 
         int level = slot == EquipmentSlot.Weapon
             ? data.weaponUpgradeLevel
             : data.armorUpgradeLevel;
         int cost = GetUpgradeCost(level);
         if (data.gold < cost)
-            return false;
+            return Task.FromResult(false);
 
         data.gold -= cost;
         if (slot == EquipmentSlot.Weapon)
@@ -103,14 +110,18 @@ public class EquipmentManager : MonoBehaviour
         else
             data.armorUpgradeLevel++;
 
-        PlayerDataManager.Instance.NotifyPlayerDataChanged();
-        OnEquipmentChanged?.Invoke();
-        OnEquipmentUpgraded?.Invoke(slot);
+        PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
+        SafeEvent.Invoke(
+            OnEquipmentChanged,
+            "Equipment",
+            nameof(OnEquipmentChanged));
+        SafeEvent.Invoke(
+            OnEquipmentUpgraded,
+            slot,
+            "Equipment",
+            nameof(OnEquipmentUpgraded));
 
-        if (FirestoreManager.Instance != null)
-            await FirestoreManager.Instance.SavePlayerDataAsync(data);
-
-        return true;
+        return Task.FromResult(true);
     }
 
     public static int GetWeaponAttack(PlayerData data)
@@ -179,4 +190,5 @@ public class EquipmentManager : MonoBehaviour
         if (!data.inventory.items.ContainsKey(itemName))
             data.inventory.items[itemName] = 1;
     }
+
 }

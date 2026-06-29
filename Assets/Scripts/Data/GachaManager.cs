@@ -26,24 +26,35 @@ public class GachaManager : MonoBehaviour
 
         DontDestroyOnLoad(gameObject);
 
+        Initialize();
+    }
+
+    public bool Initialize(CharacterDatabase sourceDatabase = null)
+    {
+        if (Instance == null)
+            Instance = this;
+
+        if (sourceDatabase != null)
+            database = sourceDatabase;
+
         if (database == null)
             database = Resources.Load<CharacterDatabase>("CharacterDatabase");
 
-        InitializeCharacterPoolFromDatabase();
+        return InitializeCharacterPoolFromDatabase();
     }
 
-    private void InitializeCharacterPoolFromDatabase()
+    private bool InitializeCharacterPoolFromDatabase()
     {
         if (database == null)
         {
             Debug.LogError("[Gacha] Character database is not assigned.");
-            return;
+            return false;
         }
 
         if (database.characters == null)
         {
             Debug.LogError("[Gacha] Character database list is null.");
-            return;
+            return false;
         }
 
         rCharacters.Clear();
@@ -71,10 +82,7 @@ public class GachaManager : MonoBehaviour
             }
         }
 
-        Debug.Log(
-            $"R:{rCharacters.Count} " +
-            $"SR:{srCharacters.Count} " +
-            $"SSR:{ssrCharacters.Count}");
+        return true;
     }
 
 
@@ -83,9 +91,6 @@ public class GachaManager : MonoBehaviour
         ValidateRollPools();
 
         int randomRoll = Random.Range(1, 101); // 1~100
-
-        UnityEngine.Debug.Log(
-            $"[Gacha] Random Value: {randomRoll}");
 
         if (randomRoll <= GachaConfig.SSRRate)
         {
@@ -167,8 +172,6 @@ public class GachaManager : MonoBehaviour
         if (data.pityCount >= PityLimit - 1)
         {
             data.pityCount = 0;
-
-            Debug.Log("[Pity] Guaranteed SSR");
 
             return GetRandomCharacter(ssrCharacters);
         }

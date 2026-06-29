@@ -28,7 +28,7 @@ public sealed class CompanionSynergyResult
 public static class CompanionSynergySystem
 {
     public static CompanionSynergyResult Calculate(
-        IReadOnlyList<CharacterData> party)
+        IList<CharacterData> party)
     {
         CompanionSynergyResult result = new CompanionSynergyResult();
         if (party == null || party.Count == 0)

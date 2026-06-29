@@ -18,7 +18,8 @@ public sealed class CompanionSlotButtonsUI
         Color panelLight,
         Color accent,
         Color gold,
-        Color success)
+        Color success,
+        bool bindExisting = false)
     {
         this.panelLight = panelLight;
         this.accent = accent;
@@ -29,14 +30,27 @@ public sealed class CompanionSlotButtonsUI
         {
             int capturedSlot = slot;
             float xMin = 0.05f + slot * 0.32f;
-            Button slotButton = RuntimeUiFactory.CreateButton(
-                "EquipSlot" + (slot + 1),
-                parent,
-                "SLOT " + (slot + 1),
-                new Vector2(xMin, 0.05f),
-                new Vector2(xMin + 0.27f, 0.23f),
-                accent,
-                () => toggleSelectedCharacterSlot?.Invoke(capturedSlot));
+            Button slotButton;
+            if (bindExisting)
+            {
+                slotButton = RuntimeUiBinder.FindButton(
+                    parent,
+                    "EquipSlot" + (slot + 1));
+                RuntimeUiBinder.ReplaceButtonAction(
+                    slotButton,
+                    () => toggleSelectedCharacterSlot?.Invoke(capturedSlot));
+            }
+            else
+            {
+                slotButton = RuntimeUiFactory.CreateButton(
+                    "EquipSlot" + (slot + 1),
+                    parent,
+                    "SLOT " + (slot + 1),
+                    new Vector2(xMin, 0.05f),
+                    new Vector2(xMin + 0.27f, 0.23f),
+                    accent,
+                    () => toggleSelectedCharacterSlot?.Invoke(capturedSlot));
+            }
             buttons.Add(slotButton);
         }
     }
@@ -48,6 +62,9 @@ public sealed class CompanionSlotButtonsUI
         for (int slot = 0; slot < buttons.Count; slot++)
         {
             Button button = buttons[slot];
+            if (button == null)
+                continue;
+
             CharacterData equipped =
                 companionManager?.GetEquippedAtSlot(slot);
             bool selectedOwned =
