@@ -38,11 +38,7 @@ public class CompanionManager : MonoBehaviour
 
         data.EnsureInitialized();
 
-        bool changed = RemoveInvalidPartyMembers(data);
-        if (HasEquippedCompanion(data))
-            return changed;
-
-        return TryEquipBestOwned(out _);
+        return TryFillEmptySlotsWithBestOwned(out _);
     }
 
     public bool TryEquipBestOwned(out CharacterData equipped)
@@ -58,6 +54,58 @@ public class CompanionManager : MonoBehaviour
 
         equipped = owned[0];
         return EquipParty(data, owned);
+    }
+
+    public bool TryFillEmptySlotsWithBestOwned(
+        out List<CharacterData> equipped)
+    {
+        equipped = new List<CharacterData>();
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        if (data == null || database?.characters == null)
+            return false;
+
+        data.EnsureInitialized();
+        bool changed = RemoveInvalidPartyMembers(data);
+        HashSet<string> used = new HashSet<string>();
+        for (int slot = 0; slot < PartySize; slot++)
+        {
+            string current = data.equippedCompanions[slot];
+            if (!string.IsNullOrEmpty(current))
+                used.Add(current);
+        }
+
+        List<CharacterData> owned = GetOwnedCharacters();
+        for (int slot = 0; slot < PartySize; slot++)
+        {
+            if (!string.IsNullOrEmpty(data.equippedCompanions[slot]))
+                continue;
+
+            CharacterData next = null;
+            foreach (CharacterData character in owned)
+            {
+                if (character != null &&
+                    !used.Contains(character.characterName))
+                {
+                    next = character;
+                    break;
+                }
+            }
+
+            if (next == null)
+                break;
+
+            data.equippedCompanions[slot] = next.characterName;
+            data.equippedCompanionRarities[slot] = next.rarity;
+            used.Add(next.characterName);
+            equipped.Add(next);
+            changed = true;
+        }
+
+        SyncLegacyEquipment(data);
+        if (changed)
+            InvokeCompanionChanged();
+
+        return changed;
     }
 
     public bool TryEquipToSlot(CharacterData character, int slotIndex)
@@ -356,12 +404,6 @@ public class CompanionManager : MonoBehaviour
 
         SyncLegacyEquipment(data);
         return changed;
-    }
-
-    private static bool HasEquippedCompanion(PlayerData data)
-    {
-        return data.equippedCompanions.Exists(
-            name => !string.IsNullOrEmpty(name));
     }
 
     private static void SyncLegacyEquipment(PlayerData data)

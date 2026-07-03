@@ -19,8 +19,9 @@ Unity 2D 모바일 방치형 RPG 프로토타입
 - 플레이어는 전쟁 중 왼쪽 날개가 부러진 참새 이등병
 - 플레이어는 직접 전방에서 싸우기보다 뒤에서 전력을 충전해 동료 스킬 사용을 지원
 - 신규 유저 첫 진입 시 만화 컷 형식의 메인 스토리 튜토리얼 표시
-- 화면 클릭/다음 버튼으로 컷을 넘기는 스토리 컷씬 UI 틀
-- 실제 아트 추가 전까지 단색 배경과 `(아트 필요)` placeholder 사용
+- 튜토리얼 스토리는 화면 전체를 컷신 이미지로 채우고, 별도 텍스트 박스 없이 진행
+- 현재 1~3번 컷은 제공된 이미지 기반, 4~7번 컷은 임시 컷신 이미지로 구성
+- 화면 클릭/다음 버튼으로 컷을 넘기고, 이전 버튼으로 놓친 컷을 다시 확인 가능
 - 귀엽고 둥근 픽셀 아트 스타일 기준
 
 ### 계정 / Firebase
@@ -61,14 +62,23 @@ Unity 2D 모바일 방치형 RPG 프로토타입
 - 동료 스킬은 쿨다운과 전력 조건을 만족하면 사용 가능
 - 전투 시각화용 임시 카드/UI
 - 추후 실제 스프라이트 교체 가능 구조
-- 참새 이등병, 동료 3명, 고양이 적의 고정 전투 좌표 설정
+- 참새 이등병, 동료 3명, 고양이 적의 전투 위치를 prefab의 `ActorRoot` 기준으로 조정 가능
 - 동료 배치는 캐릭터 1 위쪽, 캐릭터 2 중앙, 캐릭터 3 아래쪽으로 고정
 - 스테이지당 고양이 적 1마리 표시
-- 맵별 발판은 달라져도 전투 캐릭터 좌표는 동일하게 유지
+- 맵별 발판에 맞춰 `EnemyActorRoot`, `SupportActorRoot`, `CompanionActorRoot1~3` 위치를 직접 조정 가능
+- 전투 무대는 `BattlefieldLayer` 안의 `BattlefieldGuideLayer`, `BattlefieldActorLayer`, `BattlefieldEffectLayer`로 분리
+- 전투 캐릭터는 `ActorRoot > Shadow + Visual + DamageAnchor + HealthAnchor` 구조로 배치
+- 실제 전투 아트는 `CharacterData.battleVisual`과 `BattleVisualDatabase`에서 sprite, Animator, 프레임 애니메이션, 투사체를 교체
+- 실제 아트 파일은 `Assets/Art/Battle` 아래에 넣고 `Tools > Battle Art > Auto Link Battle Visuals`로 자동 연결
+- `BattleLayoutConfig`의 전투 좌표는 prefab 생성/fallback용 발 위치 기준으로 사용
+- 임시 `ActorShadow` 스프라이트로 캐릭터 발밑 그림자 표시
+- 캐릭터 draw order는 전투 y좌표 기준으로 정렬하여 아래쪽 캐릭터가 앞에 보이도록 처리
 - 동료 공격용 투사체 구조와 임시 전기 투사체 리소스
 - 대상 머리 위에 표시되는 데미지 숫자 UI
 - 1,000 이상 숫자를 A/B/C 방식으로 줄여 보여주는 `CompactNumberFormatter`
 - 고양이 적 픽셀 아트 및 애니메이션 에셋 교체 준비 구조
+- 전투 화면은 상단 2/3 전투 무대, 하단 1/3 전력 충전/캐릭터 스킬 컨트롤 패널 구조
+- `BattleHud.prefab` 기준 전투 화면을 직접 조정할 수 있도록 개별 전투 프리뷰 씬과 보정 메뉴 추가
 
 ### 성장 / 장비
 
@@ -87,8 +97,11 @@ Unity 2D 모바일 방치형 RPG 프로토타입
 - 캐릭터 상세 정보 UI
 - 직접 선택 후 장착/해제 가능한 구조
 - 동료 여러 명 장착을 위한 슬롯 구조
+- 동료 슬롯 3칸과 빈 슬롯 `+` 표시
+- 미보유 캐릭터는 이름 대신 `?`와 자물쇠 아이콘으로 표시
 - 동료 특성/시너지 시스템 기초
 - 추후 실제 동료 스프라이트 연결 가능 구조
+- 테스트용 SR 까치 `Jack`, SSR 뱁새 `Xenon` 캐릭터 데이터 및 전투 아트 연결
 
 ### 뽑기
 
@@ -140,7 +153,12 @@ Unity 2D 모바일 방치형 RPG 프로토타입
 - prefab이 없거나 깨진 경우 기존 runtime 생성 fallback 사용
 - `RuntimeUiBinder`로 prefab 안 버튼, 텍스트, 숫자, 진행바를 이름 기준으로 다시 연결
 - `Tools > UI > Regenerate Runtime UI Prefabs` 메뉴로 런타임 UI prefab 재생성 가능
+- `Tools > UI > Open UI Preview Scene` 메뉴로 UI 조정용 scene 바로 열기 가능
 - `Tools > UI > Rebuild UI Preview Scene` 메뉴로 UI 조정용 preview scene 생성 가능
+- `Tools > UI > Rebuild Individual UI Preview Scenes` 메뉴로 화면별 개별 preview scene 생성 가능
+- `Tools > UI > Fix Battle Preview Now` 메뉴로 전투 prefab 보정, 전투 preview scene 재생성, 전투 preview scene 열기 가능
+- `Tools > UI > Apply Selected Preview UI Override To Prefab` 메뉴로 preview scene에서 고친 prefab instance를 원본 prefab에 반영 가능
+- 전투 prefab에는 참새이등병, 동료 3명, 고양이 적의 `ActorRoot` 위치를 Scene view Gizmo로 표시하는 guide 추가
 - AndroidManifest 커스텀 설정
 - POST_NOTIFICATIONS 권한 추가
 - Firebase Messaging용 Android Activity 설정
@@ -203,9 +221,13 @@ Unity 2D 모바일 방치형 RPG 프로토타입
 
 1. 실제 게임은 `MainGameScene`의 `MainGameBootstrap`에서 UI를 생성
 2. 조정할 UI는 `Assets/Resources/Prefabs/UI` 안의 prefab을 직접 수정
-3. `Tools > UI > Rebuild UI Preview Scene`으로 조정용 scene 생성 가능
-4. preview scene에서 prefab instance를 수정한 경우 `Overrides > Apply All`로 prefab에 반영
-5. `Tools > UI > Regenerate Runtime UI Prefabs`는 코드 기준 prefab 재생성용이므로 수동 수정 후에는 주의해서 사용
+3. `Tools > UI > Open UI Preview Scene`으로 조정용 scene을 바로 열 수 있음
+4. `Tools > UI > Rebuild UI Preview Scene`으로 조정용 scene을 다시 생성 가능
+5. `Tools > UI > Rebuild Individual UI Preview Scenes`로 화면별 개별 preview scene 생성 가능
+6. `Tools > UI > Fix Battle Preview Now`로 전투 preview scene이 낡았을 때 전투 prefab과 scene을 다시 맞춤
+7. preview scene에서 prefab instance를 수정한 경우 `Overrides > Apply All` 또는 `Tools > UI > Apply Selected Preview UI Override To Prefab`으로 prefab에 반영
+8. 전투 캐릭터 위치는 `EnemyActorRoot`, `SupportActorRoot`, `CompanionActorRoot1~3`를 옮겨 조정
+9. `Tools > UI > Regenerate Runtime UI Prefabs`는 코드 기준 prefab 재생성용이므로 수동 수정 후에는 주의해서 사용
 
 ### 6. 성장 / 장비 / 동료
 
@@ -261,6 +283,30 @@ Unity 2D 모바일 방치형 RPG 프로토타입
 - BGM
 - 효과음
 - 한글 TMP Font Asset
+
+## 실제 아트 연결 규칙
+
+1. `Tools > Battle Art > Prepare Production Art Folders`로 실제 아트 폴더 생성
+2. 참새 이등병: `Assets/Art/Battle/Heroes/SupportSparrow/SupportSparrow.png`
+3. 동료: `Assets/Art/Battle/Companions/{캐릭터이름}/{캐릭터이름}.png`
+4. 일반 고양이: `Assets/Art/Battle/Enemies/{프로필명}/{프로필명}.png`
+5. 보스 고양이: `Assets/Art/Battle/Bosses/{프로필명}/{프로필명}.png`
+6. 프레임 애니메이션은 각 폴더 안에 `Idle`, `Attack`, `Hit`, `Death`, `Skill` 폴더를 만들고 순서대로 png 배치
+7. 기본 캐릭터 프레임 수 기준은 `Idle` 6프레임, `Attack` 8프레임, `Skill` 8프레임, `Hit` 4프레임, `Death` 6프레임
+8. 투사체는 캐릭터 폴더 안의 `BasicProjectile.png`, `SkillProjectile.png` 또는 `Assets/Art/Battle/Projectiles/{캐릭터이름}_BasicProjectile.png` 형식 사용
+9. 파일 추가 후 `Tools > Battle Art > Auto Link Battle Visuals` 실행
+10. 고양이/보스 프로필은 `BattleVisualDatabase`에서 `stageFrom`, `stageTo`, `stageCycle`, `stageCycleOffset`, `priority`로 출현 구간 설정
+11. `stageTo`가 0이면 끝 스테이지 제한 없음
+12. `stageCycle`이 0 또는 1이면 구간 내 모든 스테이지 출현, 2 이상이면 `stageCycleOffset`에 맞는 스테이지만 출현
+13. 같은 스테이지에 여러 프로필이 맞으면 `priority`가 가장 높은 프로필끼리만 순환 선택
+14. 규칙값 정리는 `Tools > Battle Art > Normalize Visual Stage Rules` 사용
+15. `BattleVisualDatabase` 인스펙터에서 스테이지별 일반 고양이/보스 선택 결과와 연결된 sprite, 애니메이션, 투사체 상태를 미리 확인 가능
+16. `Tools > Battle Art > Create Sample Stage Profiles`로 기본 고양이/보스 프로필과 아트 폴더를 먼저 생성 가능
+17. `Tools > Battle Art > Create Character Art Folders`로 `CharacterData` 기준 동료 아트 폴더를 자동 생성 가능
+18. `Tools > Battle Art > Write Art Readiness Report`로 누락된 sprite, 애니메이션, 투사체 상태를 `Logs/BattleArtReadinessReport.txt`에 출력 가능
+19. 전투 배경은 `BattleStageThemeDatabase`에서 `stageFrom`, `stageTo`, `priority`로 스테이지 구간 매핑
+20. 실제 배경 파일은 `Assets/Art/Battle/Backgrounds/{테마명}.png`, 선택 레이어는 `{테마명}_Midground.png`, `{테마명}_Foreground.png` 형식 사용
+21. `Tools > Battle Art > Create Sample Stage Themes`로 기본 배경 테마 프로필 생성 가능
 
 ## 출시 전 제거 / 교체할 임시 요소
 

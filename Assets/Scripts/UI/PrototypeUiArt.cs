@@ -15,6 +15,10 @@ public static class PrototypeUiArt
     public static Sprite ButtonNormal => Load("ButtonNormal");
     public static Sprite ButtonSelected => Load("ButtonSelected");
     public static Sprite SkillFrame => Load("SkillFrame");
+    public static Sprite ActorShadow => Load("ActorShadow");
+    public static Sprite LockIcon => Load("IconLock");
+    public static Sprite PlusIcon =>
+        LoadFirst(GameIconPath("Game_plus"), UiPath("IconPlus"));
     public static Sprite GoldIcon =>
         LoadFirst(BoardIconPath("Board_pouch"), UiPath("IconGold"));
     public static Sprite StandardGachaBanner =>

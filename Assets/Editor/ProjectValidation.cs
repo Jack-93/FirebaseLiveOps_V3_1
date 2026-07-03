@@ -22,6 +22,10 @@ public static class ProjectValidation
         ValidateStoryIntro();
         ValidatePrototypeScene();
         ValidatePrototypeUiArt();
+        ValidateProductionArtPipeline();
+        ValidateBattleVisualStageRules();
+        ValidateBattleStageThemeRules();
+        ValidateRuntimeUiPrefabs();
         ValidateCharacterPlaceholders();
         ValidateRuntimeComposition();
 
@@ -430,9 +434,146 @@ public static class ProjectValidation
             "ThemeElectric_01.png",
             "Electric theme icon prototype is missing.");
         ValidatePrototypeSpriteAsset(
+            "Assets/Resources/PrototypeArt/UI/ActorShadow.png",
+            "Actor shadow sprite is missing.");
+        ValidatePrototypeSpriteAsset(
             "Assets/Resources/PrototypeArt/Enemies/" +
             "CatScout.png",
             "Last Tick cat enemy art is missing.");
+    }
+
+    private static void ValidateRuntimeUiPrefabs()
+    {
+        const string prefabRoot = "Assets/Resources/Prefabs/UI/";
+        string[] requiredPrefabs =
+        {
+            "WorldBackdrop",
+            "TopBar",
+            "BattleHud",
+            "GrowthPanel",
+            "GachaPanel",
+            "MorePanel",
+            "CollectionPanel",
+            "EquipmentPanel",
+            "QuestPanel",
+            "ShopPanel",
+            "EventPanel",
+            "SettingsPanel",
+            "AccountPanel",
+            "BottomNavigation",
+            "TutorialPanel",
+            "StoryIntroOverlay",
+            "TitleOverlay",
+            "LoadingOverlay",
+            "OfflineOverlay",
+            "ToastPanel"
+        };
+
+        foreach (string prefabName in requiredPrefabs)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                prefabRoot + prefabName + ".prefab");
+            Require(prefab != null,
+                prefabName + " runtime UI prefab is missing.");
+            Require(prefab.GetComponent<RectTransform>() != null,
+                prefabName + " prefab root must be a RectTransform.");
+        }
+
+        SceneAsset previewScene =
+            AssetDatabase.LoadAssetAtPath<SceneAsset>(
+                "Assets/Scenes/UiPrefabPreviewScene.unity");
+        Require(previewScene != null,
+            "UiPrefabPreviewScene is missing.");
+
+        GameObject battleHud = AssetDatabase.LoadAssetAtPath<GameObject>(
+            prefabRoot + "BattleHud.prefab");
+        string[] battleNodes =
+        {
+            "EnemyCard",
+            "BattlefieldLayer",
+            "BattlefieldGuideLayer",
+            "BattlefieldActorLayer",
+            "BattlefieldEffectLayer",
+            "EnemyActorRoot",
+            "SupportActorRoot",
+            "CompanionActorRoot1",
+            "CompanionActorRoot2",
+            "CompanionActorRoot3",
+            "EnemyShadow",
+            "SupportShadow",
+            "CompanionShadow1",
+            "CompanionShadow2",
+            "CompanionShadow3",
+            "EnemyVisual",
+            "PlayerVisual",
+            "CompanionVisual1",
+            "CompanionVisual2",
+            "CompanionVisual3",
+            "CompanionProjectile1",
+            "CompanionProjectile2",
+            "CompanionProjectile3",
+            "EnemyDamagePopup",
+            "PlayerDamagePopup",
+            "PowerChargeButton",
+            "CompanionSkillButton1",
+            "CompanionSkillButton2",
+            "CompanionSkillButton3"
+        };
+
+        foreach (string nodeName in battleNodes)
+        {
+            Require(FindDescendant(battleHud.transform, nodeName) != null,
+                "BattleHud prefab is missing " + nodeName + ".");
+        }
+
+        ValidateBattlePrefabActorRoot(battleHud, "SupportActorRoot");
+        ValidateBattlePrefabActorRoot(battleHud, "EnemyActorRoot");
+        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
+        {
+            ValidateBattlePrefabActorRoot(
+                battleHud,
+                "CompanionActorRoot" + (slot + 1));
+        }
+
+        string[] guideNodes =
+        {
+            "EnemyActorRoot",
+            "SupportActorRoot",
+            "CompanionActorRoot1",
+            "CompanionActorRoot2",
+            "CompanionActorRoot3"
+        };
+        foreach (string guideNode in guideNodes)
+        {
+            Transform transform = FindDescendant(
+                battleHud.transform,
+                guideNode);
+            Require(
+                transform.GetComponent<BattleSlotGuide>() != null,
+                guideNode + " must expose a Scene-view slot guide.");
+        }
+    }
+
+    private static void ValidateBattlePrefabActorRoot(
+        GameObject prefab,
+        string nodeName)
+    {
+        Transform transform = FindDescendant(prefab.transform, nodeName);
+        RectTransform rect =
+            transform == null ? null : transform.GetComponent<RectTransform>();
+        Require(rect != null,
+            nodeName + " must be a RectTransform.");
+
+        Require(
+            rect.anchorMin.x >= 0f &&
+            rect.anchorMax.x <= 1f &&
+            rect.anchorMin.y >= 0f &&
+            rect.anchorMax.y <= 1f,
+            nodeName + " must stay inside the battlefield layer.");
+        Require(
+            rect.anchorMax.x > rect.anchorMin.x &&
+            rect.anchorMax.y > rect.anchorMin.y,
+            nodeName + " must keep a positive size.");
     }
 
     private static void ValidateUiSpriteBorder(
@@ -471,6 +612,239 @@ public static class ProjectValidation
         string[] guids =
             AssetDatabase.FindAssets("t:Sprite", new[] { assetFolderPath });
         Require(guids != null && guids.Length > 0, missingMessage);
+    }
+
+    private static void ValidateProductionArtPipeline()
+    {
+        string[] requiredFolders =
+        {
+            "Assets/Art",
+            "Assets/Art/Battle",
+            "Assets/Art/Battle/Heroes",
+            "Assets/Art/Battle/Companions",
+            "Assets/Art/Battle/Enemies",
+            "Assets/Art/Battle/Bosses",
+            "Assets/Art/Battle/Projectiles",
+            "Assets/Art/Battle/Backgrounds",
+            "Assets/Art/UI",
+            "Assets/Art/UI/Icons",
+            "Assets/Art/UI/Frames",
+            "Assets/Art/Fonts",
+            "Assets/Art/Audio",
+            "Assets/Art/Audio/BGM",
+            "Assets/Art/Audio/SFX"
+        };
+
+        foreach (string folder in requiredFolders)
+        {
+            Require(AssetDatabase.IsValidFolder(folder),
+                folder + " production art folder is missing.");
+        }
+
+        BattleVisualDatabase database =
+            AssetDatabase.LoadAssetAtPath<BattleVisualDatabase>(
+                "Assets/Resources/BattleVisualDatabase.asset");
+        Require(database != null,
+            "BattleVisualDatabase asset is missing.");
+        ValidateVisualProfile(database.hero, "Hero");
+        ValidateVisualProfiles(database.normalEnemies, "Enemy");
+        ValidateVisualProfiles(database.bosses, "Boss");
+
+        BattleStageThemeDatabase themeDatabase =
+            AssetDatabase.LoadAssetAtPath<BattleStageThemeDatabase>(
+                "Assets/Resources/BattleStageThemeDatabase.asset");
+        Require(themeDatabase != null,
+            "BattleStageThemeDatabase asset is missing.");
+        ValidateStageThemeProfiles(themeDatabase.themes);
+    }
+
+    private static void ValidateVisualProfiles(
+        List<BattleVisualProfile> profiles,
+        string label)
+    {
+        if (profiles == null)
+            return;
+
+        foreach (BattleVisualProfile profile in profiles)
+            ValidateVisualProfile(profile, label);
+    }
+
+    private static void ValidateVisualProfile(
+        BattleVisualProfile profile,
+        string label)
+    {
+        if (profile == null)
+            return;
+
+        if (profile.HasVisual)
+        {
+            Require(!string.IsNullOrWhiteSpace(profile.profileName),
+                label + " visual profile needs a profileName.");
+        }
+
+        int start = Mathf.Max(1, profile.stageFrom);
+        Require(profile.stageFrom >= 0,
+            label + " visual profile stageFrom must be zero or positive.");
+        Require(profile.stageTo == 0 || profile.stageTo >= start,
+            label + " visual profile stageTo must be zero or >= stageFrom.");
+        Require(profile.stageCycle >= 0,
+            label + " visual profile stageCycle must be zero or positive.");
+        Require(profile.stageCycleOffset >= 0,
+            label + " visual profile stageCycleOffset must be zero or positive.");
+        if (profile.stageCycle > 1)
+        {
+            Require(profile.stageCycleOffset < profile.stageCycle,
+                label + " visual profile cycle offset must be less than stageCycle.");
+        }
+    }
+
+    private static void ValidateBattleVisualStageRules()
+    {
+        BattleVisualDatabase database =
+            ScriptableObject.CreateInstance<BattleVisualDatabase>();
+        try
+        {
+            database.normalEnemies.Add(new BattleVisualProfile
+            {
+                profileName = "CommonCat",
+                stageFrom = 1,
+                stageTo = 10
+            });
+            database.normalEnemies.Add(new BattleVisualProfile
+            {
+                profileName = "EliteCat",
+                stageFrom = 5,
+                stageTo = 8,
+                priority = 10
+            });
+
+            Require(
+                database.GetEnemy(4, false)?.profileName == "CommonCat",
+                "Battle visual rule should use base profile before elite range.");
+            Require(
+                database.GetEnemy(5, false)?.profileName == "EliteCat",
+                "Battle visual rule priority did not override base profile.");
+
+            database.normalEnemies.Clear();
+            database.normalEnemies.Add(new BattleVisualProfile
+            {
+                profileName = "CycleA",
+                stageFrom = 10
+            });
+            database.normalEnemies.Add(new BattleVisualProfile
+            {
+                profileName = "CycleB",
+                stageFrom = 10
+            });
+
+            Require(
+                database.GetEnemy(10, false)?.profileName == "CycleA",
+                "Battle visual cycle should start from stageFrom.");
+            Require(
+                database.GetEnemy(11, false)?.profileName == "CycleB",
+                "Battle visual cycle should rotate after stageFrom.");
+
+            database.bosses.Add(new BattleVisualProfile
+            {
+                profileName = "OddBoss",
+                stageCycle = 2,
+                stageCycleOffset = 0
+            });
+            database.bosses.Add(new BattleVisualProfile
+            {
+                profileName = "EvenBoss",
+                stageCycle = 2,
+                stageCycleOffset = 1
+            });
+
+            Require(
+                database.GetEnemy(1, true)?.profileName == "OddBoss",
+                "Boss visual cycle offset failed for odd stage.");
+            Require(
+                database.GetEnemy(2, true)?.profileName == "EvenBoss",
+                "Boss visual cycle offset failed for even stage.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(database);
+        }
+    }
+
+    private static void ValidateStageThemeProfiles(
+        List<BattleStageThemeProfile> themes)
+    {
+        if (themes == null)
+            return;
+
+        foreach (BattleStageThemeProfile theme in themes)
+        {
+            if (theme == null)
+                continue;
+
+            if (theme.HasVisual)
+            {
+                Require(!string.IsNullOrWhiteSpace(theme.themeName),
+                    "Stage theme profile needs a themeName.");
+            }
+
+            int start = Mathf.Max(1, theme.stageFrom);
+            Require(theme.stageFrom >= 0,
+                "Stage theme stageFrom must be zero or positive.");
+            Require(theme.stageTo == 0 || theme.stageTo >= start,
+                "Stage theme stageTo must be zero or >= stageFrom.");
+        }
+    }
+
+    private static void ValidateBattleStageThemeRules()
+    {
+        BattleStageThemeDatabase database =
+            ScriptableObject.CreateInstance<BattleStageThemeDatabase>();
+        try
+        {
+            database.themes.Add(new BattleStageThemeProfile
+            {
+                themeName = "Base",
+                stageFrom = 1,
+                stageTo = 10
+            });
+            database.themes.Add(new BattleStageThemeProfile
+            {
+                themeName = "Priority",
+                stageFrom = 5,
+                stageTo = 8,
+                priority = 10
+            });
+
+            Require(
+                database.GetTheme(4)?.themeName == "Base",
+                "Stage theme should use base profile before priority range.");
+            Require(
+                database.GetTheme(5)?.themeName == "Priority",
+                "Stage theme priority did not override base profile.");
+
+            database.themes.Clear();
+            database.themes.Add(new BattleStageThemeProfile
+            {
+                themeName = "ThemeA",
+                stageFrom = 20
+            });
+            database.themes.Add(new BattleStageThemeProfile
+            {
+                themeName = "ThemeB",
+                stageFrom = 20
+            });
+
+            Require(
+                database.GetTheme(20)?.themeName == "ThemeA",
+                "Stage theme cycle should start from stageFrom.");
+            Require(
+                database.GetTheme(21)?.themeName == "ThemeB",
+                "Stage theme cycle should rotate after stageFrom.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(database);
+        }
     }
 
     private static void ValidateGachaEconomy()
@@ -848,7 +1222,7 @@ public static class ProjectValidation
             Require(
                 character != null &&
                 character.icon != null &&
-                character.battleSprite != null,
+                character.ResolveBattleSprite() != null,
                 characterName + " prototype art is not connected.");
         }
 

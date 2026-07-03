@@ -11,9 +11,183 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8ee601159cb943aa909e210020e15904, type: 3}
   m_Name: BattleVisualDatabase
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   hero:
+    profileName: SupportSparrow
+    stageFrom: 1
+    stageTo: 0
+    stageCycle: 0
+    stageCycleOffset: 0
+    priority: 0
     sprite: {fileID: 0}
     animatorController: {fileID: 0}
-  normalEnemies: []
-  bosses: []
+    visual:
+      sprite: {fileID: 0}
+      animatorController: {fileID: 0}
+      spriteAnimations: []
+      basicProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+      skillProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+  normalEnemies:
+  - profileName: CatScout
+    stageFrom: 1
+    stageTo: 20
+    stageCycle: 0
+    stageCycleOffset: 0
+    priority: 0
+    sprite: {fileID: 0}
+    animatorController: {fileID: 0}
+    visual:
+      sprite: {fileID: 0}
+      animatorController: {fileID: 0}
+      spriteAnimations: []
+      basicProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+      skillProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+  - profileName: CatStray
+    stageFrom: 21
+    stageTo: 50
+    stageCycle: 0
+    stageCycleOffset: 0
+    priority: 0
+    sprite: {fileID: 0}
+    animatorController: {fileID: 0}
+    visual:
+      sprite: {fileID: 0}
+      animatorController: {fileID: 0}
+      spriteAnimations: []
+      basicProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+      skillProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+  - profileName: CatWireRunner
+    stageFrom: 51
+    stageTo: 90
+    stageCycle: 0
+    stageCycleOffset: 0
+    priority: 0
+    sprite: {fileID: 0}
+    animatorController: {fileID: 0}
+    visual:
+      sprite: {fileID: 0}
+      animatorController: {fileID: 0}
+      spriteAnimations: []
+      basicProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+      skillProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+  - profileName: CatStormClaw
+    stageFrom: 91
+    stageTo: 0
+    stageCycle: 0
+    stageCycleOffset: 0
+    priority: 0
+    sprite: {fileID: 0}
+    animatorController: {fileID: 0}
+    visual:
+      sprite: {fileID: 0}
+      animatorController: {fileID: 0}
+      spriteAnimations: []
+      basicProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+      skillProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+  bosses:
+  - profileName: CatPoleCaptain
+    stageFrom: 1
+    stageTo: 30
+    stageCycle: 0
+    stageCycleOffset: 0
+    priority: 0
+    sprite: {fileID: 0}
+    animatorController: {fileID: 0}
+    visual:
+      sprite: {fileID: 0}
+      animatorController: {fileID: 0}
+      spriteAnimations: []
+      basicProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+      skillProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+  - profileName: CatRooftopRaider
+    stageFrom: 31
+    stageTo: 70
+    stageCycle: 0
+    stageCycleOffset: 0
+    priority: 0
+    sprite: {fileID: 0}
+    animatorController: {fileID: 0}
+    visual:
+      sprite: {fileID: 0}
+      animatorController: {fileID: 0}
+      spriteAnimations: []
+      basicProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+      skillProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+  - profileName: CatStormGeneral
+    stageFrom: 71
+    stageTo: 0
+    stageCycle: 0
+    stageCycleOffset: 0
+    priority: 0
+    sprite: {fileID: 0}
+    animatorController: {fileID: 0}
+    visual:
+      sprite: {fileID: 0}
+      animatorController: {fileID: 0}
+      spriteAnimations: []
+      basicProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+      skillProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0

@@ -7,6 +7,7 @@ public static class PlayerDataLocalCache
 {
     private const string FilePrefix = "player_cache_";
     private const string FileExtension = ".json";
+    private const string MetaExtension = ".meta.json";
 
     public static bool TryLoad(string uid, out PlayerData data)
     {
@@ -45,6 +46,7 @@ public static class PlayerDataLocalCache
                 data,
                 Formatting.None);
             WriteAllTextAtomic(path, json);
+            TouchMeta(data.uid);
         }
         catch (Exception exception)
         {
@@ -63,11 +65,86 @@ public static class PlayerDataLocalCache
             serverData.lastOnlineUnixTime;
     }
 
+    public static bool HasPendingRemoteSave(string uid)
+    {
+        return TryLoadMeta(uid, out CacheMeta meta) &&
+            meta.pendingRemoteSave;
+    }
+
+    public static void MarkPendingRemoteSave(
+        string uid,
+        bool pendingRemoteSave)
+    {
+        try
+        {
+            CacheMeta meta = TryLoadMeta(uid, out CacheMeta loaded)
+                ? loaded
+                : new CacheMeta();
+            meta.pendingRemoteSave = pendingRemoteSave;
+            meta.updatedUnixTime =
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            WriteMeta(uid, meta);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning(
+                "[PlayerDataLocalCache] Pending marker update failed: " +
+                exception.Message);
+        }
+    }
+
     private static string GetPath(string uid)
     {
         string fileName =
             FilePrefix + Sanitize(uid) + FileExtension;
         return Path.Combine(Application.persistentDataPath, fileName);
+    }
+
+    private static string GetMetaPath(string uid)
+    {
+        string fileName =
+            FilePrefix + Sanitize(uid) + MetaExtension;
+        return Path.Combine(Application.persistentDataPath, fileName);
+    }
+
+    private static void TouchMeta(string uid)
+    {
+        CacheMeta meta = TryLoadMeta(uid, out CacheMeta loaded)
+            ? loaded
+            : new CacheMeta();
+        meta.cachedAtUnixTime =
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        WriteMeta(uid, meta);
+    }
+
+    private static bool TryLoadMeta(string uid, out CacheMeta meta)
+    {
+        meta = null;
+        string path = GetMetaPath(uid);
+        if (!File.Exists(path))
+            return false;
+
+        try
+        {
+            string json = File.ReadAllText(path);
+            meta = JsonConvert.DeserializeObject<CacheMeta>(json);
+            return meta != null;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning(
+                "[PlayerDataLocalCache] Meta load failed: " +
+                exception.Message);
+            return false;
+        }
+    }
+
+    private static void WriteMeta(string uid, CacheMeta meta)
+    {
+        string path = GetMetaPath(uid);
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        string json = JsonConvert.SerializeObject(meta, Formatting.None);
+        WriteAllTextAtomic(path, json);
     }
 
     private static string Sanitize(string uid)
@@ -101,5 +178,13 @@ public static class PlayerDataLocalCache
             File.Delete(path);
             File.Move(tempPath, path);
         }
+    }
+
+    [Serializable]
+    private sealed class CacheMeta
+    {
+        public bool pendingRemoteSave;
+        public long cachedAtUnixTime;
+        public long updatedUnixTime;
     }
 }

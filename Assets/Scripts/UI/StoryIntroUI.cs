@@ -15,6 +15,7 @@ public sealed class StoryIntroUI
     private TMP_Text previousButtonText;
     private TMP_Text buttonText;
     private Image artImage;
+    private RectTransform artRect;
 
     private static readonly Color PanelLight =
         new Color32(52, 68, 96, 255);
@@ -62,96 +63,19 @@ public sealed class StoryIntroUI
         RectTransform artPanel = RuntimeUiFactory.CreatePanel(
             "StoryIntroArtPlaceholder",
             overlay,
-            new Color32(135, 199, 255, 255),
-            new Vector2(0.06f, 0.36f),
-            new Vector2(0.94f, 0.9f));
+            Color.black,
+            Vector2.zero,
+            Vector2.one);
+        artRect = artPanel;
         artImage = artPanel.GetComponent<Image>();
+        artImage.preserveAspect = false;
 
-        RuntimeUiFactory.CreatePanel(
-            "StoryIntroPixelFrame",
-            artPanel,
-            new Color32(255, 255, 255, 38),
-            new Vector2(0.03f, 0.04f),
-            new Vector2(0.97f, 0.96f));
-
-        artText = RuntimeUiFactory.CreateText(
-            "StoryIntroArtText",
-            artPanel,
-            "",
-            34,
-            new Vector2(0.08f, 0.34f),
-            new Vector2(0.92f, 0.66f),
-            TextAlignmentOptions.Center,
-            Color.white);
-
-        RectTransform dialoguePanel = RuntimeUiFactory.CreatePanel(
-            "StoryIntroDialoguePanel",
+        previousButton = CreateInvisibleTouchButton(
+            "StoryIntroPreviousTouchArea",
             overlay,
-            new Color32(28, 38, 60, 255),
-            new Vector2(0.06f, 0.08f),
-            new Vector2(0.94f, 0.33f));
-
-        counterText = RuntimeUiFactory.CreateText(
-            "StoryIntroCounter",
-            dialoguePanel,
-            "1/7",
-            24,
-            new Vector2(0.05f, 0.74f),
-            new Vector2(0.24f, 0.94f),
-            TextAlignmentOptions.Left,
-            new Color32(255, 201, 77, 255));
-
-        titleText = RuntimeUiFactory.CreateText(
-            "StoryIntroTitle",
-            dialoguePanel,
-            "\uC804\uBD07\uB300 \uBC29\uC5B4 \uC791\uC804",
-            36,
-            new Vector2(0.25f, 0.7f),
-            new Vector2(0.95f, 0.94f),
-            TextAlignmentOptions.Right,
-            new Color32(82, 188, 255, 255));
-
-        bodyText = RuntimeUiFactory.CreateText(
-            "StoryIntroBody",
-            dialoguePanel,
-            "\uB300\uC0AC\uB294 \uCD94\uD6C4 \uD655\uC815",
-            31,
-            new Vector2(0.05f, 0.26f),
-            new Vector2(0.95f, 0.68f),
-            TextAlignmentOptions.Left,
-            Color.white);
-
-        previousButton = RuntimeUiFactory.CreateButton(
-            "StoryIntroPreviousButton",
-            dialoguePanel,
-            "\uC774\uC804",
-            new Vector2(0.05f, 0.05f),
-            new Vector2(0.31f, 0.23f),
-            PanelLight,
-            () => previousAction?.Invoke());
-        previousButtonText =
-            previousButton.GetComponentInChildren<TMP_Text>();
-        previousButtonText.fontSizeMax = 21;
-
-        Button nextButton = RuntimeUiFactory.CreateButton(
-            "StoryIntroNextButton",
-            dialoguePanel,
-            "\uB2E4\uC74C",
-            new Vector2(0.64f, 0.05f),
-            new Vector2(0.95f, 0.23f),
-            new Color32(255, 201, 77, 255),
-            () => nextAction?.Invoke());
-        buttonText = nextButton.GetComponentInChildren<TMP_Text>();
-
-        RuntimeUiFactory.CreateText(
-            "StoryIntroTapHint",
-            dialoguePanel,
-            "\uD654\uBA74\uC744 \uB204\uB974\uBA74 \uB2E4\uC74C \uCEF7\uC73C\uB85C \uC774\uB3D9",
-            20,
-            new Vector2(0.32f, 0.05f),
-            new Vector2(0.63f, 0.23f),
-            TextAlignmentOptions.Center,
-            new Color32(190, 203, 225, 255));
+            new Vector2(0f, 0f),
+            new Vector2(0.22f, 1f),
+            previousAction);
 
         overlayObject.SetActive(false);
     }
@@ -203,7 +127,7 @@ public sealed class StoryIntroUI
         {
             artImage.sprite = cutArt;
             artImage.type = Image.Type.Simple;
-            artImage.preserveAspect = true;
+            artImage.preserveAspect = false;
             artImage.color = hasCutArt
                 ? Color.white
                 : TryParseColor(cut.placeholderColorHex, PanelLight);
@@ -211,7 +135,10 @@ public sealed class StoryIntroUI
 
         bool canGoPrevious = tutorialManager.CurrentStoryCutIndex > 0;
         if (previousButton != null)
+        {
+            previousButton.gameObject.SetActive(canGoPrevious);
             previousButton.interactable = canGoPrevious;
+        }
         if (previousButtonText != null)
         {
             previousButtonText.color = canGoPrevious
@@ -240,6 +167,12 @@ public sealed class StoryIntroUI
         artImage = RuntimeUiBinder.FindImage(
             overlay,
             "StoryIntroArtPlaceholder");
+        artRect = artImage == null
+            ? RuntimeUiBinder.FindRect(overlay, "StoryIntroArtPlaceholder")
+            : artImage.GetComponent<RectTransform>();
+
+        ApplyFullscreenArtLayout();
+        HideStoryTextChrome(overlay);
 
         Button tapArea = overlay.GetComponent<Button>();
         if (tapArea == null)
@@ -249,29 +182,96 @@ public sealed class StoryIntroUI
             tapArea,
             () => nextAction?.Invoke());
 
-        previousButton = RuntimeUiBinder.FindButton(
+        previousButton = CreateInvisibleTouchButton(
+            "StoryIntroPreviousTouchArea",
             overlay,
-            "StoryIntroPreviousButton");
-        previousButtonText =
-            previousButton == null
-                ? null
-                : previousButton.GetComponentInChildren<TMP_Text>();
-        RuntimeUiBinder.ReplaceButtonAction(
-            previousButton,
-            () => previousAction?.Invoke());
+            new Vector2(0f, 0f),
+            new Vector2(0.22f, 1f),
+            previousAction);
+        previousButtonText = null;
 
-        Button nextButton = RuntimeUiBinder.FindButton(
-            overlay,
-            "StoryIntroNextButton");
-        buttonText =
-            nextButton == null
-                ? null
-                : nextButton.GetComponentInChildren<TMP_Text>();
-        RuntimeUiBinder.ReplaceButtonAction(
-            nextButton,
-            () => nextAction?.Invoke());
+        buttonText = null;
 
         overlayObject.SetActive(false);
+    }
+
+    private void ApplyFullscreenArtLayout()
+    {
+        if (artRect == null)
+            return;
+
+        artRect.anchorMin = Vector2.zero;
+        artRect.anchorMax = Vector2.one;
+        artRect.offsetMin = Vector2.zero;
+        artRect.offsetMax = Vector2.zero;
+        artRect.SetAsFirstSibling();
+
+        if (artImage != null)
+        {
+            artImage.type = Image.Type.Simple;
+            artImage.preserveAspect = false;
+            artImage.raycastTarget = false;
+        }
+    }
+
+    private static void HideStoryTextChrome(RectTransform overlay)
+    {
+        HideByName(overlay, "StoryIntroPixelFrame");
+        HideByName(overlay, "StoryIntroArtText");
+        HideByName(overlay, "StoryIntroDialoguePanel");
+        HideByName(overlay, "StoryIntroCounter");
+        HideByName(overlay, "StoryIntroTitle");
+        HideByName(overlay, "StoryIntroBody");
+        HideByName(overlay, "StoryIntroTapHint");
+        HideByName(overlay, "StoryIntroPreviousButton");
+        HideByName(overlay, "StoryIntroNextButton");
+    }
+
+    private static void HideByName(RectTransform root, string name)
+    {
+        RectTransform target = RuntimeUiBinder.FindRect(root, name);
+        if (target != null)
+            target.gameObject.SetActive(false);
+    }
+
+    private static Button CreateInvisibleTouchButton(
+        string name,
+        RectTransform parent,
+        Vector2 anchorMin,
+        Vector2 anchorMax,
+        Action action)
+    {
+        RectTransform existing = RuntimeUiBinder.FindRect(parent, name);
+        RectTransform rect = existing != null
+            ? existing
+            : RuntimeUiFactory.CreatePanel(
+                name,
+                parent,
+                new Color32(0, 0, 0, 0),
+                anchorMin,
+                anchorMax);
+
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        rect.SetAsLastSibling();
+
+        Image image = rect.GetComponent<Image>();
+        if (image != null)
+        {
+            image.color = new Color32(0, 0, 0, 0);
+            image.raycastTarget = true;
+        }
+
+        Button button = rect.GetComponent<Button>();
+        if (button == null)
+            button = rect.gameObject.AddComponent<Button>();
+        button.targetGraphic = image;
+        RuntimeUiBinder.ReplaceButtonAction(
+            button,
+            () => action?.Invoke());
+        return button;
     }
 
     private static Color TryParseColor(string htmlColor, Color fallback)

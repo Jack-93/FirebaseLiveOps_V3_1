@@ -47,6 +47,7 @@ public class PlayerDataSaveScheduler : MonoBehaviour
         latestData = data;
         StampOnlineTime(data);
         PlayerDataLocalCache.Save(data);
+        MarkRemotePending(data, true);
 
         saveVersion++;
         hasPendingRemoteSave = true;
@@ -66,6 +67,7 @@ public class PlayerDataSaveScheduler : MonoBehaviour
         latestData = target;
         StampOnlineTime(target);
         PlayerDataLocalCache.Save(target);
+        MarkRemotePending(target, true);
 
         saveVersion++;
         hasPendingRemoteSave = true;
@@ -85,6 +87,7 @@ public class PlayerDataSaveScheduler : MonoBehaviour
         latestData = target;
         StampOnlineTime(target);
         PlayerDataLocalCache.Save(target);
+        MarkRemotePending(target, true);
         saveVersion++;
         hasPendingRemoteSave = true;
         remoteSaveTimer = 0f;
@@ -129,17 +132,20 @@ public class PlayerDataSaveScheduler : MonoBehaviour
             {
                 hasPendingRemoteSave = false;
                 remoteSaveTimer = 0f;
+                MarkRemotePending(data, false);
             }
             else
             {
                 hasPendingRemoteSave = true;
                 remoteSaveTimer = BusyRetrySeconds;
+                MarkRemotePending(data, true);
             }
         }
         catch (Exception exception)
         {
             hasPendingRemoteSave = true;
             remoteSaveTimer = RemoteDebounceSeconds;
+            MarkRemotePending(data, true);
             Debug.LogWarning(
                 "[PlayerDataSaveScheduler] Remote save deferred: " +
                 exception.Message);
@@ -160,5 +166,13 @@ public class PlayerDataSaveScheduler : MonoBehaviour
     {
         data.lastOnlineUnixTime =
             DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    }
+
+    private static void MarkRemotePending(PlayerData data, bool pending)
+    {
+        if (data == null || string.IsNullOrWhiteSpace(data.uid))
+            return;
+
+        PlayerDataLocalCache.MarkPendingRemoteSave(data.uid, pending);
     }
 }

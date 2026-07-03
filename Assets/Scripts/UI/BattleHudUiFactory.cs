@@ -26,27 +26,6 @@ public static class BattleHudUiFactory
             Vector2.one);
     }
 
-    public static RectTransform CreateBattlePad(
-        RectTransform parent,
-        string name,
-        Vector2 anchor,
-        Vector2 normalizedSize,
-        Color tint)
-    {
-        Vector2 halfSize = normalizedSize * 0.5f;
-        RectTransform pad = RuntimeUiFactory.CreatePanel(
-            name,
-            parent,
-            new Color(tint.r, tint.g, tint.b, 0f),
-            anchor - halfSize,
-            anchor + halfSize);
-
-        Image background = pad.GetComponent<Image>();
-        background.raycastTarget = false;
-
-        return pad;
-    }
-
     public static RectTransform CreateBadge(
         Button button,
         string name,

@@ -2,7 +2,7 @@ using UnityEngine;
 
 public static class BattleLayoutConfig
 {
-    // Normalized positions inside the full portrait battle artwork.
+    // Normalized foot positions inside the full portrait battle artwork.
     public static readonly Vector2 SupportSparrowAnchor =
         new Vector2(0.18f, 0.43f);
 

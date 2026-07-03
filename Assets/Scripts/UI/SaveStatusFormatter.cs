@@ -2,10 +2,6 @@ public static class SaveStatusFormatter
 {
     public static string FormatShort(FirestoreManager firestore)
     {
-        bool schedulerPending =
-            PlayerDataSaveScheduler.Instance != null &&
-            PlayerDataSaveScheduler.Instance.HasPendingRemoteSave;
-
         if (firestore == null)
         {
             return LocalizationManager.Text(
@@ -13,7 +9,7 @@ public static class SaveStatusFormatter
                 "\uB85C\uCEEC \uC800\uC7A5\uB9CC");
         }
 
-        return firestore.HasPendingSave || schedulerPending
+        return HasAnyPendingSave(firestore)
             ? LocalizationManager.Text(
                 "Local saved | Server pending",
                 "\uB85C\uCEEC \uC800\uC7A5\uB428 | \uC11C\uBC84 \uB300\uAE30")
@@ -24,10 +20,6 @@ public static class SaveStatusFormatter
 
     public static string FormatDetailed(FirestoreManager firestore)
     {
-        bool schedulerPending =
-            PlayerDataSaveScheduler.Instance != null &&
-            PlayerDataSaveScheduler.Instance.HasPendingRemoteSave;
-
         if (firestore == null)
         {
             return LocalizationManager.Text(
@@ -35,7 +27,7 @@ public static class SaveStatusFormatter
                 "\uC800\uC7A5: \uB85C\uCEEC \uCE90\uC2DC \uC0AC\uC6A9 \uAC00\uB2A5. \uC11C\uBC84 \uC5F0\uACB0 \uC5C6\uC74C.");
         }
 
-        if (!firestore.HasPendingSave && !schedulerPending)
+        if (!HasAnyPendingSave(firestore))
         {
             return LocalizationManager.Text(
                 "Save: server save complete.",
@@ -60,11 +52,7 @@ public static class SaveStatusFormatter
 
     public static string FormatManualSaveToast(FirestoreManager firestore)
     {
-        bool schedulerPending =
-            PlayerDataSaveScheduler.Instance != null &&
-            PlayerDataSaveScheduler.Instance.HasPendingRemoteSave;
-
-        if (firestore == null || firestore.HasPendingSave || schedulerPending)
+        if (firestore == null || HasAnyPendingSave(firestore))
         {
             return LocalizationManager.Text(
                 "Saved locally. Server sync will retry.",
@@ -81,5 +69,22 @@ public static class SaveStatusFormatter
         return LocalizationManager.Text(
             "Saved locally. Server sync will retry.",
             "\uB85C\uCEEC \uC800\uC7A5 \uC644\uB8CC. \uC11C\uBC84 \uB3D9\uAE30\uD654\uB294 \uC790\uB3D9 \uC7AC\uC2DC\uB3C4.");
+    }
+
+    private static bool HasAnyPendingSave(FirestoreManager firestore)
+    {
+        return
+            (firestore != null && firestore.HasPendingSave) ||
+            (PlayerDataSaveScheduler.Instance != null &&
+             PlayerDataSaveScheduler.Instance.HasPendingRemoteSave) ||
+            HasLocalPendingRemoteSave();
+    }
+
+    private static bool HasLocalPendingRemoteSave()
+    {
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        return data != null &&
+            !string.IsNullOrWhiteSpace(data.uid) &&
+            PlayerDataLocalCache.HasPendingRemoteSave(data.uid);
     }
 }

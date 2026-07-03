@@ -23,7 +23,8 @@
 
 ## MapleStory Font
 
-- Not bundled yet.
+- File: `Maplestory Light.ttf`
+- File: `Maplestory Bold.ttf`
 - Source: https://maplestory.nexon.com/Media/Font
-- Candidate use: damage numbers only.
-- Status: official page allows app/game embedding, but direct font download link was not exposed through static page fetch. Re-check manually before bundling.
+- Use in project: primary UI, title, button, and damage number font.
+- License note: official MapleStory font page says the font is free for all users, can be used and distributed freely, can be bundled or used as an embedded font with the copyright notice included, cannot be modified/edited, cannot be sold as the font itself, and source attribution is recommended.

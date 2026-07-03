@@ -4,8 +4,8 @@ using UnityEngine;
 
 public static class GameFont
 {
-    private const string PrimaryResourcePath = "Fonts/ONE-Mobile-POP";
-    private const string TitleResourcePath = "Fonts/Jalnan2";
+    private const string PrimaryResourcePath = "Fonts/Maplestory Light";
+    private const string TitleResourcePath = "Fonts/Maplestory Bold";
     private const string FallbackResourcePath = "Fonts/Jua-Regular";
 
     private static TMP_FontAsset primaryFontAsset;
@@ -20,7 +20,7 @@ public static class GameFont
 
             primaryFontAsset = LoadRuntimeFont(
                 PrimaryResourcePath,
-                "ONE Mobile POP Runtime TMP Font") ??
+                "Maplestory Light Runtime TMP Font") ??
                 LoadRuntimeFont(
                     FallbackResourcePath,
                     "Jua Runtime TMP Font");
@@ -37,13 +37,13 @@ public static class GameFont
 
             titleFontAsset = LoadRuntimeFont(
                 TitleResourcePath,
-                "Jalnan2 Runtime TMP Font") ??
+                "Maplestory Bold Runtime TMP Font") ??
                 Primary;
             return titleFontAsset;
         }
     }
 
-    public static TMP_FontAsset Damage => Primary;
+    public static TMP_FontAsset Damage => Title;
 
     public static void Apply(TMP_Text text, string objectName = null)
     {
@@ -56,9 +56,17 @@ public static class GameFont
 
     public static void ApplyDamage(TMP_Text text)
     {
-        TMP_FontAsset font = Damage;
-        if (text != null && font != null)
-            text.font = font;
+        if (text != null && Damage != null)
+            text.font = Damage;
+    }
+
+    public static void ApplyToHierarchy(Transform root)
+    {
+        if (root == null)
+            return;
+
+        foreach (TMP_Text text in root.GetComponentsInChildren<TMP_Text>(true))
+            Apply(text, text.name);
     }
 
     private static TMP_FontAsset LoadRuntimeFont(

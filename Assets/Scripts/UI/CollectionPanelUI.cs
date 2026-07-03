@@ -8,10 +8,14 @@ public sealed class CollectionPanelUI
 {
     private const string NumberResourceRoot =
         "PrototypeArt/Numbers/DamageGold";
+    private const int CharactersPerPage = 12;
+    private const int CharacterColumns = 4;
 
     private RectTransform panel;
+    private RectTransform slotBar;
     private RectTransform detailInfoRoot;
     private TMP_Text selectionPromptText;
+    private TMP_Text pageText;
     private TMP_Text characterTitleText;
     private TMP_Text ownershipLabelText;
     private TMP_Text ownershipStateText;
@@ -29,7 +33,19 @@ public sealed class CollectionPanelUI
     private SpriteNumberText attackBonusNumberText;
     private SpriteNumberText promotionCostNumberText;
     private Image characterDetailPortraitImage;
+    private Button previousPageButton;
+    private Button nextPageButton;
+    private readonly Button[] characterButtons =
+        new Button[CharactersPerPage];
+    private readonly Image[] characterPortraitImages =
+        new Image[CharactersPerPage];
+    private readonly Image[] characterLockImages =
+        new Image[CharactersPerPage];
+    private readonly TMP_Text[] characterButtonLabels =
+        new TMP_Text[CharactersPerPage];
     private CompanionSlotButtonsUI slotButtons;
+    private Action<CharacterData> selectCharacterAction;
+    private int characterPage;
 
     public GameObject GameObject => panel.gameObject;
 
@@ -101,12 +117,21 @@ public sealed class CollectionPanelUI
         RuntimeUiFactory.CreateText(
             "CollectionSubtitle",
             panel,
-            "Select a companion, then equip it to a party slot.",
+            "+ 슬롯을 누른 뒤 장착할 동료를 선택하세요.",
             24,
             new Vector2(0.24f, 0.86f),
             new Vector2(0.96f, 0.9f),
             TextAlignmentOptions.Center,
             MutedText);
+
+        slotBar = CreateSlotBar();
+        slotButtons = new CompanionSlotButtonsUI(
+            slotBar,
+            toggleSelectedCharacterSlot,
+            PanelLight,
+            Accent,
+            Gold,
+            Success);
 
         BuildCharacterButtons(companionManager, selectCharacter);
 
@@ -120,7 +145,7 @@ public sealed class CollectionPanelUI
         RuntimeUiFactory.CreateText(
             "CharacterDetailTitle",
             detailCard,
-            "DETAIL / PARTY SLOTS",
+            "상세 정보",
             25,
             new Vector2(0.05f, 0.82f),
             new Vector2(0.67f, 0.95f),
@@ -307,19 +332,14 @@ public sealed class CollectionPanelUI
             Gold,
             () => promoteSelectedCharacter?.Invoke());
 
-        slotButtons = new CompanionSlotButtonsUI(
-            detailCard,
-            toggleSelectedCharacterSlot,
-            PanelLight,
-            Accent,
-            Gold,
-            Success);
     }
 
     public void Refresh(
         CharacterData selectedCharacter,
         CompanionManager companionManager)
     {
+        RefreshCharacterButtons(companionManager);
+
         if (selectedCharacter == null || companionManager == null)
         {
             if (selectionPromptText != null)
@@ -340,9 +360,7 @@ public sealed class CollectionPanelUI
         if (detailInfoRoot != null)
             detailInfoRoot.gameObject.SetActive(true);
         RefreshDetailInfo(selectedCharacter, companionManager);
-        SetPortrait(
-            selectedCharacter.icon ??
-            selectedCharacter.battleSprite);
+        SetPortrait(selectedCharacter.ResolvePortraitSprite());
         slotButtons?.Refresh(
             selectedCharacter,
             companionManager);
@@ -358,7 +376,13 @@ public sealed class CollectionPanelUI
         RuntimeUiBinder.ReplaceButtonAction(
             RuntimeUiBinder.FindButton(panel, "CollectionBackButton"),
             () => showMore?.Invoke());
+        TMP_Text subtitleText =
+            RuntimeUiBinder.FindText(panel, "CollectionSubtitle");
+        SetText(
+            subtitleText,
+            "+ 슬롯을 누른 뒤 장착할 동료를 선택하세요.");
         BindCharacterButtons(companionManager, selectCharacter);
+        HideLegacyDetailSlotButtons();
 
         selectionPromptText =
             RuntimeUiBinder.FindText(
@@ -368,6 +392,9 @@ public sealed class CollectionPanelUI
             RuntimeUiBinder.FindRect(panel, "CharacterDetailInfo");
         characterTitleText =
             RuntimeUiBinder.FindText(panel, "CharacterTitleText");
+        SetText(
+            RuntimeUiBinder.FindText(panel, "CharacterDetailTitle"),
+            "상세 정보");
         ownershipLabelText =
             RuntimeUiBinder.FindText(panel, "OwnershipLabelText");
         ownershipStateText =
@@ -403,14 +430,15 @@ public sealed class CollectionPanelUI
         RuntimeUiBinder.ReplaceButtonAction(
             RuntimeUiBinder.FindButton(panel, "PromoteButton"),
             () => promoteSelectedCharacter?.Invoke());
+        slotBar = RuntimeUiBinder.FindRect(panel, "CompanionSlotBar") ??
+            CreateSlotBar();
         slotButtons = new CompanionSlotButtonsUI(
-            RuntimeUiBinder.FindRect(panel, "CharacterDetailCard"),
+            slotBar,
             toggleSelectedCharacterSlot,
             PanelLight,
             Accent,
             Gold,
-            Success,
-            true);
+            Success);
         if (detailInfoRoot != null)
             detailInfoRoot.gameObject.SetActive(false);
     }
@@ -550,80 +578,399 @@ public sealed class CollectionPanelUI
         CompanionManager companionManager,
         Action<CharacterData> selectCharacter)
     {
-        List<CharacterData> characters =
-            companionManager?.GetAllCharacters() ??
-            new List<CharacterData>();
-        for (int index = 0; index < characters.Count; index++)
+        selectCharacterAction = selectCharacter;
+
+        for (int index = 0; index < CharactersPerPage; index++)
         {
-            CharacterData character = characters[index];
-            int column = index % 3;
-            int row = index / 3;
-            float xMin = 0.04f + column * 0.32f;
-            float yMax = 0.83f - row * 0.115f;
+            Vector2 anchorMin;
+            Vector2 anchorMax;
+            GetSlotAnchors(index, out anchorMin, out anchorMax);
 
             Button characterButton = RuntimeUiFactory.CreateButton(
-                "Character_" + character.characterName,
+                "CharacterSlot_" + (index + 1),
                 panel,
-                $"[{character.rarity}]\n{character.characterName}",
-                new Vector2(xMin, yMax - 0.09f),
-                new Vector2(xMin + 0.28f, yMax),
-                GetRarityColor(character.rarity),
-                () => selectCharacter?.Invoke(character));
+                "",
+                anchorMin,
+                anchorMax,
+                PanelLight,
+                () => { });
+            characterButtons[index] = characterButton;
 
-            Sprite portrait = character.icon ?? character.battleSprite;
-            if (portrait == null)
-                continue;
-
-            RuntimeUiFactory.CreateSpriteImage(
+            characterPortraitImages[index] = RuntimeUiFactory.CreateSpriteImage(
                 "Portrait",
                 characterButton.transform,
-                portrait,
-                new Vector2(0.04f, 0.12f),
-                new Vector2(0.32f, 0.88f));
+                null,
+                new Vector2(0.12f, 0.28f),
+                new Vector2(0.88f, 0.9f));
+            characterLockImages[index] = CreateLockImage(
+                characterButton.transform);
 
-            Transform label = characterButton.transform.Find("Label");
-            if (label == null ||
-                !label.TryGetComponent(out RectTransform labelRect))
-            {
-                continue;
-            }
-
-            labelRect.anchorMin = new Vector2(0.34f, 0.08f);
-            labelRect.anchorMax = new Vector2(0.96f, 0.9f);
-            TMP_Text labelText = label.GetComponent<TMP_Text>();
-            if (labelText != null)
-                labelText.alignment = TextAlignmentOptions.Left;
+            TMP_Text labelText = characterButton.GetComponentInChildren<TMP_Text>(
+                true);
+            characterButtonLabels[index] = labelText;
+            ConfigureCharacterLabel(labelText);
         }
+
+        BuildPageControls();
+        RefreshCharacterButtons(companionManager);
     }
 
     private void BindCharacterButtons(
         CompanionManager companionManager,
         Action<CharacterData> selectCharacter)
     {
+        selectCharacterAction = selectCharacter;
+        List<Button> existingButtons = GetExistingCharacterButtons();
+
+        for (int index = 0; index < CharactersPerPage; index++)
+        {
+            Button characterButton = index < existingButtons.Count
+                ? existingButtons[index]
+                : CreateRuntimeCharacterSlot(index);
+            characterButtons[index] = characterButton;
+            if (characterButton == null)
+                continue;
+
+            characterButton.name = "CharacterSlot_" + (index + 1);
+            RectTransform rect =
+                characterButton.GetComponent<RectTransform>();
+            Vector2 anchorMin;
+            Vector2 anchorMax;
+            GetSlotAnchors(index, out anchorMin, out anchorMax);
+            ApplyAnchors(rect, anchorMin, anchorMax);
+
+            characterPortraitImages[index] =
+                RuntimeUiBinder.FindImage(
+                    characterButton.transform,
+                    "Portrait") ??
+                RuntimeUiFactory.CreateSpriteImage(
+                    "Portrait",
+                    characterButton.transform,
+                    null,
+                    new Vector2(0.12f, 0.28f),
+                    new Vector2(0.88f, 0.9f));
+            ApplyAnchors(
+                characterPortraitImages[index]
+                    ?.GetComponent<RectTransform>(),
+                new Vector2(0.12f, 0.28f),
+                new Vector2(0.88f, 0.9f));
+            characterLockImages[index] =
+                RuntimeUiBinder.FindImage(
+                    characterButton.transform,
+                    "LockIcon") ??
+                CreateLockImage(characterButton.transform);
+
+            TMP_Text labelText = RuntimeUiBinder.FindText(
+                characterButton.transform,
+                "Label") ??
+                characterButton.GetComponentInChildren<TMP_Text>(true);
+            characterButtonLabels[index] = labelText;
+            ConfigureCharacterLabel(labelText);
+        }
+
+        BuildPageControls();
+        RefreshCharacterButtons(companionManager);
+    }
+
+    private void RefreshCharacterButtons(CompanionManager companionManager)
+    {
         List<CharacterData> characters =
             companionManager?.GetAllCharacters() ??
             new List<CharacterData>();
-        for (int index = 0; index < characters.Count; index++)
-        {
-            CharacterData character = characters[index];
-            Button characterButton = RuntimeUiBinder.FindButton(
-                panel,
-                "Character_" + character.characterName);
-            RuntimeUiBinder.ReplaceButtonAction(
-                characterButton,
-                () => selectCharacter?.Invoke(character));
+        int maxPage = characters.Count == 0
+            ? 0
+            : (characters.Count - 1) / CharactersPerPage;
+        characterPage = Mathf.Clamp(characterPage, 0, maxPage);
 
-            Image portraitImage = characterButton == null
-                ? null
-                : RuntimeUiBinder.FindImage(characterButton.transform, "Portrait");
-            if (portraitImage == null)
+        for (int index = 0; index < CharactersPerPage; index++)
+        {
+            Button button = characterButtons[index];
+            if (button == null)
                 continue;
 
-            Sprite portrait = character.icon ?? character.battleSprite;
-            portraitImage.sprite = portrait;
-            portraitImage.color =
-                portrait == null ? Color.clear : Color.white;
+            int characterIndex =
+                characterPage * CharactersPerPage + index;
+            bool hasCharacter = characterIndex < characters.Count;
+            button.gameObject.SetActive(hasCharacter);
+            if (!hasCharacter)
+                continue;
+
+            CharacterData character = characters[characterIndex];
+            bool owned = companionManager != null &&
+                companionManager.GetOwnedCount(
+                    character.characterName) > 0;
+            CharacterData capturedCharacter = character;
+            RuntimeUiBinder.ReplaceButtonAction(
+                button,
+                owned
+                    ? () => selectCharacterAction?.Invoke(capturedCharacter)
+                    : (UnityEngine.Events.UnityAction)null);
+            button.interactable = owned;
+
+            TMP_Text label = characterButtonLabels[index];
+            SetText(
+                label,
+                owned
+                    ? character.characterName
+                    : "?");
+
+            Sprite portrait = owned
+                ? character.ResolveGachaSprite()
+                : null;
+            Image portraitImage = characterPortraitImages[index];
+            if (portraitImage != null)
+            {
+                portraitImage.sprite = portrait;
+                portraitImage.color =
+                    portrait == null ? Color.clear : Color.white;
+            }
+            Image lockImage = characterLockImages[index];
+            if (lockImage != null)
+            {
+                lockImage.sprite = PrototypeUiArt.LockIcon;
+                lockImage.color = owned ? Color.clear : Color.white;
+                lockImage.gameObject.SetActive(!owned);
+            }
+
+            ApplyCharacterButtonColor(
+                button,
+                character.rarity,
+                owned);
         }
+
+        RefreshPageControls(maxPage);
+    }
+
+    private List<Button> GetExistingCharacterButtons()
+    {
+        List<Button> buttons = new List<Button>();
+        if (panel == null)
+            return buttons;
+
+        foreach (Button button in panel.GetComponentsInChildren<Button>(true))
+        {
+            if (button == null ||
+                !button.name.StartsWith(
+                    "Character_",
+                    StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            buttons.Add(button);
+        }
+
+        buttons.Sort(CompareCharacterButtonPosition);
+        return buttons;
+    }
+
+    private static int CompareCharacterButtonPosition(
+        Button left,
+        Button right)
+    {
+        RectTransform leftRect = left.GetComponent<RectTransform>();
+        RectTransform rightRect = right.GetComponent<RectTransform>();
+        if (leftRect == null || rightRect == null)
+            return 0;
+
+        int rowComparison =
+            rightRect.anchorMax.y.CompareTo(leftRect.anchorMax.y);
+        if (rowComparison != 0)
+            return rowComparison;
+
+        return leftRect.anchorMin.x.CompareTo(rightRect.anchorMin.x);
+    }
+
+    private Button CreateRuntimeCharacterSlot(int index)
+    {
+        Vector2 anchorMin;
+        Vector2 anchorMax;
+        GetSlotAnchors(index, out anchorMin, out anchorMax);
+        return RuntimeUiFactory.CreateButton(
+            "CharacterSlot_" + (index + 1),
+            panel,
+            "",
+            anchorMin,
+            anchorMax,
+            PanelLight,
+            () => { });
+    }
+
+    private void BuildPageControls()
+    {
+        previousPageButton =
+            RuntimeUiBinder.FindButton(
+                panel,
+                "CollectionPreviousPageButton") ??
+            RuntimeUiFactory.CreateButton(
+                "CollectionPreviousPageButton",
+                panel,
+                "<",
+                new Vector2(0.005f, 0.38f),
+                new Vector2(0.08f, 0.75f),
+                PanelLight,
+                () => ChangeCharacterPage(-1));
+        RuntimeUiBinder.ReplaceButtonAction(
+            previousPageButton,
+            () => ChangeCharacterPage(-1));
+
+        nextPageButton =
+            RuntimeUiBinder.FindButton(
+                panel,
+                "CollectionNextPageButton") ??
+            RuntimeUiFactory.CreateButton(
+                "CollectionNextPageButton",
+                panel,
+                ">",
+                new Vector2(0.92f, 0.38f),
+                new Vector2(0.995f, 0.75f),
+                PanelLight,
+                () => ChangeCharacterPage(1));
+        RuntimeUiBinder.ReplaceButtonAction(
+            nextPageButton,
+            () => ChangeCharacterPage(1));
+
+        pageText =
+            RuntimeUiBinder.FindText(panel, "CollectionPageText") ??
+            RuntimeUiFactory.CreateText(
+                "CollectionPageText",
+                panel,
+                "",
+                20,
+                new Vector2(0.39f, 0.34f),
+                new Vector2(0.61f, 0.38f),
+                TextAlignmentOptions.Center,
+                MutedText);
+    }
+
+    private void ChangeCharacterPage(int direction)
+    {
+        characterPage += direction;
+        RefreshCharacterButtons(CompanionManager.Instance);
+    }
+
+    private void RefreshPageControls(int maxPage)
+    {
+        bool showPages = maxPage > 0;
+        if (previousPageButton != null)
+        {
+            previousPageButton.gameObject.SetActive(showPages);
+            previousPageButton.interactable = characterPage > 0;
+        }
+
+        if (nextPageButton != null)
+        {
+            nextPageButton.gameObject.SetActive(showPages);
+            nextPageButton.interactable = characterPage < maxPage;
+        }
+
+        if (pageText != null)
+        {
+            pageText.gameObject.SetActive(showPages);
+            pageText.text = (characterPage + 1) + " / " + (maxPage + 1);
+        }
+    }
+
+    private static void GetSlotAnchors(
+        int index,
+        out Vector2 anchorMin,
+        out Vector2 anchorMax)
+    {
+        int column = index % CharacterColumns;
+        int row = index / CharacterColumns;
+        float width = 0.18f;
+        float gap = 0.025f;
+        float xMin = 0.11f + column * (width + gap);
+        float yMax = 0.715f - row * 0.125f;
+        anchorMin = new Vector2(xMin, yMax - 0.11f);
+        anchorMax = new Vector2(xMin + width, yMax);
+    }
+
+    private static void ApplyAnchors(
+        RectTransform rect,
+        Vector2 anchorMin,
+        Vector2 anchorMax)
+    {
+        if (rect == null)
+            return;
+
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+    }
+
+    private static void ConfigureCharacterLabel(TMP_Text labelText)
+    {
+        if (labelText == null)
+            return;
+
+        labelText.alignment = TextAlignmentOptions.Center;
+        labelText.fontSizeMax = 19f;
+        RectTransform labelRect =
+            labelText.GetComponent<RectTransform>();
+        ApplyAnchors(
+            labelRect,
+            new Vector2(0.06f, 0.02f),
+            new Vector2(0.94f, 0.24f));
+    }
+
+    private RectTransform CreateSlotBar()
+    {
+        RectTransform bar = RuntimeUiFactory.CreatePanel(
+            "CompanionSlotBar",
+            panel,
+            new Color32(0, 0, 0, 0),
+            new Vector2(0.04f, 0.735f),
+            new Vector2(0.96f, 0.855f));
+        Image image = bar.GetComponent<Image>();
+        if (image != null)
+            image.raycastTarget = false;
+        return bar;
+    }
+
+    private Image CreateLockImage(Transform parent)
+    {
+        return RuntimeUiFactory.CreateSpriteImage(
+            "LockIcon",
+            parent,
+            PrototypeUiArt.LockIcon,
+            new Vector2(0.32f, 0.38f),
+            new Vector2(0.68f, 0.76f));
+    }
+
+    private void HideLegacyDetailSlotButtons()
+    {
+        RectTransform detailCard =
+            RuntimeUiBinder.FindRect(panel, "CharacterDetailCard");
+        if (detailCard == null)
+            return;
+
+        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
+        {
+            Button button = RuntimeUiBinder.FindButton(
+                detailCard,
+                "EquipSlot" + (slot + 1));
+            if (button != null)
+                button.gameObject.SetActive(false);
+        }
+    }
+
+    private static void ApplyCharacterButtonColor(
+        Button button,
+        string rarity,
+        bool owned)
+    {
+        Color color = GetRarityColor(rarity);
+        if (!owned)
+            color = Color.Lerp(color, new Color32(30, 30, 30, 255), 0.58f);
+
+        Image art = RuntimeUiBinder.FindImage(
+            button.transform,
+            "ButtonArt") ??
+            (button.targetGraphic as Image);
+        if (art != null)
+            art.color = color;
     }
 
     private void SetPortrait(Sprite portrait)

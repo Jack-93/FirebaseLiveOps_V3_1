@@ -9,9 +9,6 @@ public sealed class WorldBackdropUI
     private Image foregroundImage;
     private int themeIndex = -1;
 
-    private static readonly Color Background =
-        new Color32(17, 24, 39, 255);
-
     public GameObject GameObject => backdrop == null ? null : backdrop.gameObject;
 
     public WorldBackdropUI(
@@ -26,7 +23,7 @@ public sealed class WorldBackdropUI
             rootImage.raycastTarget = false;
         }
 
-        themeIndex = PrototypeBattleArt.GetThemeIndex(stage);
+        themeIndex = BattleStageThemeResolver.GetThemeIndex(stage);
 
         if (usePrefab &&
             RuntimeUiBinder.TryInstantiatePrefab(
@@ -57,23 +54,23 @@ public sealed class WorldBackdropUI
         backgroundImage = CreateWorldLayer(
             "WorldBackgroundLayer",
             backdrop,
-            PrototypeBattleArt.GetStageBackground(stage),
-            Background);
+            BattleStageThemeResolver.GetStageBackground(stage),
+            BattleStageThemeResolver.GetFallbackColor(stage));
         midgroundImage = CreateWorldLayer(
             "WorldMidgroundLayer",
             backdrop,
-            PrototypeBattleArt.GetStageMidground(stage),
+            BattleStageThemeResolver.GetStageMidground(stage),
             Color.clear);
         foregroundImage = CreateWorldLayer(
             "WorldForegroundLayer",
             backdrop,
-            PrototypeBattleArt.GetStageForeground(stage),
+            BattleStageThemeResolver.GetStageForeground(stage),
             Color.clear);
     }
 
     public void Refresh(int stage)
     {
-        int nextThemeIndex = PrototypeBattleArt.GetThemeIndex(stage);
+        int nextThemeIndex = BattleStageThemeResolver.GetThemeIndex(stage);
         if (nextThemeIndex == themeIndex)
             return;
 
@@ -102,15 +99,15 @@ public sealed class WorldBackdropUI
     {
         SetWorldLayer(
             backgroundImage,
-            PrototypeBattleArt.GetStageBackground(stage),
-            Background);
+            BattleStageThemeResolver.GetStageBackground(stage),
+            BattleStageThemeResolver.GetFallbackColor(stage));
         SetWorldLayer(
             midgroundImage,
-            PrototypeBattleArt.GetStageMidground(stage),
+            BattleStageThemeResolver.GetStageMidground(stage),
             Color.clear);
         SetWorldLayer(
             foregroundImage,
-            PrototypeBattleArt.GetStageForeground(stage),
+            BattleStageThemeResolver.GetStageForeground(stage),
             Color.clear);
     }
 

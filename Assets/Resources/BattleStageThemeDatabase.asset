@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 29a466cedfc557e409ae8d5560168b9b, type: 3}
+  m_Name: BattleStageThemeDatabase
+  m_EditorClassIdentifier: Assembly-CSharp::BattleStageThemeDatabase
+  themes:
+  - themeName: SunsetPole
+    stageFrom: 1
+    stageTo: 20
+    priority: 0
+    background: {fileID: 0}
+    midground: {fileID: 0}
+    foreground: {fileID: 0}
+    fallbackColor: {r: 0.06666667, g: 0.09411765, b: 0.15294118, a: 1}
+  - themeName: ForestPole
+    stageFrom: 21
+    stageTo: 50
+    priority: 0
+    background: {fileID: 0}
+    midground: {fileID: 0}
+    foreground: {fileID: 0}
+    fallbackColor: {r: 0.06666667, g: 0.09411765, b: 0.15294118, a: 1}
+  - themeName: RooftopPole
+    stageFrom: 51
+    stageTo: 90
+    priority: 0
+    background: {fileID: 0}
+    midground: {fileID: 0}
+    foreground: {fileID: 0}
+    fallbackColor: {r: 0.06666667, g: 0.09411765, b: 0.15294118, a: 1}
+  - themeName: RainPole
+    stageFrom: 91
+    stageTo: 0
+    priority: 0
+    background: {fileID: 0}
+    midground: {fileID: 0}
+    foreground: {fileID: 0}
+    fallbackColor: {r: 0.06666667, g: 0.09411765, b: 0.15294118, a: 1}

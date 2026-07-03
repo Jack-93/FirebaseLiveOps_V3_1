@@ -11,6 +11,7 @@ public sealed class CompanionActionController
     private readonly Action refreshBattle;
 
     private CharacterData selectedCharacter;
+    private int pendingEquipSlot = -1;
 
     public CompanionActionController(
         CompanionManager companionManager,
@@ -32,18 +33,41 @@ public sealed class CompanionActionController
 
     public void EnsureSelected()
     {
-        if (selectedCharacter != null || companionManager == null)
+        if (companionManager == null)
             return;
 
-        List<CharacterData> characters =
-            companionManager.GetAllCharacters();
-        if (characters.Count > 0)
-            selectedCharacter = characters[0];
+        if (selectedCharacter != null &&
+            companionManager.GetOwnedCount(
+                selectedCharacter.characterName) > 0)
+        {
+            return;
+        }
+
+        List<CharacterData> ownedCharacters =
+            companionManager.GetOwnedCharacters();
+        selectedCharacter = ownedCharacters.Count > 0
+            ? ownedCharacters[0]
+            : null;
     }
 
     public void Select(CharacterData character)
     {
+        if (character != null &&
+            companionManager != null &&
+            companionManager.GetOwnedCount(character.characterName) <= 0)
+        {
+            showToast?.Invoke("Recruit this companion first.");
+            return;
+        }
+
         selectedCharacter = character;
+
+        if (pendingEquipSlot >= 0)
+        {
+            EquipSelectedToPendingSlot();
+            return;
+        }
+
         refreshCollection?.Invoke();
     }
 
@@ -82,20 +106,35 @@ public sealed class CompanionActionController
 
     public void ToggleSelectedSlot(int slotIndex)
     {
-        if (selectedCharacter == null || companionManager == null)
+        if (companionManager == null)
             return;
 
+        pendingEquipSlot = slotIndex;
         CharacterData equipped =
             companionManager.GetEquippedAtSlot(slotIndex);
-        bool selectedInSlot =
-            equipped != null &&
-            equipped.characterName == selectedCharacter.characterName;
-        bool changed = selectedInSlot
-            ? companionManager.TryUnequipSlot(slotIndex)
-            : companionManager.TryEquipToSlot(
-                selectedCharacter,
-                slotIndex);
+        selectedCharacter = equipped ?? selectedCharacter;
+        refreshCollection?.Invoke();
+        showToast?.Invoke(
+            equipped == null
+                ? $"{slotIndex + 1}번 슬롯: 장착할 동료를 선택하세요."
+                : $"{slotIndex + 1}번 슬롯: 교체할 동료를 선택하세요.");
+    }
 
+    private void EquipSelectedToPendingSlot()
+    {
+        if (selectedCharacter == null ||
+            companionManager == null ||
+            pendingEquipSlot < 0)
+        {
+            return;
+        }
+
+        int targetSlot = pendingEquipSlot;
+        pendingEquipSlot = -1;
+
+        bool changed = companionManager.TryEquipToSlot(
+            selectedCharacter,
+            targetSlot);
         if (!changed)
         {
             showToast?.Invoke("This companion is not owned.");
@@ -104,11 +143,9 @@ public sealed class CompanionActionController
 
         RefreshPlayerData();
         refreshCollection?.Invoke();
+        refreshBattle?.Invoke();
         showToast?.Invoke(
-            selectedInSlot
-                ? $"{selectedCharacter.characterName} removed."
-                : $"{selectedCharacter.characterName} set to slot " +
-                  $"{slotIndex + 1}.");
+            $"{selectedCharacter.characterName} {targetSlot + 1}번 슬롯 장착.");
     }
 
     private void ApplyCompanionSelection(CharacterData equipped)

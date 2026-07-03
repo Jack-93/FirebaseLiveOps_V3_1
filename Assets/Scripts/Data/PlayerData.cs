@@ -175,7 +175,9 @@ public class PlayerData
         highestStage = System.Math.Max(currentStage, highestStage);
         stageEnemyIndex = System.Math.Max(
             0,
-            System.Math.Min(4, stageEnemyIndex));
+            System.Math.Min(
+                GameBalanceConfig.EnemiesPerStage - 1,
+                stageEnemyIndex));
         attackLevel = System.Math.Max(1, attackLevel);
         healthLevel = System.Math.Max(1, healthLevel);
         attackSpeedLevel = System.Math.Max(1, attackSpeedLevel);

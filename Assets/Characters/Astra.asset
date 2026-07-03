@@ -21,8 +21,25 @@ MonoBehaviour:
   basicProjectileTint: {r: 1, g: 1, b: 1, a: 1}
   skillProjectileTint: {r: 1, g: 1, b: 1, a: 1}
   battleAnimator: {fileID: 0}
+  battleVisual:
+    sprite: {fileID: 0}
+    animatorController: {fileID: 0}
+    spriteAnimations: []
+    basicProjectile:
+      sprite: {fileID: 21300000, guid: 96e76109869d4e7f88953cc0701507e0, type: 3}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      duration: 0
+      size: 0
+    skillProjectile:
+      sprite: {fileID: 21300000, guid: 9e708890c3b84bbdb9a19d4f118c4308, type: 3}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      duration: 0
+      size: 0
   element: 3
   role: 1
   synergyTags:
   - Arcane
   description: Placeholder ranged companion.
+  skillName: Power Strike
+  skillCooldown: 8
+  skillDamageMultiplier: 2

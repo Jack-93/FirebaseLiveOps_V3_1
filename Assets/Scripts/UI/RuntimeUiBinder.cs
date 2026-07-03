@@ -24,6 +24,7 @@ public static class RuntimeUiBinder
         GameObject instance = Object.Instantiate(prefab, parent, false);
         instance.name = prefabName;
         rect = instance.GetComponent<RectTransform>();
+        GameFont.ApplyToHierarchy(rect);
         return rect != null;
     }
 
@@ -73,9 +74,11 @@ public static class RuntimeUiBinder
     public static TMP_Text FindText(Transform root, string name)
     {
         Transform transform = FindTransform(root, name);
-        return transform == null
+        TMP_Text text = transform == null
             ? null
             : transform.GetComponent<TMP_Text>();
+        GameFont.Apply(text, name);
+        return text;
     }
 
     public static Image FindImage(Transform root, string name)
@@ -89,9 +92,11 @@ public static class RuntimeUiBinder
     public static Button FindButton(Transform root, string name)
     {
         Transform transform = FindTransform(root, name);
-        return transform == null
-            ? null
-            : transform.GetComponent<Button>();
+        if (transform == null)
+            return null;
+
+        GameFont.ApplyToHierarchy(transform);
+        return transform.GetComponent<Button>();
     }
 
     public static Transform FindTransform(Transform root, string name)

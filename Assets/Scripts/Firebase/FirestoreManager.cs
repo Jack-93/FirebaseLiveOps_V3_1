@@ -70,16 +70,17 @@ public class FirestoreManager : MonoBehaviour
             if (TryLoadLocalData(
                     user.UserId,
                     out PlayerData newerLocalData) &&
-                PlayerDataLocalCache.IsNewerThan(newerLocalData, data))
+                ShouldRestoreLocalData(user.UserId, newerLocalData, data))
             {
                 await SavePlayerDataAsync(newerLocalData);
                 Debug.LogWarning(
-                    "[Firestore] Local cache was newer than server data. " +
+                    "[Firestore] Local cache needed server sync. " +
                     "Server data restored from cache.");
                 return newerLocalData;
             }
 
             PlayerDataLocalCache.Save(data);
+            PlayerDataLocalCache.MarkPendingRemoteSave(user.UserId, false);
             LastSaveError = "";
 
             Debug.Log("[Firestore] Data Loaded");
@@ -104,6 +105,9 @@ public class FirestoreManager : MonoBehaviour
             };
             fallbackData.EnsureInitialized();
             PlayerDataLocalCache.Save(fallbackData);
+            PlayerDataLocalCache.MarkPendingRemoteSave(
+                user.UserId,
+                true);
             Debug.LogWarning(
                 "[Firestore] Server load failed and no local cache was found. " +
                 "Starting from a local fallback save: " +
@@ -120,6 +124,15 @@ public class FirestoreManager : MonoBehaviour
         data.uid = uid;
         data.EnsureInitialized();
         return true;
+    }
+
+    private static bool ShouldRestoreLocalData(
+        string uid,
+        PlayerData localData,
+        PlayerData serverData)
+    {
+        return PlayerDataLocalCache.HasPendingRemoteSave(uid) ||
+            PlayerDataLocalCache.IsNewerThan(localData, serverData);
     }
 
     public async Task SavePlayerDataAsync(PlayerData data)
@@ -142,6 +155,9 @@ public class FirestoreManager : MonoBehaviour
             HasPendingSave = true;
             data.uid = user.UserId;
             PlayerDataLocalCache.Save(data);
+            PlayerDataLocalCache.MarkPendingRemoteSave(
+                user.UserId,
+                true);
 
             DocumentReference docRef =
                 db.Collection("users").Document(user.UserId);
@@ -157,6 +173,9 @@ public class FirestoreManager : MonoBehaviour
                     HasPendingSave = false;
                     LastSaveError = "";
                     PlayerDataLocalCache.Save(data);
+                    PlayerDataLocalCache.MarkPendingRemoteSave(
+                        user.UserId,
+                        false);
                     Debug.Log("[Firestore] Save Success");
                     return;
                 }
@@ -179,6 +198,12 @@ public class FirestoreManager : MonoBehaviour
         {
             HasPendingSave = true;
             LastSaveError = exception.Message;
+            if (data != null && !string.IsNullOrWhiteSpace(data.uid))
+            {
+                PlayerDataLocalCache.MarkPendingRemoteSave(
+                    data.uid,
+                    true);
+            }
             throw;
         }
         finally

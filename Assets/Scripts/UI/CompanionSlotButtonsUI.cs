@@ -7,9 +7,9 @@ using UnityEngine.UI;
 public sealed class CompanionSlotButtonsUI
 {
     private readonly List<Button> buttons = new List<Button>();
+    private readonly List<Image> portraitImages = new List<Image>();
+    private readonly List<Image> plusImages = new List<Image>();
     private readonly Color panelLight;
-    private readonly Color accent;
-    private readonly Color gold;
     private readonly Color success;
 
     public CompanionSlotButtonsUI(
@@ -22,8 +22,6 @@ public sealed class CompanionSlotButtonsUI
         bool bindExisting = false)
     {
         this.panelLight = panelLight;
-        this.accent = accent;
-        this.gold = gold;
         this.success = success;
 
         for (int slot = 0; slot < CompanionManager.PartySize; slot++)
@@ -45,12 +43,13 @@ public sealed class CompanionSlotButtonsUI
                 slotButton = RuntimeUiFactory.CreateButton(
                     "EquipSlot" + (slot + 1),
                     parent,
-                    "SLOT " + (slot + 1),
-                    new Vector2(xMin, 0.05f),
-                    new Vector2(xMin + 0.27f, 0.23f),
+                    "+",
+                    new Vector2(xMin, 0.08f),
+                    new Vector2(xMin + 0.27f, 0.92f),
                     accent,
                     () => toggleSelectedCharacterSlot?.Invoke(capturedSlot));
             }
+            ConfigureSlot(slotButton);
             buttons.Add(slotButton);
         }
     }
@@ -67,76 +66,111 @@ public sealed class CompanionSlotButtonsUI
 
             CharacterData equipped =
                 companionManager?.GetEquippedAtSlot(slot);
-            bool selectedOwned =
-                selectedCharacter != null &&
-                companionManager != null &&
-                companionManager.GetOwnedCount(
-                    selectedCharacter.characterName) > 0;
-            bool selectedInSlot =
-                selectedCharacter != null &&
-                equipped != null &&
-                equipped.characterName ==
-                selectedCharacter.characterName;
+            bool hasEquipped = equipped != null;
 
-            SetButtonLabel(
-                button,
-                BuildLabel(
-                    slot,
-                    equipped,
-                    selectedCharacter,
-                    selectedOwned,
-                    selectedInSlot));
-            button.interactable =
-                selectedCharacter != null &&
-                (selectedOwned || selectedInSlot);
+            SetPortrait(slot, equipped);
+            SetPlus(slot, !hasEquipped);
+            SetButtonLabel(button, hasEquipped ? equipped.characterName : "+");
+            button.interactable = true;
 
             if (button.targetGraphic == null)
                 continue;
 
-            button.targetGraphic.color = selectedInSlot
+            button.targetGraphic.color = hasEquipped
                 ? success
-                : selectedOwned
-                    ? accent
-                    : equipped != null
-                        ? gold
-                        : panelLight;
+                : panelLight;
         }
     }
 
-    private static string BuildLabel(
-        int slot,
-        CharacterData equipped,
-        CharacterData selectedCharacter,
-        bool selectedOwned,
-        bool selectedInSlot)
+    private void ConfigureSlot(Button button)
     {
-        string slotLabel =
-            $"{LocalizationManager.Translate("SLOT")} {slot + 1}\n";
+        if (button == null)
+            return;
 
-        if (selectedInSlot)
-            return slotLabel + LocalizationManager.Translate("REMOVE");
-
-        if (!selectedOwned)
+        TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
+        if (label != null)
         {
-            return equipped == null
-                ? slotLabel + LocalizationManager.Translate("EMPTY")
-                : slotLabel + equipped.characterName;
+            label.fontSizeMax = 24f;
+            label.alignment = TextAlignmentOptions.Center;
+            RectTransform labelRect =
+                label.GetComponent<RectTransform>();
+            if (labelRect != null)
+            {
+                labelRect.anchorMin = new UnityEngine.Vector2(0.08f, 0.02f);
+                labelRect.anchorMax = new UnityEngine.Vector2(0.92f, 0.22f);
+                labelRect.offsetMin = UnityEngine.Vector2.zero;
+                labelRect.offsetMax = UnityEngine.Vector2.zero;
+            }
         }
 
-        string target = equipped == null
-            ? LocalizationManager.Translate("EQUIP")
-            : $"{equipped.characterName} > " +
-              $"{selectedCharacter.characterName}";
-        return slotLabel + target;
+        Image portrait = RuntimeUiBinder.FindImage(
+            button.transform,
+            "SlotPortrait") ??
+            RuntimeUiFactory.CreateSpriteImage(
+                "SlotPortrait",
+                button.transform,
+                null,
+                new UnityEngine.Vector2(0.12f, 0.24f),
+                new UnityEngine.Vector2(0.88f, 0.92f));
+        Image plus = RuntimeUiBinder.FindImage(
+            button.transform,
+            "SlotPlusIcon") ??
+            RuntimeUiFactory.CreateSpriteImage(
+                "SlotPlusIcon",
+                button.transform,
+                PrototypeUiArt.PlusIcon,
+                new UnityEngine.Vector2(0.32f, 0.35f),
+                new UnityEngine.Vector2(0.68f, 0.72f));
+        portraitImages.Add(portrait);
+        plusImages.Add(plus);
     }
 
-    private static void SetButtonLabel(Button button, string value)
+    private void SetPortrait(int slot, CharacterData equipped)
+    {
+        if (slot < 0 || slot >= portraitImages.Count)
+            return;
+
+        Image image = portraitImages[slot];
+        if (image == null)
+            return;
+
+        Sprite sprite = equipped == null
+            ? null
+            : equipped.ResolvePortraitSprite();
+        image.sprite = sprite;
+        image.color = sprite == null
+            ? UnityEngine.Color.clear
+            : UnityEngine.Color.white;
+        image.gameObject.SetActive(sprite != null);
+    }
+
+    private void SetPlus(int slot, bool active)
+    {
+        if (slot < 0 || slot >= plusImages.Count)
+            return;
+
+        Image image = plusImages[slot];
+        if (image == null)
+            return;
+
+        image.sprite = PrototypeUiArt.PlusIcon;
+        image.color = active && image.sprite != null
+            ? UnityEngine.Color.white
+            : UnityEngine.Color.clear;
+        image.gameObject.SetActive(active && image.sprite != null);
+    }
+
+    private void SetButtonLabel(Button button, string value)
     {
         if (button == null)
             return;
 
         TMP_Text label = button.GetComponentInChildren<TMP_Text>();
         if (label != null)
+        {
             label.text = LocalizationManager.Translate(value);
+            label.gameObject.SetActive(
+                value == "+" || !string.IsNullOrEmpty(value));
+        }
     }
 }

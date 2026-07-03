@@ -185,6 +185,7 @@ public sealed class GachaPanelUI
         if (panel == null)
             return false;
 
+        GameFont.ApplyToHierarchy(panel);
         BindPrefab(rollGacha, clearResult);
         return true;
     }

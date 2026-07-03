@@ -13,6 +13,7 @@ public sealed class MainGameEventSubscriptions : IDisposable
     private readonly MonetizationManager monetizationManager;
     private readonly Action refreshBattle;
     private readonly Action<string> handleEquipmentDropped;
+    private readonly Action handleEquipmentChanged;
     private readonly Action<UpgradeType> handleGrowthUpdated;
     private readonly Action refreshTutorial;
     private readonly Action handleCompanionChanged;
@@ -29,6 +30,7 @@ public sealed class MainGameEventSubscriptions : IDisposable
         BattleHudUI battleHud,
         Action refreshBattle,
         Action<string> handleEquipmentDropped,
+        Action handleEquipmentChanged,
         Action<UpgradeType> handleGrowthUpdated,
         Action refreshTutorial,
         Action handleCompanionChanged,
@@ -43,6 +45,7 @@ public sealed class MainGameEventSubscriptions : IDisposable
         this.battleHud = battleHud;
         this.refreshBattle = refreshBattle;
         this.handleEquipmentDropped = handleEquipmentDropped;
+        this.handleEquipmentChanged = handleEquipmentChanged;
         this.handleGrowthUpdated = handleGrowthUpdated;
         this.refreshTutorial = refreshTutorial;
         this.handleCompanionChanged = handleCompanionChanged;
@@ -68,7 +71,10 @@ public sealed class MainGameEventSubscriptions : IDisposable
         }
 
         if (equipmentManager != null)
+        {
             equipmentManager.OnEquipmentDropped += handleEquipmentDropped;
+            equipmentManager.OnEquipmentChanged += handleEquipmentChanged;
+        }
 
         if (growthManager != null)
             growthManager.OnUpgraded += handleGrowthUpdated;
@@ -103,7 +109,10 @@ public sealed class MainGameEventSubscriptions : IDisposable
         }
 
         if (equipmentManager != null)
+        {
             equipmentManager.OnEquipmentDropped -= handleEquipmentDropped;
+            equipmentManager.OnEquipmentChanged -= handleEquipmentChanged;
+        }
 
         if (growthManager != null)
             growthManager.OnUpgraded -= handleGrowthUpdated;
@@ -135,7 +144,7 @@ public sealed class MainGameEventSubscriptions : IDisposable
             battleHud.HandleCompanionBasicAttackVisual;
         battleManager.OnEnemyAttackPerformed +=
             battleHud.HandleEnemyAttackVisual;
-        battleManager.OnEnemyDefeated +=
+        battleManager.OnEnemyDefeatedVisual +=
             battleHud.HandleEnemyDefeatedVisual;
         battleManager.OnPlayerDefeated +=
             battleHud.HandlePlayerDefeatedVisual;
@@ -158,7 +167,7 @@ public sealed class MainGameEventSubscriptions : IDisposable
             battleHud.HandleCompanionBasicAttackVisual;
         battleManager.OnEnemyAttackPerformed -=
             battleHud.HandleEnemyAttackVisual;
-        battleManager.OnEnemyDefeated -=
+        battleManager.OnEnemyDefeatedVisual -=
             battleHud.HandleEnemyDefeatedVisual;
         battleManager.OnPlayerDefeated -=
             battleHud.HandlePlayerDefeatedVisual;

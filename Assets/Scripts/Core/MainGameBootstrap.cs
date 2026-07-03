@@ -387,6 +387,8 @@ public class MainGameBootstrap : MonoBehaviour
         data.lastOnlineUnixTime =
             DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         PlayerDataLocalCache.Save(data);
+        if (!string.IsNullOrWhiteSpace(data.uid))
+            PlayerDataLocalCache.MarkPendingRemoteSave(data.uid, true);
     }
 
     private async Task SaveInBackgroundAsync()
@@ -477,7 +479,16 @@ public class MainGameBootstrap : MonoBehaviour
             (PlayerDataSaveScheduler.Instance != null &&
              PlayerDataSaveScheduler.Instance.HasPendingRemoteSave) ||
             (FirestoreManager.Instance != null &&
-             FirestoreManager.Instance.HasPendingSave);
+             FirestoreManager.Instance.HasPendingSave) ||
+            HasLocalPendingRemoteSave();
+    }
+
+    private static bool HasLocalPendingRemoteSave()
+    {
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        return data != null &&
+            !string.IsNullOrWhiteSpace(data.uid) &&
+            PlayerDataLocalCache.HasPendingRemoteSave(data.uid);
     }
 
     private static int CalculateOfflineGold(PlayerData data, long now)

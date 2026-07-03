@@ -95,7 +95,7 @@ public sealed class GachaResultUI
                 alreadyOwned ||
                 shownCounts[character.characterName] > 1;
 
-            Sprite portrait = character.icon ?? character.battleSprite;
+            Sprite portrait = character.ResolveGachaSprite();
             if (portraits[index] != null)
             {
                 portraits[index].sprite = portrait;

@@ -16,7 +16,7 @@ public class BattleActorView : MonoBehaviour
 {
     public bool HasSprite => currentBaseSprite != null || currentSprite != null;
 
-    private const float SpriteFrameSeconds = 0.085f;
+    private const float SpriteFrameSeconds = 0.3f;
 
     private Image image;
     private Animator animator;
@@ -82,8 +82,11 @@ public class BattleActorView : MonoBehaviour
     public void SetSpriteAnimations(
         Dictionary<BattleAnimationCue, Sprite[]> animations)
     {
-        if (ReferenceEquals(spriteAnimations, animations))
+        if (ReferenceEquals(spriteAnimations, animations) ||
+            HasSameAnimations(spriteAnimations, animations))
+        {
             return;
+        }
 
         spriteAnimations = animations;
         StopSpriteAnimation(true);
@@ -203,6 +206,42 @@ public class BattleActorView : MonoBehaviour
             spriteAnimations.TryGetValue(cue, out frames) &&
             frames != null &&
             frames.Length > 0;
+    }
+
+    private static bool HasSameAnimations(
+        Dictionary<BattleAnimationCue, Sprite[]> current,
+        Dictionary<BattleAnimationCue, Sprite[]> next)
+    {
+        if (current == null || next == null)
+            return current == next;
+
+        if (current.Count != next.Count)
+            return false;
+
+        foreach (KeyValuePair<BattleAnimationCue, Sprite[]> pair in current)
+        {
+            if (!next.TryGetValue(pair.Key, out Sprite[] nextFrames))
+                return false;
+
+            Sprite[] currentFrames = pair.Value;
+            if (currentFrames == null || nextFrames == null)
+            {
+                if (currentFrames != nextFrames)
+                    return false;
+                continue;
+            }
+
+            if (currentFrames.Length != nextFrames.Length)
+                return false;
+
+            for (int index = 0; index < currentFrames.Length; index++)
+            {
+                if (currentFrames[index] != nextFrames[index])
+                    return false;
+            }
+        }
+
+        return true;
     }
 
     private void StopSpriteAnimation(bool resetSprite)

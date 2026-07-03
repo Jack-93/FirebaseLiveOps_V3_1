@@ -58,6 +58,7 @@ public class MainGameUI : MonoBehaviour
     private AccountPanelUI accountPanelUI;
     private AccountActionController accountActions;
     private RewardActionController rewardActions;
+    private RectTransform portraitRoot;
     private readonly NotificationBadgeController notificationBadges =
         new NotificationBadgeController();
 
@@ -80,7 +81,7 @@ public class MainGameUI : MonoBehaviour
 
         BuildInterface();
         BindEvents();
-        LocalizationManager.ApplyTo(transform);
+        LocalizationManager.ApplyTo(portraitRoot);
         ShowBattle();
     }
 
@@ -100,7 +101,7 @@ public class MainGameUI : MonoBehaviour
         RefreshAccount();
         RefreshTutorial();
         RefreshStoryIntro();
-        LocalizationManager.ApplyTo(transform);
+        LocalizationManager.ApplyTo(portraitRoot);
         RefreshNotificationBadges();
     }
 
@@ -149,7 +150,7 @@ public class MainGameUI : MonoBehaviour
     {
         EnsureEventSystem();
 
-        RectTransform portraitRoot =
+        portraitRoot =
             MobileScreenLayout.CreateSafeAreaCanvas(
                 "MainGameCanvas",
                 Background);
@@ -174,6 +175,7 @@ public class MainGameUI : MonoBehaviour
         BuildTitleScreen(portraitRoot);
         BuildStoryIntro(portraitRoot);
         BuildLoadingOverlay(portraitRoot);
+        LocalizationManager.ApplyTo(portraitRoot);
     }
 
     private void BuildWorldBackdrop(RectTransform root)
@@ -444,6 +446,7 @@ public class MainGameUI : MonoBehaviour
             battleHud,
             RefreshBattle,
             HandleEquipmentDropped,
+            HandleEquipmentChanged,
             HandleGrowthUpdated,
             RefreshTutorial,
             HandleCompanionChanged,
@@ -518,9 +521,6 @@ public class MainGameUI : MonoBehaviour
         companionActions?.EnsureSelected();
         CharacterData selectedCharacter =
             companionActions?.SelectedCharacter;
-        if (selectedCharacter == null)
-            return;
-
         collectionPanelUI?.Refresh(selectedCharacter, companionManager);
     }
 
@@ -596,6 +596,13 @@ public class MainGameUI : MonoBehaviour
         equipmentActions?.HandleDropped(itemName);
     }
 
+    private void HandleEquipmentChanged()
+    {
+        battleManager?.RefreshPlayerStats();
+        RefreshGrowth();
+        RefreshTopBar();
+    }
+
     private void HandleGrowthUpdated(UpgradeType type)
     {
         RefreshGrowth();
@@ -615,6 +622,7 @@ public class MainGameUI : MonoBehaviour
     private void ShowBattle()
     {
         navigation?.ShowBattle();
+        RefreshBattle();
     }
 
     private void ShowGrowth()

@@ -3,10 +3,23 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 
+public enum CompanionSkillUseResult
+{
+    Success,
+    BattleNotRunning,
+    Recovering,
+    NoEnemy,
+    InvalidSlot,
+    NoCompanion,
+    Cooldown,
+    NotEnoughPower
+}
+
 public class BattleManager : MonoBehaviour
 {
     public event Action OnBattleStateChanged;
     public event Action<int> OnEnemyDefeated;
+    public event Action<int> OnEnemyDefeatedVisual;
     public event Action<int> OnStageCleared;
     public event Action<int, CharacterData, int> OnCompanionBasicAttackPerformed;
     public event Action<int> OnEnemyAttackPerformed;
@@ -27,6 +40,7 @@ public class BattleManager : MonoBehaviour
     public int EnemyMaxHealth { get; private set; }
     public int LastPlayerDamage { get; private set; }
     public int LastEnemyDamage { get; private set; }
+    public bool LastDefeatedEnemyWasBoss { get; private set; }
     public float PowerCharge { get; private set; }
     public float PowerChargeMax => PowerChargeLimit;
     public float PowerChargeRatio =>
@@ -38,8 +52,16 @@ public class BattleManager : MonoBehaviour
     public static float FullChargeCooldownBoost =>
         SkillCooldownBoostOnFullCharge;
 
-    public string EnemyName =>
-        GameBalance.GetEnemyName(Data.currentStage, IsBoss);
+    public string EnemyName
+    {
+        get
+        {
+            PlayerData data = Data;
+            return data == null
+                ? ""
+                : GameBalance.GetEnemyName(data.currentStage, IsBoss);
+        }
+    }
 
     private PlayerData Data => PlayerDataManager.Instance?.playerData;
 
@@ -48,6 +70,7 @@ public class BattleManager : MonoBehaviour
     private bool isRecovering;
     private float bossPatternTimer;
     private int bossPatternIndex;
+    private int enemySpawnSequence;
     private List<BossPatternDefinition> bossPatterns;
     private readonly float[] skillCooldowns =
         new float[CompanionManager.PartySize];
@@ -119,12 +142,21 @@ public class BattleManager : MonoBehaviour
         float healthRatio = PlayerHealth / (float)previousMax;
 
         PlayerMaxHealth = GameBalance.GetPlayerMaxHealth(data);
-        PlayerHealth = IsInitialized
-            ? Mathf.Clamp(
+        if (!IsInitialized)
+        {
+            PlayerHealth = PlayerMaxHealth;
+        }
+        else if (isRecovering && PlayerHealth <= 0)
+        {
+            PlayerHealth = 0;
+        }
+        else
+        {
+            PlayerHealth = Mathf.Clamp(
                 Mathf.RoundToInt(PlayerMaxHealth * healthRatio),
                 1,
-                PlayerMaxHealth)
-            : PlayerMaxHealth;
+                PlayerMaxHealth);
+        }
 
         NotifyChanged();
     }
@@ -201,8 +233,11 @@ public class BattleManager : MonoBehaviour
             if (companionAttackTimers[slot] > 0f || EnemyHealth <= 0)
                 continue;
 
+            int sequenceBeforeAttack = enemySpawnSequence;
             CompanionBasicAttack(slot, character);
             companionAttackTimers[slot] = GetCompanionAttackDelay(slot);
+            if (sequenceBeforeAttack != enemySpawnSequence)
+                break;
         }
     }
 
@@ -326,18 +361,36 @@ public class BattleManager : MonoBehaviour
 
     public bool TryUseCompanionSkill(int slot)
     {
-        if (!IsRunning || isRecovering || EnemyHealth <= 0 ||
-            slot < 0 || slot >= skillCooldowns.Length ||
-            skillCooldowns[slot] > 0f ||
-            PowerCharge < SkillPowerCost)
+        return TryUseCompanionSkill(slot, out _) ==
+            CompanionSkillUseResult.Success;
+    }
+
+    public CompanionSkillUseResult TryUseCompanionSkill(
+        int slot,
+        out float remainingCooldown)
+    {
+        remainingCooldown = 0f;
+
+        if (!IsRunning)
+            return CompanionSkillUseResult.BattleNotRunning;
+        if (isRecovering)
+            return CompanionSkillUseResult.Recovering;
+        if (EnemyHealth <= 0)
+            return CompanionSkillUseResult.NoEnemy;
+        if (slot < 0 || slot >= skillCooldowns.Length)
+            return CompanionSkillUseResult.InvalidSlot;
+        if (skillCooldowns[slot] > 0f)
         {
-            return false;
+            remainingCooldown = skillCooldowns[slot];
+            return CompanionSkillUseResult.Cooldown;
         }
+        if (PowerCharge < SkillPowerCost)
+            return CompanionSkillUseResult.NotEnoughPower;
 
         CharacterData character =
             CompanionManager.Instance?.GetEquippedAtSlot(slot);
         if (character == null)
-            return false;
+            return CompanionSkillUseResult.NoCompanion;
 
         PowerCharge = Mathf.Max(0f, PowerCharge - SkillPowerCost);
         UseCompanionSkill(slot, character);
@@ -347,7 +400,7 @@ public class BattleManager : MonoBehaviour
             PowerChargeLimit,
             "Battle",
             nameof(OnPowerCharged));
-        return true;
+        return CompanionSkillUseResult.Success;
     }
 
     public bool ChargePower()
@@ -355,12 +408,10 @@ public class BattleManager : MonoBehaviour
         if (!IsInitialized || !IsRunning || isRecovering)
             return false;
 
-        float previous = PowerCharge;
         PowerCharge = Mathf.Min(
             PowerChargeLimit,
             PowerCharge + PowerChargePerTap);
-        if (PowerCharge >= PowerChargeLimit &&
-            previous < PowerChargeLimit)
+        if (PowerCharge >= PowerChargeLimit)
         {
             ReduceSkillCooldowns(SkillCooldownBoostOnFullCharge);
         }
@@ -461,7 +512,7 @@ public class BattleManager : MonoBehaviour
         data.totalMonstersDefeated++;
 
         bool defeatedBoss = IsBoss;
-        TryGrantEquipmentDrop(clearedStage, defeatedBoss);
+        LastDefeatedEnemyWasBoss = defeatedBoss;
         if (defeatedBoss)
         {
             bool firstClear = clearedStage >= data.highestStage;
@@ -481,7 +532,15 @@ public class BattleManager : MonoBehaviour
             data.stageEnemyIndex++;
         }
 
-        PlayerDataManager.Instance.NotifyPlayerDataChanged(!defeatedBoss);
+        SafeEvent.Invoke(
+            OnEnemyDefeatedVisual,
+            reward,
+            "Battle",
+            nameof(OnEnemyDefeatedVisual));
+
+        SpawnEnemy();
+        TryGrantEquipmentDrop(clearedStage, defeatedBoss);
+
         SafeEvent.Invoke(
             OnEnemyDefeated,
             reward,
@@ -498,7 +557,7 @@ public class BattleManager : MonoBehaviour
             _ = SaveProgressAsync();
         }
 
-        SpawnEnemy();
+        PlayerDataManager.Instance.NotifyPlayerDataChanged(!defeatedBoss);
     }
 
     private static void TryGrantEquipmentDrop(
@@ -521,6 +580,7 @@ public class BattleManager : MonoBehaviour
     private void SpawnEnemy()
     {
         PlayerData data = Data;
+        enemySpawnSequence++;
         IsBoss =
             data.stageEnemyIndex >= GameBalance.EnemiesPerStage - 1;
         EnemyMaxHealth =

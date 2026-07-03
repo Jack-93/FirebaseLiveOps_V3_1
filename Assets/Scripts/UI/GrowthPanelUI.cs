@@ -163,6 +163,7 @@ public sealed class GrowthPanelUI
         if (panel == null)
             return false;
 
+        GameFont.ApplyToHierarchy(panel);
         BindPrefab(upgradeAttack, upgradeHealth, upgradeAttackSpeed);
         return true;
     }

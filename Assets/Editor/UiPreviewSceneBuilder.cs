@@ -10,24 +10,112 @@ public static class UiPreviewSceneBuilder
 {
     private const string PreviewScenePath =
         "Assets/Scenes/UiPrefabPreviewScene.unity";
+    private const string IndividualPreviewSceneFolder =
+        "Assets/Scenes/UIPreviews";
     private const string PrefabRoot = "Assets/Resources/Prefabs/UI/";
     private const float ScreenWidth = 1080f;
     private const float ScreenHeight = 1920f;
     private const float ScreenGapX = 140f;
     private const float ScreenGapY = 220f;
+    private const float CanvasScale = 0.01f;
     private const int Columns = 3;
+
+    [MenuItem("Tools/UI/Open UI Preview Scene")]
+    public static void Open()
+    {
+        if (AssetDatabase.LoadAssetAtPath<SceneAsset>(PreviewScenePath) == null)
+            Build();
+
+        EditorSceneManager.OpenScene(PreviewScenePath, OpenSceneMode.Single);
+        Selection.activeObject =
+            AssetDatabase.LoadAssetAtPath<SceneAsset>(PreviewScenePath);
+    }
 
     [MenuItem("Tools/UI/Rebuild UI Preview Scene")]
     public static void Build()
     {
+        UiPrefabOverrideTools.UpgradeBattleHudPrefabLayout();
+
         Scene scene = EditorSceneManager.NewScene(
             NewSceneSetup.EmptyScene,
             NewSceneMode.Single);
 
         CreateCamera();
         RectTransform canvas = CreateCanvas();
+        CreateGlobalGuide(canvas);
 
-        List<PreviewScreen> screens = new List<PreviewScreen>
+        List<PreviewScreen> screens = GetPreviewScreens();
+
+        for (int index = 0; index < screens.Count; index++)
+            BuildScreen(canvas, screens[index], index);
+
+        EditorSceneManager.SaveScene(scene, PreviewScenePath);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        Debug.Log("[UI] Preview scene rebuilt: " + PreviewScenePath);
+    }
+
+    [MenuItem("Tools/UI/Rebuild Individual UI Preview Scenes")]
+    public static void BuildIndividualScenes()
+    {
+        UiPrefabOverrideTools.UpgradeBattleHudPrefabLayout();
+        EnsureIndividualPreviewFolder();
+
+        List<PreviewScreen> screens = GetPreviewScreens();
+        foreach (PreviewScreen screen in screens)
+            BuildIndividualScene(screen);
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        Debug.Log(
+            "[UI] Individual preview scenes rebuilt: " +
+            IndividualPreviewSceneFolder);
+    }
+
+    [MenuItem("Tools/UI/Open Battle UI Preview Scene")]
+    public static void OpenBattlePreview()
+    {
+        UiPrefabOverrideTools.UpgradeBattleHudPrefabLayout();
+
+        string path = GetIndividualScenePath("00 Battle");
+        if (AssetDatabase.LoadAssetAtPath<SceneAsset>(path) == null)
+            BuildBattlePreviewScene();
+
+        EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+        Selection.activeObject =
+            AssetDatabase.LoadAssetAtPath<SceneAsset>(path);
+    }
+
+    [MenuItem("Tools/UI/Fix Battle Preview Now")]
+    public static void FixBattlePreviewNow()
+    {
+        BuildBattlePreviewScene();
+
+        string path = GetIndividualScenePath("00 Battle");
+        EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+        Selection.activeObject =
+            AssetDatabase.LoadAssetAtPath<SceneAsset>(path);
+    }
+
+    [MenuItem("Tools/UI/Rebuild Battle UI Preview Scene")]
+    public static void BuildBattlePreviewScene()
+    {
+        UiPrefabOverrideTools.UpgradeBattleHudPrefabLayout();
+        EnsureIndividualPreviewFolder();
+        BuildIndividualScene(GetPreviewScreens()[0]);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        Debug.Log(
+            "[UI] Battle preview scene rebuilt: " +
+            GetIndividualScenePath("00 Battle"));
+    }
+
+    private static List<PreviewScreen> GetPreviewScreens()
+    {
+        return new List<PreviewScreen>
         {
             new PreviewScreen(
                 "00 Battle",
@@ -111,15 +199,6 @@ public static class UiPreviewSceneBuilder
                 "WorldBackdrop",
                 "OfflineOverlay"),
         };
-
-        for (int index = 0; index < screens.Count; index++)
-            BuildScreen(canvas, screens[index], index);
-
-        EditorSceneManager.SaveScene(scene, PreviewScenePath);
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-
-        Debug.Log("[UI] Preview scene rebuilt: " + PreviewScenePath);
     }
 
     private static RectTransform CreateCanvas()
@@ -137,7 +216,7 @@ public static class UiPreviewSceneBuilder
         rect.sizeDelta = new Vector2(
             Columns * (ScreenWidth + ScreenGapX),
             5f * (ScreenHeight + ScreenGapY));
-        rect.localScale = Vector3.one * 0.01f;
+        rect.localScale = Vector3.one * CanvasScale;
         rect.position = Vector3.zero;
 
         CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
@@ -148,6 +227,85 @@ public static class UiPreviewSceneBuilder
             CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0f;
         return rect;
+    }
+
+    private static RectTransform CreateSingleCanvas()
+    {
+        GameObject canvasObject = new GameObject(
+            "UiPrefabPreviewCanvas",
+            typeof(RectTransform),
+            typeof(Canvas),
+            typeof(CanvasScaler),
+            typeof(GraphicRaycaster));
+        Canvas canvas = canvasObject.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.WorldSpace;
+
+        RectTransform rect = canvasObject.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(ScreenWidth, ScreenHeight);
+        rect.localScale = Vector3.one * CanvasScale;
+        rect.position = Vector3.zero;
+
+        CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution =
+            new Vector2(ScreenWidth, ScreenHeight);
+        scaler.screenMatchMode =
+            CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        scaler.matchWidthOrHeight = 0f;
+        return rect;
+    }
+
+    private static void BuildIndividualScene(PreviewScreen screen)
+    {
+        Scene scene = EditorSceneManager.NewScene(
+            NewSceneSetup.EmptyScene,
+            NewSceneMode.Single);
+
+        CreateCamera();
+        RectTransform canvas = CreateSingleCanvas();
+
+        RectTransform root = CreatePanel(
+            "Preview_" + screen.Name,
+            canvas,
+            new Color32(5, 8, 14, 255),
+            new Vector2(0f, 1f),
+            new Vector2(0f, 1f));
+        root.sizeDelta = new Vector2(ScreenWidth, ScreenHeight);
+        root.pivot = new Vector2(0f, 1f);
+        root.anchoredPosition = Vector2.zero;
+
+        CreateLabel(root, screen.Name);
+        CreateScreenGuide(root);
+        CreateScreenOutline(root);
+
+        foreach (string prefabName in screen.Prefabs)
+            AddPrefab(root, prefabName);
+
+        EditorSceneManager.SaveScene(scene, GetIndividualScenePath(screen.Name));
+    }
+
+    private static void EnsureIndividualPreviewFolder()
+    {
+        if (!AssetDatabase.IsValidFolder("Assets/Scenes"))
+            AssetDatabase.CreateFolder("Assets", "Scenes");
+
+        if (!AssetDatabase.IsValidFolder(IndividualPreviewSceneFolder))
+            AssetDatabase.CreateFolder("Assets/Scenes", "UIPreviews");
+    }
+
+    private static string GetIndividualScenePath(string screenName)
+    {
+        return IndividualPreviewSceneFolder + "/Preview_" +
+            SanitizeSceneName(screenName) + ".unity";
+    }
+
+    private static string SanitizeSceneName(string screenName)
+    {
+        return screenName
+            .Replace(" ", "_")
+            .Replace("/", "_")
+            .Replace("\\", "_")
+            .Replace(":", "_");
     }
 
     private static void BuildScreen(
@@ -170,9 +328,98 @@ public static class UiPreviewSceneBuilder
             -row * (ScreenHeight + ScreenGapY));
 
         CreateLabel(root, screen.Name);
+        CreateScreenGuide(root);
+        CreateScreenOutline(root);
 
         foreach (string prefabName in screen.Prefabs)
             AddPrefab(root, prefabName);
+    }
+
+    private static void CreateGlobalGuide(RectTransform canvas)
+    {
+        RectTransform guide = CreatePanel(
+            "PreviewGlobalGuide",
+            canvas,
+            new Color32(8, 12, 22, 210),
+            new Vector2(0f, 1f),
+            new Vector2(0f, 1f));
+        guide.sizeDelta = new Vector2(ScreenWidth, 92f);
+        guide.pivot = new Vector2(0f, 1f);
+        guide.anchoredPosition = new Vector2(0f, 92f);
+        guide.GetComponent<Image>().raycastTarget = false;
+
+        TMP_Text text = CreateGuideText(
+            guide,
+            "PreviewGlobalGuideText",
+            "UI Prefab Preview: select a prefab instance, move/resize it, then use Overrides > Apply All or Tools/UI/Apply Selected Preview UI Override To Prefab.",
+            22f,
+            TextAlignmentOptions.Center);
+        text.color = new Color32(205, 235, 255, 255);
+    }
+
+    private static void CreateScreenGuide(RectTransform parent)
+    {
+        RectTransform guide = CreatePanel(
+            "PreviewEditGuide",
+            parent,
+            new Color32(5, 10, 18, 150),
+            new Vector2(0.03f, 0.905f),
+            new Vector2(0.97f, 0.955f));
+        guide.GetComponent<Image>().raycastTarget = false;
+
+        TMP_Text text = CreateGuideText(
+            guide,
+            "PreviewEditGuideText",
+            "Prefab instance edit area. Battle slot guides are Scene-view gizmos only.",
+            18f,
+            TextAlignmentOptions.Center);
+        text.color = new Color32(170, 225, 255, 255);
+    }
+
+    private static void CreateScreenOutline(RectTransform parent)
+    {
+        Image outlineImage = RuntimeUiFactory.CreateSpriteImage(
+            "PreviewScreenOutline",
+            parent,
+            null,
+            Vector2.zero,
+            Vector2.one);
+        outlineImage.color = new Color32(50, 190, 255, 35);
+        Outline outline = outlineImage.gameObject.AddComponent<Outline>();
+        outline.effectColor = new Color32(70, 210, 255, 180);
+        outline.effectDistance = new Vector2(4f, -4f);
+        outlineImage.transform.SetAsFirstSibling();
+    }
+
+    private static TMP_Text CreateGuideText(
+        RectTransform parent,
+        string name,
+        string value,
+        float fontSize,
+        TextAlignmentOptions alignment)
+    {
+        GameObject textObject = new GameObject(
+            name,
+            typeof(RectTransform),
+            typeof(TextMeshProUGUI));
+        textObject.transform.SetParent(parent, false);
+        RectTransform rect = textObject.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.02f, 0.12f);
+        rect.anchorMax = new Vector2(0.98f, 0.88f);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        TextMeshProUGUI text = textObject.GetComponent<TextMeshProUGUI>();
+        text.text = value;
+        text.fontSize = fontSize;
+        text.enableAutoSizing = true;
+        text.fontSizeMax = fontSize;
+        text.fontSizeMin = 10f;
+        text.alignment = alignment;
+        text.textWrappingMode = TextWrappingModes.Normal;
+        text.raycastTarget = false;
+        GameFont.Apply(text, name);
+        return text;
     }
 
     private static void AddPrefab(RectTransform parent, string prefabName)
@@ -195,10 +442,8 @@ public static class UiPreviewSceneBuilder
         if (rect == null)
             return;
 
-        rect.anchorMin = Vector2.zero;
-        rect.anchorMax = Vector2.one;
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
+        // Keep each prefab's own anchors so preview sizes match runtime.
+        rect.localScale = Vector3.one;
     }
 
     private static RectTransform CreatePanel(
@@ -256,10 +501,13 @@ public static class UiPreviewSceneBuilder
             typeof(Camera),
             typeof(AudioListener));
         cameraObject.tag = "MainCamera";
-        cameraObject.transform.position = new Vector3(16f, -36f, -10f);
+        cameraObject.transform.position = new Vector3(
+            ScreenWidth * CanvasScale * 0.5f,
+            -ScreenHeight * CanvasScale * 0.5f,
+            -10f);
         Camera camera = cameraObject.GetComponent<Camera>();
         camera.orthographic = true;
-        camera.orthographicSize = 16f;
+        camera.orthographicSize = ScreenHeight * CanvasScale * 0.54f;
         camera.clearFlags = CameraClearFlags.SolidColor;
         camera.backgroundColor = new Color32(20, 28, 45, 255);
     }

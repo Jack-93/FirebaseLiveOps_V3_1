@@ -29,6 +29,7 @@ public static class LocalizationManager
         new Entry("COLLECTION", "도감"),
         new Entry("BEST", "최고"),
         new Entry("CLAIM", "받기"),
+        new Entry("QUEST", "퀘스트"),
         new Entry("QUESTS", "퀘스트"),
         new Entry("EVENT", "이벤트"),
         new Entry("SHOP", "상점"),
@@ -71,6 +72,12 @@ public static class LocalizationManager
         new Entry("Companion DMG", "동료 피해"),
         new Entry("Not enough power charge.", "전력이 부족합니다."),
         new Entry("Skill is not ready.", "스킬이 아직 준비되지 않았습니다."),
+        new Entry("Skill cooldown remains.", "스킬 재사용 대기"),
+        new Entry("Battle is not ready.", "전투가 아직 준비되지 않았습니다."),
+        new Entry("Battle is not running.", "전투가 진행 중이 아닙니다."),
+        new Entry("No companion in this slot.", "이 슬롯에 동료가 없습니다."),
+        new Entry("No enemy target.", "공격할 적이 없습니다."),
+        new Entry("Invalid companion slot.", "동료 슬롯이 올바르지 않습니다."),
         new Entry(
             "Power charger is not ready.",
             "전력 충전기를 아직 사용할 수 없습니다."),
@@ -86,6 +93,7 @@ public static class LocalizationManager
         new Entry("TITLE", "타이틀"),
         new Entry("LOADING", "불러오는 중"),
         new Entry("REPEAT", "반복"),
+        new Entry("AUTO SKILL", "자동 스킬"),
         new Entry("Companion skills preparing...", "동료 스킬 준비 중..."),
         new Entry("Stage", "스테이지"),
         new Entry("Gold", "골드"),
@@ -297,6 +305,7 @@ public static class LocalizationManager
             "Tickets are used before Gems.",
             "티켓을 먼저 사용하고, 부족하면 젬을 사용합니다."),
         new Entry("RECRUIT", "모집"),
+        new Entry("Invalid recruitment count.", "모집 횟수가 올바르지 않습니다."),
         new Entry(
             "Game data is not ready.",
             "게임 정보를 아직 불러오지 못했습니다."),
@@ -312,6 +321,9 @@ public static class LocalizationManager
         new Entry(
             "Recruitment failed. Cost refunded.",
             "모집에 실패했습니다. 비용을 돌려받았습니다."),
+        new Entry(
+            "Recruitment failed. State restored.",
+            "모집에 실패했습니다. 상태를 되돌렸습니다."),
         new Entry(
             "Could not return to battle.",
             "전투 화면으로 돌아갈 수 없습니다."),
@@ -355,7 +367,7 @@ public static class LocalizationManager
         foreach (TMP_Text text in root.GetComponentsInChildren<TMP_Text>(true))
         {
             text.text = Translate(text.text);
-            GameFont.Apply(text);
+            GameFont.Apply(text, text.name);
         }
     }
 }

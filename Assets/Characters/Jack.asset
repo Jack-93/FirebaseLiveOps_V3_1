@@ -1,0 +1,80 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edbddcf0806d01c46b7c1bf4982395b7, type: 3}
+  m_Name: Jack
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterData
+  characterName: Jack
+  rarity: SR
+  icon: {fileID: 21300000, guid: 8de3ab970b551674a9e67b6878f00675, type: 3}
+  battleSprite: {fileID: 0}
+  basicProjectileSprite: {fileID: 0}
+  skillProjectileSprite: {fileID: 0}
+  basicProjectileTint: {r: 1, g: 1, b: 1, a: 1}
+  skillProjectileTint: {r: 1, g: 1, b: 1, a: 1}
+  battleAnimator: {fileID: 0}
+  battleVisual:
+    sprite: {fileID: 21300000, guid: 8de3ab970b551674a9e67b6878f00675, type: 3}
+    animatorController: {fileID: 0}
+    spriteAnimations:
+    - cue: 0
+      frames:
+      - {fileID: 21300000, guid: ad2d035185aba57459ad60517fea7445, type: 3}
+      - {fileID: 21300000, guid: aad7e19586b5feb468e4f17a006d436a, type: 3}
+      - {fileID: 21300000, guid: f6315b84999c761488183ce249f45335, type: 3}
+      - {fileID: 21300000, guid: 81074654e53c1db4487b5c5e162fadcb, type: 3}
+    - cue: 1
+      frames:
+      - {fileID: 21300000, guid: d251c4a5bb9fda145a0216468e6ce886, type: 3}
+      - {fileID: 21300000, guid: 63361590cfb76034a9e1c85ff13ec085, type: 3}
+      - {fileID: 21300000, guid: 542c40b99d7a1774faea975431f721b6, type: 3}
+      - {fileID: 21300000, guid: dc089d68d75c0fa40833c67bba39cdfc, type: 3}
+    - cue: 2
+      frames:
+      - {fileID: 21300000, guid: 9abbb7c8a22c7d5418ca3603880c1b2b, type: 3}
+      - {fileID: 21300000, guid: 786c3956e1acbea4a944a76c9e75d122, type: 3}
+      - {fileID: 21300000, guid: 5e81dfe1e4b0b6b43927b2d4721b0935, type: 3}
+      - {fileID: 21300000, guid: 03b4f35f0209c03408e8ec890169f4f8, type: 3}
+    - cue: 3
+      frames:
+      - {fileID: 21300000, guid: e052f6115405264498e676298a63bde2, type: 3}
+      - {fileID: 21300000, guid: 881ee9c1232db8349b7aa214e98ce27a, type: 3}
+      - {fileID: 21300000, guid: df72ca09259145d45b0c403f65d2f758, type: 3}
+      - {fileID: 21300000, guid: dcd289963d7f4f840a81fb976e000ac2, type: 3}
+    - cue: 4
+      frames:
+      - {fileID: 21300000, guid: 656042c847861164abcfcf6419e12cfd, type: 3}
+      - {fileID: 21300000, guid: 7f77dde878e8ed34e848674db8c4a08d, type: 3}
+      - {fileID: 21300000, guid: 41b07024c1c69f945a687a844ffb2d5c, type: 3}
+      - {fileID: 21300000, guid: dbb66f99a3696b94ab818f8ac15e4b3d, type: 3}
+      - {fileID: 21300000, guid: f305d432cf1d1404982eccf201f4c21e, type: 3}
+      - {fileID: 21300000, guid: 55c4841d39e3a694999589854df4f466, type: 3}
+    basicProjectile:
+      sprite: {fileID: 21300000, guid: 0e26ee1f29a9e7c4b9fe9849d0973b25, type: 3}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      duration: 0
+      size: 0
+    skillProjectile:
+      sprite: {fileID: 21300000, guid: 2c78c12122891a14986e88c9e09dfaa0, type: 3}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      duration: 0
+      size: 0
+  element: 3
+  role: 1
+  synergyTags:
+  - Bird
+  - Electric
+  - Magpie
+  description: SR magpie companion prototype. A fast rooftop striker that fires charged
+    feather shots.
+  skillName: Magpie Spark
+  skillCooldown: 7.5
+  skillDamageMultiplier: 2.2

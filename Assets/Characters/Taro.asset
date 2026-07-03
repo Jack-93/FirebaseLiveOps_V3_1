@@ -21,8 +21,25 @@ MonoBehaviour:
   basicProjectileTint: {r: 1, g: 1, b: 1, a: 1}
   skillProjectileTint: {r: 1, g: 1, b: 1, a: 1}
   battleAnimator: {fileID: 0}
+  battleVisual:
+    sprite: {fileID: 21300000, guid: 7541e570eb04e8a498300567c23550da, type: 3}
+    animatorController: {fileID: 0}
+    spriteAnimations: []
+    basicProjectile:
+      sprite: {fileID: 21300000, guid: 7a7109565e194d448902c40b5f1d75e3, type: 3}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      duration: 0
+      size: 0
+    skillProjectile:
+      sprite: {fileID: 21300000, guid: 9e708890c3b84bbdb9a19d4f118c4308, type: 3}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      duration: 0
+      size: 0
   element: 1
   role: 2
   synergyTags:
   - Vanguard
   description: A cheerful brawler who never backs away from danger.
+  skillName: Power Strike
+  skillCooldown: 8
+  skillDamageMultiplier: 2

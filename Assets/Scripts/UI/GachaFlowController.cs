@@ -109,6 +109,12 @@ public sealed class GachaFlowController
                 LogRollAnalytics(character);
             }
 
+            if (companionManager != null)
+            {
+                companionManager.TryFillEmptySlotsWithBestOwned(
+                    out _);
+            }
+
             panel?.ShowResults(results, ownedBefore);
             SetResultMode(panel?.IsResultVisible == true);
             panel?.SetStatus(
@@ -253,12 +259,22 @@ public sealed class GachaFlowController
     {
         private readonly int pityCount;
         private readonly Dictionary<string, int> inventoryItems;
+        private readonly List<string> equippedCompanions;
+        private readonly List<string> equippedCompanionRarities;
+        private readonly string equippedCompanion;
+        private readonly string equippedCompanionRarity;
 
         private GachaRollSnapshot(PlayerData data)
         {
             pityCount = data.pityCount;
             inventoryItems =
                 new Dictionary<string, int>(data.inventory.items);
+            equippedCompanions =
+                new List<string>(data.equippedCompanions);
+            equippedCompanionRarities =
+                new List<string>(data.equippedCompanionRarities);
+            equippedCompanion = data.equippedCompanion;
+            equippedCompanionRarity = data.equippedCompanionRarity;
         }
 
         public static GachaRollSnapshot Capture(PlayerData data)
@@ -276,6 +292,12 @@ public sealed class GachaFlowController
             data.pityCount = pityCount;
             data.inventory.items =
                 new Dictionary<string, int>(inventoryItems);
+            data.equippedCompanions =
+                new List<string>(equippedCompanions);
+            data.equippedCompanionRarities =
+                new List<string>(equippedCompanionRarities);
+            data.equippedCompanion = equippedCompanion;
+            data.equippedCompanionRarity = equippedCompanionRarity;
         }
     }
 }
