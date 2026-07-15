@@ -25,34 +25,36 @@ public static class GameBalanceConfig
     public const int EnemiesPerStage = 5;
     public const int MaxOfflineHours = 8;
     public const float BossTimeLimit = 30f;
+    public const float BossPatternWarningSeconds = 1.25f;
 
     public const int PlayerBaseAttack = 8;
     public const int PlayerAttackPerLevel = 2;
     public const int PlayerAttackPerUpgrade = 6;
-    public const int PlayerBaseHealth = 90;
+    public const int PlayerBaseHealth = 105;
     public const int PlayerHealthPerLevel = 10;
-    public const int PlayerHealthPerUpgrade = 30;
+    public const int PlayerHealthPerUpgrade = 34;
     public const float PlayerBaseAttackInterval = 1.2f;
     public const float PlayerAttackIntervalReduction = 0.045f;
     public const float PlayerMinAttackInterval = 0.25f;
     public const float PlayerAbsoluteMinAttackInterval = 0.2f;
 
     public const double EnemyBaseHealth = 42d;
-    public const double EnemyHealthGrowth = 1.17d;
-    public const double EnemyStageHealthCycleBonus = 0.08d;
-    public const double BossHealthMultiplier = 5d;
-    public const double EnemyBaseAttack = 5d;
-    public const double EnemyAttackGrowth = 1.11d;
-    public const double EnemyStageAttackCycleBonus = 0.05d;
-    public const double BossAttackMultiplier = 1.8d;
-    public const double EnemyBaseGold = 12d;
-    public const double EnemyGoldGrowth = 1.12d;
-    public const double EnemyStageGoldCycleBonus = 0.06d;
-    public const double BossGoldMultiplier = 8d;
+    // Stage 1-30: free progression should fund Attack, Pole DUR, and SPD together.
+    public const double EnemyHealthGrowth = 1.135d;
+    public const double EnemyStageHealthCycleBonus = 0.04d;
+    public const double BossHealthMultiplier = 3.5d;
+    public const double EnemyBaseAttack = 4d;
+    public const double EnemyAttackGrowth = 1.065d;
+    public const double EnemyStageAttackCycleBonus = 0.03d;
+    public const double BossAttackMultiplier = 1.45d;
+    public const double EnemyBaseGold = 14d;
+    public const double EnemyGoldGrowth = 1.15d;
+    public const double EnemyStageGoldCycleBonus = 0.05d;
+    public const double BossGoldMultiplier = 9d;
 
     public const int HeroUpgradeBaseCost = 100;
     public const int AttackSpeedUpgradeBaseCost = 180;
-    public const double HeroUpgradeCostGrowth = 1.34d;
+    public const double HeroUpgradeCostGrowth = 1.18d;
 
     public const int EquipmentWeaponBaseAttack = 4;
     public const int EquipmentWeaponAttackPerTier = 8;
@@ -60,9 +62,26 @@ public static class GameBalanceConfig
     public const int EquipmentArmorBaseHealth = 20;
     public const int EquipmentArmorHealthPerTier = 35;
     public const int EquipmentArmorHealthPerLevel = 12;
-    public const int EquipmentUpgradeBaseCost = 150;
-    public const int EquipmentUpgradeQuadraticCost = 75;
+    public const float EquipmentArmorBaseDamageReductionPercent = 2f;
+    public const float EquipmentArmorDamageReductionPerTier = 3f;
+    public const float EquipmentArmorDamageReductionPerLevel = 0.35f;
+    public const float EquipmentArmorMaxDamageReductionPercent = 45f;
+    public const int EquipmentStarForceMaxLevel = 20;
+    public const int EquipmentStarForceBaseCost = 150;
+    public const int EquipmentStarForceQuadraticCost = 75;
+    public const int EquipmentUpgradeBaseCost = EquipmentStarForceBaseCost;
+    public const int EquipmentUpgradeQuadraticCost =
+        EquipmentStarForceQuadraticCost;
     public const float NormalEquipmentDropChance = 0.12f;
+    public const int EquipmentOptionMinPercent = 1;
+    public const int EquipmentOptionMaxPercent = 15;
+    public const int EquipmentCoinTier0 = 5;
+    public const int EquipmentCoinTier1 = 15;
+    public const int EquipmentCoinTier2 = 40;
+    public const int EquipmentCoinTier3 = 100;
+    public const int EquipmentRerollCoinTier1 = 10;
+    public const int EquipmentRerollCoinTier2 = 30;
+    public const int EquipmentRerollCoinTier3 = 75;
 
     public const int GachaSingleGemCost = 100;
     public const int GachaTenGemCost = 900;
@@ -97,7 +116,7 @@ public static class GameBalanceConfig
     public const int SmallGemPackGems = 1200;
     public const int LargeGemPackGems = 6500;
 
-    // Prototype bootstrap grants. Set to 0 before release balancing.
-    public const int PrototypeMinimumGold = 100000;
-    public const int PrototypeMinimumGems = 100000;
+    // Natural rewards are balance baseline. No prototype currency floor.
+    public const int PrototypeMinimumGold = 0;
+    public const int PrototypeMinimumGems = 0;
 }

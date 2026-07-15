@@ -1,0 +1,97 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edbddcf0806d01c46b7c1bf4982395b7, type: 3}
+  m_Name: "\uD1A0\uB974"
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterData
+  characterName: "\uD1A0\uB974"
+  rarity: SSR
+  icon: {fileID: 21300000, guid: 928408ebc7f0cd5488a4a3e2fc9504d8, type: 3}
+  battleSprite: {fileID: 0}
+  basicProjectileSprite: {fileID: 21300000, guid: dcec3c470e43f8f4b82050deb6afd49a, type: 3}
+  skillProjectileSprite: {fileID: 21300000, guid: 83c2ff1b8587007479a035a50be5b4b4, type: 3}
+  basicProjectileTint: {r: 1, g: 1, b: 1, a: 1}
+  skillProjectileTint: {r: 1, g: 1, b: 1, a: 1}
+  battleAnimator: {fileID: 0}
+  battleVisual:
+    sprite: {fileID: 21300000, guid: 928408ebc7f0cd5488a4a3e2fc9504d8, type: 3}
+    animatorController: {fileID: 0}
+    spriteAnimations:
+    - cue: 0
+      frames:
+      - {fileID: 21300000, guid: 1a9b54920a2ec5b4eb944bce66b3558c, type: 3}
+      - {fileID: 21300000, guid: 9f36c3af95f1497428d12e9ac9de710f, type: 3}
+      - {fileID: 21300000, guid: de783323d8a69f7489e4311a2f864024, type: 3}
+      - {fileID: 21300000, guid: 4f40975f3d16e7c4f89b79ce89988652, type: 3}
+      - {fileID: 21300000, guid: 096ef580961af584489c82889af1e6af, type: 3}
+      - {fileID: 21300000, guid: 74071c0c41284734dac22141b8b231b7, type: 3}
+    - cue: 1
+      frames:
+      - {fileID: 21300000, guid: b49a32eca5f9790458735254220c1b73, type: 3}
+      - {fileID: 21300000, guid: 67a84b0c7b2076e49ab82b5871dbb1b7, type: 3}
+      - {fileID: 21300000, guid: 5addb4f2cd23dd54c8def559568b9fa3, type: 3}
+      - {fileID: 21300000, guid: d23d2ae2c9f471a49ad15d6aee6c407a, type: 3}
+      - {fileID: 21300000, guid: 8fdb29fceb0cf13409bab5616c3eda80, type: 3}
+      - {fileID: 21300000, guid: b5a6586cca4f2244ab6cf9c564c3ac82, type: 3}
+      - {fileID: 21300000, guid: 8afa67377e471da49a38d9f420c3263e, type: 3}
+      - {fileID: 21300000, guid: f22cad99beacda045a7a5423be483d72, type: 3}
+    - cue: 2
+      frames:
+      - {fileID: 21300000, guid: fb5990609f3b82949a23c5fdc136bb74, type: 3}
+      - {fileID: 21300000, guid: 640f22364edb67c41b170b89b977b677, type: 3}
+      - {fileID: 21300000, guid: 78439a4338d79be4088efede8b15e72a, type: 3}
+      - {fileID: 21300000, guid: 304cde403660a854389e86feb4726370, type: 3}
+    - cue: 3
+      frames:
+      - {fileID: 21300000, guid: 5864418c8631ef74590bdc1954b67dc1, type: 3}
+      - {fileID: 21300000, guid: 621442701158cdb4ca3138c1c3cf9b68, type: 3}
+      - {fileID: 21300000, guid: f58415cc023f9be41ba7cdc9b78b35e8, type: 3}
+      - {fileID: 21300000, guid: 4684a5f6858eed1459aacfdc2e2db642, type: 3}
+      - {fileID: 21300000, guid: d58bb0df588ffc94cae97f07d6a2fe82, type: 3}
+      - {fileID: 21300000, guid: 69aaf40d6c9de7545b7ac46bf7f96232, type: 3}
+    - cue: 4
+      frames:
+      - {fileID: 21300000, guid: 3268ede7b2f0f674f941083be22c449c, type: 3}
+      - {fileID: 21300000, guid: c1b3c520b2069574c8349bbf0453277c, type: 3}
+      - {fileID: 21300000, guid: 610c756d9bf528f478bb999afff0a938, type: 3}
+      - {fileID: 21300000, guid: c1deebc548909df4690aaf7f2ab0e99e, type: 3}
+      - {fileID: 21300000, guid: 329305d1d2a7eef4190ba36937a84954, type: 3}
+      - {fileID: 21300000, guid: ebfec69e2bd5123409a5f2abc3d6b351, type: 3}
+      - {fileID: 21300000, guid: cab3f6710f610d74bbce04f3c2dca2ed, type: 3}
+      - {fileID: 21300000, guid: 1757216ef5227c746bb6517a0edae956, type: 3}
+    basicProjectile:
+      sprite: {fileID: 21300000, guid: dcec3c470e43f8f4b82050deb6afd49a, type: 3}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      duration: 0
+      size: 0
+    skillProjectile:
+      sprite: {fileID: 21300000, guid: 83c2ff1b8587007479a035a50be5b4b4, type: 3}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      duration: 0
+      size: 0
+  element: 6
+  role: 2
+  synergyTags:
+  - Bird
+  - Water
+  - Owl
+  - Guardian
+  - Tank
+  - SSR
+  description: "SSR \uBB3C\uC18D\uC131 \uD0F1\uCEE4 \uC218\uB9AC\uBD80\uC5C9\uC774.
+    \n\uC218\uB9AC\uBD80\uC5C9\uC774\uB294 \uC6A9\uB9F9\uD558\uACE0 \uBA4B\uC838\uBD80\uB7EC."
+  skillName: "\uD30C\uB3C4 \uBC29\uBCBD"
+  skillCooldown: 10
+  skillEffect: 0
+  basicAttackMultiplier: 0.55
+  skillDamageMultiplier: 1.6
+  lineRepairPercent: 0.35
+  lineDefensePercentBonus: 25

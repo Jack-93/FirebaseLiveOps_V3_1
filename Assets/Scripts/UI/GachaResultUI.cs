@@ -39,7 +39,7 @@ public sealed class GachaResultUI
         bool bindExisting)
     {
         if (bindExisting)
-            Bind(panel, onConfirm);
+            Bind(panel, onConfirm, accent);
         else
             Build(panel, onConfirm, accent);
     }
@@ -207,23 +207,50 @@ public sealed class GachaResultUI
 
     private void Bind(
         RectTransform panel,
-        UnityAction onConfirm)
+        UnityAction onConfirm,
+        Color accent)
     {
         RectTransform resultCard =
             RuntimeUiBinder.FindRect(panel, "GachaResultCard");
+        if (resultCard == null)
+        {
+            Build(panel, onConfirm, accent);
+            return;
+        }
+
         placeholderText =
             RuntimeUiBinder.FindText(resultCard, "GachaResultText");
         pointText =
             RuntimeUiBinder.FindText(resultCard, "RecruitPointText");
-        pointNumberText = new SpriteNumberText(
-            RuntimeUiBinder.FindRect(
+        RectTransform pointNumberRect = RuntimeUiBinder.FindRect(
+            resultCard,
+            "RecruitPointNumberText");
+        pointNumberText = pointNumberRect == null
+            ? new SpriteNumberText(
                 resultCard,
-                "RecruitPointNumberText"),
-            NumberResourceRoot,
-            20f);
+                "RecruitPointNumberText",
+                NumberResourceRoot,
+                20f,
+                new Vector2(0.88f, 0.01f),
+                new Vector2(0.97f, 0.08f))
+            : new SpriteNumberText(
+                pointNumberRect,
+                NumberResourceRoot,
+                20f);
 
         confirmButton =
             RuntimeUiBinder.FindButton(panel, "GachaResultConfirmButton");
+        if (confirmButton == null)
+        {
+            confirmButton = RuntimeUiFactory.CreateButton(
+                "GachaResultConfirmButton",
+                panel,
+                "CONFIRM",
+                new Vector2(0.34f, 0.055f),
+                new Vector2(0.66f, 0.145f),
+                accent,
+                onConfirm);
+        }
         RuntimeUiBinder.ReplaceButtonAction(confirmButton, onConfirm);
         if (confirmButton != null)
             confirmButton.gameObject.SetActive(false);

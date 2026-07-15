@@ -9,14 +9,20 @@ public sealed class BattleStageThemeProfile
     public int stageFrom = 1;
     public int stageTo;
     public int priority;
+    public string mapPrefabPath;
     public Sprite background;
+    public Sprite farBackground;
     public Sprite midground;
+    public Sprite ground;
     public Sprite foreground;
     public Color fallbackColor = new Color32(17, 24, 39, 255);
 
     public bool HasVisual =>
+        !string.IsNullOrWhiteSpace(mapPrefabPath) ||
         background != null ||
+        farBackground != null ||
         midground != null ||
+        ground != null ||
         foreground != null;
 
     public bool MatchesStage(int stage)
@@ -51,14 +57,6 @@ public sealed class BattleStageThemeDatabase : ScriptableObject
                 candidates.Add(theme);
         }
 
-        if (candidates.Count == 0)
-        {
-            foreach (BattleStageThemeProfile theme in themes)
-            {
-                if (theme != null)
-                    candidates.Add(theme);
-            }
-        }
         if (candidates.Count == 0)
             return null;
 
@@ -145,6 +143,18 @@ public static class BattleStageThemeResolver
             PrototypeBattleArt.GetStageMidground(stage);
     }
 
+    public static Sprite GetStageFarBackground(int stage)
+    {
+        BattleStageThemeProfile profile = GetConfiguredTheme(stage);
+        return profile?.farBackground;
+    }
+
+    public static Sprite GetStageGround(int stage)
+    {
+        BattleStageThemeProfile profile = GetConfiguredTheme(stage);
+        return profile?.ground;
+    }
+
     public static Sprite GetStageForeground(int stage)
     {
         BattleStageThemeProfile profile = GetConfiguredTheme(stage);
@@ -159,6 +169,14 @@ public static class BattleStageThemeResolver
             return profile.fallbackColor;
 
         return new Color32(17, 24, 39, 255);
+    }
+
+    public static string GetStageMapPrefabPath(int stage)
+    {
+        BattleStageThemeProfile profile = GetConfiguredTheme(stage);
+        return string.IsNullOrWhiteSpace(profile?.mapPrefabPath)
+            ? null
+            : profile.mapPrefabPath;
     }
 
     private static BattleStageThemeProfile GetConfiguredTheme(int stage)

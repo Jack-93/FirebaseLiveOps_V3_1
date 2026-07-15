@@ -70,7 +70,7 @@ public sealed class MainGameNavigationController
 
     public void ShowEquipment()
     {
-        Show(equipmentPanel, BottomNavigationTab.More);
+        Show(equipmentPanel, BottomNavigationTab.Equipment);
     }
 
     public void ShowQuests()

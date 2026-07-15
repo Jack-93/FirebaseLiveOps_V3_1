@@ -3,9 +3,10 @@ public enum CompanionElement
     None,
     Flame,
     Nature,
-    Light,
+    Electric,
     Shadow,
-    Wind
+    Wind,
+    Water
 }
 
 public enum CompanionRole
@@ -14,4 +15,12 @@ public enum CompanionRole
     Striker,
     Guardian,
     Support
+}
+
+public enum CompanionSkillEffect
+{
+    DamageEnemy,
+    RepairLine = 1,
+    RepairPole = 1,
+    PartyDamageBuff = 2
 }

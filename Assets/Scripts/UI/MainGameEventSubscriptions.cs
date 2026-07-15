@@ -152,6 +152,8 @@ public sealed class MainGameEventSubscriptions : IDisposable
             battleHud.HandleCompanionSkillVisual;
         battleManager.OnBossPatternUsed +=
             battleHud.HandleBossPatternVisual;
+        battleManager.OnBossPatternWarning +=
+            battleHud.HandleBossPatternWarningVisual;
         battleManager.OnBossChallengeFailed +=
             battleHud.HandleBossChallengeFailed;
         battleManager.OnPowerCharged +=
@@ -175,6 +177,8 @@ public sealed class MainGameEventSubscriptions : IDisposable
             battleHud.HandleCompanionSkillVisual;
         battleManager.OnBossPatternUsed -=
             battleHud.HandleBossPatternVisual;
+        battleManager.OnBossPatternWarning -=
+            battleHud.HandleBossPatternWarningVisual;
         battleManager.OnBossChallengeFailed -=
             battleHud.HandleBossChallengeFailed;
         battleManager.OnPowerCharged -=

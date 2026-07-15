@@ -484,6 +484,8 @@ public static class ProjectValidation
                 "Assets/Scenes/UiPrefabPreviewScene.unity");
         Require(previewScene != null,
             "UiPrefabPreviewScene is missing.");
+        ValidateUiPreviewScenes(prefabRoot, requiredPrefabs);
+        ValidateRuntimeUiEditorSafety();
 
         GameObject battleHud = AssetDatabase.LoadAssetAtPath<GameObject>(
             prefabRoot + "BattleHud.prefab");
@@ -551,6 +553,148 @@ public static class ProjectValidation
             Require(
                 transform.GetComponent<BattleSlotGuide>() != null,
                 guideNode + " must expose a Scene-view slot guide.");
+        }
+    }
+
+    private static void ValidateUiPreviewScenes(
+        string prefabRoot,
+        string[] requiredPrefabs)
+    {
+        const string aggregatePreviewScene =
+            "Assets/Scenes/UiPrefabPreviewScene.unity";
+
+        Require(File.Exists(aggregatePreviewScene),
+            "UiPrefabPreviewScene file is missing.");
+        string aggregateSceneText =
+            File.ReadAllText(aggregatePreviewScene);
+        foreach (string prefabName in requiredPrefabs)
+        {
+            RequireSceneReferencesPrefab(
+                aggregateSceneText,
+                prefabRoot,
+                prefabName,
+                "UiPrefabPreviewScene");
+        }
+
+        PreviewSceneRequirement[] sceneRequirements =
+        {
+            new PreviewSceneRequirement("Preview_00_Battle.unity", "BattleHud"),
+            new PreviewSceneRequirement("Preview_01_Gacha.unity", "GachaPanel"),
+            new PreviewSceneRequirement("Preview_02_Growth.unity", "GrowthPanel"),
+            new PreviewSceneRequirement("Preview_03_More.unity", "MorePanel"),
+            new PreviewSceneRequirement("Preview_04_Collection.unity", "CollectionPanel"),
+            new PreviewSceneRequirement("Preview_05_Equipment.unity", "EquipmentPanel"),
+            new PreviewSceneRequirement("Preview_06_Quest.unity", "QuestPanel"),
+            new PreviewSceneRequirement("Preview_07_Shop.unity", "ShopPanel"),
+            new PreviewSceneRequirement("Preview_08_Event.unity", "EventPanel"),
+            new PreviewSceneRequirement("Preview_09_Settings.unity", "SettingsPanel"),
+            new PreviewSceneRequirement("Preview_10_Account.unity", "AccountPanel"),
+            new PreviewSceneRequirement("Preview_11_Story_Intro.unity", "StoryIntroOverlay"),
+            new PreviewSceneRequirement("Preview_12_Title.unity", "TitleOverlay"),
+            new PreviewSceneRequirement("Preview_13_Loading.unity", "LoadingOverlay"),
+            new PreviewSceneRequirement("Preview_14_Offline_Reward.unity", "OfflineOverlay"),
+            new PreviewSceneRequirement("Preview_15_Tutorial.unity", "TutorialPanel"),
+            new PreviewSceneRequirement("Preview_16_Toast.unity", "ToastPanel"),
+        };
+
+        foreach (PreviewSceneRequirement requirement in sceneRequirements)
+        {
+            string scenePath =
+                "Assets/Scenes/UIPreviews/" + requirement.SceneFileName;
+            Require(File.Exists(scenePath),
+                requirement.SceneFileName + " preview scene is missing.");
+            string sceneText = File.ReadAllText(scenePath);
+            RequireSceneReferencesPrefab(
+                sceneText,
+                prefabRoot,
+                requirement.ActivePrefabName,
+                requirement.SceneFileName);
+            RequireSceneReferencesPrefab(
+                sceneText,
+                prefabRoot,
+                "WorldBackdrop",
+                requirement.SceneFileName);
+            RequireSceneReferencesPrefab(
+                sceneText,
+                prefabRoot,
+                "TopBar",
+                requirement.SceneFileName);
+            RequireSceneReferencesPrefab(
+                sceneText,
+                prefabRoot,
+                "BottomNavigation",
+                requirement.SceneFileName);
+        }
+    }
+
+    private static void ValidateRuntimeUiEditorSafety()
+    {
+        string[] removedGeneratorScripts =
+        {
+            "Assets/Editor/RuntimeUiPrefabGenerator.cs",
+            "Assets/Editor/BattleHudPrefabGenerator.cs",
+            "Assets/Editor/GachaPanelPrefabGenerator.cs",
+            "Assets/Editor/GrowthPanelPrefabGenerator.cs"
+        };
+        foreach (string scriptPath in removedGeneratorScripts)
+        {
+            Require(
+                !File.Exists(scriptPath),
+                scriptPath + " must stay removed.");
+        }
+
+        const string uiMenuRoot = "Tools/UI/";
+        string[] forbiddenUiMenuItems =
+        {
+            uiMenuRoot + "Rebuild UI Preview Scene",
+            uiMenuRoot + "Rebuild Individual UI Preview Scenes",
+            uiMenuRoot + "Rebuild Battle UI Preview Scene",
+            uiMenuRoot + "Fix Battle Preview Now",
+            uiMenuRoot + "Upgrade Battle Hud Prefab Layout",
+            uiMenuRoot + "Remove Obsolete Battle Slot Pads"
+        };
+        foreach (string editorScript in Directory.GetFiles(
+            "Assets/Editor",
+            "*.cs",
+            SearchOption.AllDirectories))
+        {
+            string text = File.ReadAllText(editorScript);
+            foreach (string forbiddenMenuItem in forbiddenUiMenuItems)
+            {
+                Require(
+                    !text.Contains(forbiddenMenuItem),
+                    "Dangerous UI editor menu must stay removed: " +
+                    forbiddenMenuItem);
+            }
+        }
+    }
+
+    private static void RequireSceneReferencesPrefab(
+        string sceneText,
+        string prefabRoot,
+        string prefabName,
+        string sceneName)
+    {
+        string prefabPath = prefabRoot + prefabName + ".prefab";
+        string guid = AssetDatabase.AssetPathToGUID(prefabPath);
+        Require(!string.IsNullOrEmpty(guid),
+            prefabName + " prefab GUID is missing.");
+        Require(sceneText.Contains("guid: " + guid),
+            sceneName + " must reference runtime UI prefab " +
+            prefabName + ".");
+    }
+
+    private readonly struct PreviewSceneRequirement
+    {
+        public readonly string SceneFileName;
+        public readonly string ActivePrefabName;
+
+        public PreviewSceneRequirement(
+            string sceneFileName,
+            string activePrefabName)
+        {
+            SceneFileName = sceneFileName;
+            ActivePrefabName = activePrefabName;
         }
     }
 

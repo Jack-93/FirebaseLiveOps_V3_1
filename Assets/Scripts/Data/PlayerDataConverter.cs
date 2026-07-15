@@ -67,8 +67,29 @@ public static class PlayerDataConverter
             { "companionStars", ConvertIntDictionary(data.companionStars) },
             { "equippedWeapon", data.equippedWeapon },
             { "equippedArmor", data.equippedArmor },
+            {
+                "equippedWeaponInstanceId",
+                data.equippedWeaponInstanceId
+            },
+            {
+                "equippedArmorInstanceId",
+                data.equippedArmorInstanceId
+            },
+            {
+                "equipmentInstances",
+                ConvertEquipmentInstances(data.equipmentInstances)
+            },
+            { "flightEquipmentCoins", data.flightEquipmentCoins },
             { "weaponUpgradeLevel", data.weaponUpgradeLevel },
             { "armorUpgradeLevel", data.armorUpgradeLevel },
+            {
+                "weaponStarForceDowngradeFails",
+                data.weaponStarForceDowngradeFails
+            },
+            {
+                "armorStarForceDowngradeFails",
+                data.armorStarForceDowngradeFails
+            },
             { "dailyQuestDate", data.dailyQuestDate },
             { "dailyQuestKills", data.dailyQuestKills },
             { "dailyQuestClaimed", data.dailyQuestClaimed },
@@ -148,10 +169,30 @@ public static class PlayerDataConverter
             autoAdvance = GetBool(values, "autoAdvance", true),
             equippedWeapon = GetString(values, "equippedWeapon", ""),
             equippedArmor = GetString(values, "equippedArmor", ""),
+            equippedWeaponInstanceId = GetString(
+                values,
+                "equippedWeaponInstanceId",
+                ""),
+            equippedArmorInstanceId = GetString(
+                values,
+                "equippedArmorInstanceId",
+                ""),
+            flightEquipmentCoins = GetInt(
+                values,
+                "flightEquipmentCoins",
+                0),
             weaponUpgradeLevel =
                 GetInt(values, "weaponUpgradeLevel", 0),
             armorUpgradeLevel =
                 GetInt(values, "armorUpgradeLevel", 0),
+            weaponStarForceDowngradeFails = GetInt(
+                values,
+                "weaponStarForceDowngradeFails",
+                0),
+            armorStarForceDowngradeFails = GetInt(
+                values,
+                "armorStarForceDowngradeFails",
+                0),
             dailyQuestDate = GetString(values, "dailyQuestDate", ""),
             dailyQuestKills = GetInt(values, "dailyQuestKills", 0),
             dailyQuestClaimed =
@@ -266,6 +307,14 @@ public static class PlayerDataConverter
                 out object starsValue))
         {
             data.companionStars = ConvertIntDictionary(starsValue);
+        }
+
+        if (values.TryGetValue(
+                "equipmentInstances",
+                out object equipmentInstancesValue))
+        {
+            data.equipmentInstances =
+                ConvertEquipmentInstances(equipmentInstancesValue);
         }
 
         data.EnsureInitialized();
@@ -383,6 +432,100 @@ public static class PlayerDataConverter
         return mails;
     }
 
+    private static List<object> ConvertEquipmentInstances(
+        List<EquipmentInstance> instances)
+    {
+        List<object> result = new List<object>();
+        if (instances == null)
+            return result;
+
+        foreach (EquipmentInstance instance in instances)
+        {
+            if (instance == null)
+                continue;
+
+            List<object> rolledOptions = new List<object>();
+            if (instance.rolledOptions != null)
+            {
+                foreach (EquipmentRolledOption option in
+                         instance.rolledOptions)
+                {
+                    if (option == null)
+                        continue;
+
+                    rolledOptions.Add(new Dictionary<string, object>
+                    {
+                        { "type", (int)option.type },
+                        { "value", option.value }
+                    });
+                }
+            }
+
+            result.Add(new Dictionary<string, object>
+            {
+                { "instanceId", instance.instanceId ?? "" },
+                { "definitionId", instance.definitionId ?? "" },
+                { "rolledOptions", rolledOptions }
+            });
+        }
+
+        return result;
+    }
+
+    private static List<EquipmentInstance> ConvertEquipmentInstances(
+        object raw)
+    {
+        List<EquipmentInstance> result = new List<EquipmentInstance>();
+        if (!(raw is IEnumerable list) || raw is string)
+            return result;
+
+        foreach (object rawInstance in list)
+        {
+            if (!(rawInstance is IDictionary dictionary))
+                continue;
+
+            EquipmentInstance instance = new EquipmentInstance
+            {
+                instanceId = GetDictionaryString(dictionary, "instanceId"),
+                definitionId = GetDictionaryString(dictionary, "definitionId")
+            };
+            if (dictionary.Contains("rolledOptions"))
+            {
+                instance.rolledOptions = ConvertRolledOptions(
+                    dictionary["rolledOptions"]);
+            }
+
+            result.Add(instance);
+        }
+
+        return result;
+    }
+
+    private static List<EquipmentRolledOption> ConvertRolledOptions(
+        object raw)
+    {
+        List<EquipmentRolledOption> result =
+            new List<EquipmentRolledOption>();
+        if (!(raw is IEnumerable list) || raw is string)
+            return result;
+
+        foreach (object rawOption in list)
+        {
+            if (!(rawOption is IDictionary dictionary))
+                continue;
+
+            result.Add(new EquipmentRolledOption
+            {
+                type = (EquipmentOptionType)GetDictionaryInt(
+                    dictionary,
+                    "type"),
+                value = GetDictionaryFloat(dictionary, "value")
+            });
+        }
+
+        return result;
+    }
+
     private static List<string> ConvertStrings(
         object raw,
         bool keepEmpty = false)
@@ -465,6 +608,23 @@ public static class PlayerDataConverter
         return dictionary.Contains(key)
             ? ConvertToInt(dictionary[key], 0)
             : 0;
+    }
+
+    private static float GetDictionaryFloat(
+        IDictionary dictionary,
+        string key)
+    {
+        if (!dictionary.Contains(key) || dictionary[key] == null)
+            return 0f;
+
+        try
+        {
+            return Convert.ToSingle(dictionary[key]);
+        }
+        catch
+        {
+            return 0f;
+        }
     }
 
     private static bool GetDictionaryBool(

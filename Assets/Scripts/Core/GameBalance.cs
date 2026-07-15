@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public static class GameBalance
@@ -9,6 +10,8 @@ public static class GameBalance
         GameBalanceConfig.MaxOfflineHours;
     public const float BossTimeLimit =
         GameBalanceConfig.BossTimeLimit;
+    public const float BossPatternWarningSeconds =
+        GameBalanceConfig.BossPatternWarningSeconds;
 
     private static readonly string[] EnemyNames =
     {
@@ -71,12 +74,19 @@ public static class GameBalance
         CompanionSynergyResult synergy =
             CompanionManager.Instance?.GetSynergyResult();
         bonusPercent += synergy?.AttackPercent ?? 0;
+        bonusPercent += Mathf.RoundToInt(
+            EquipmentManager.GetAttackPercent(data));
 
         return Mathf.RoundToInt(
             baseAttack * (1f + bonusPercent / 100f));
     }
 
     public static int GetPlayerMaxHealth(PlayerData data)
+    {
+        return GetPoleMaxDurability(data);
+    }
+
+    public static int GetPoleMaxDurability(PlayerData data)
     {
         int baseHealth =
             GameBalanceConfig.PlayerBaseHealth +
@@ -88,8 +98,47 @@ public static class GameBalance
             CompanionManager.Instance
                 ?.GetSynergyResult()
                 .HealthPercent ?? 0;
+        synergyPercent +=
+            GetEquippedCompanionPoleDurabilityPercentBonus();
+        synergyPercent += Mathf.RoundToInt(
+            EquipmentManager.GetPoleDurabilityPercent(data));
         return Mathf.RoundToInt(
             baseHealth * (1f + synergyPercent / 100f));
+    }
+
+    public static int GetPoleDamageAfterArmor(
+        PlayerData data,
+        int incomingDamage)
+    {
+        int damage = Mathf.Max(0, incomingDamage);
+        if (damage <= 0)
+            return 0;
+
+        float reductionPercent =
+            EquipmentManager.GetPoleDamageReductionPercent(data);
+        return Mathf.Max(
+            1,
+            Mathf.RoundToInt(damage * (1f - reductionPercent / 100f)));
+    }
+
+    private static int GetEquippedCompanionPoleDurabilityPercentBonus()
+    {
+        List<CharacterData> party =
+            CompanionManager.Instance?.GetEquippedParty();
+        if (party == null)
+            return 0;
+
+        int bonusPercent = 0;
+        foreach (CharacterData character in party)
+        {
+            if (character == null)
+                continue;
+
+            bonusPercent += Mathf.RoundToInt(
+                Mathf.Max(0f, character.poleDurabilityPercentBonus));
+        }
+
+        return bonusPercent;
     }
 
     public static float GetPlayerAttackInterval(PlayerData data)
@@ -163,8 +212,20 @@ public static class GameBalance
     {
         double attackScore =
             GetPlayerAttack(data) / GetPlayerAttackInterval(data);
-        double healthScore = GetPlayerMaxHealth(data) * 0.35d;
-        return ClampToInt(attackScore * 10d + healthScore);
+        double poleDurabilityScore =
+            GetPoleMaxDurability(data) *
+            GetPoleEffectiveDurabilityMultiplier(data) *
+            0.35d;
+        return ClampToInt(attackScore * 10d + poleDurabilityScore);
+    }
+
+    private static double GetPoleEffectiveDurabilityMultiplier(PlayerData data)
+    {
+        float reductionPercent =
+            EquipmentManager.GetPoleDamageReductionPercent(data);
+        float damageTakenMultiplier =
+            Mathf.Clamp(1f - reductionPercent / 100f, 0.1f, 1f);
+        return 1d / damageTakenMultiplier;
     }
 
     public static int GetOfflineGoldPerMinute(PlayerData data)

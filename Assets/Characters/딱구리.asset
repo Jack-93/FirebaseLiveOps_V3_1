@@ -1,0 +1,97 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edbddcf0806d01c46b7c1bf4982395b7, type: 3}
+  m_Name: "\uB531\uAD6C\uB9AC"
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterData
+  characterName: "\uB531\uAFB8\uB9AC"
+  rarity: SSR
+  icon: {fileID: 21300000, guid: b87d3ed43e9b43d4a33443e5c00424ac, type: 3}
+  battleSprite: {fileID: 0}
+  basicProjectileSprite: {fileID: 21300000, guid: 21d7195712fa48408fca381c8bb8b6f4, type: 3}
+  skillProjectileSprite: {fileID: 21300000, guid: 56f59ab4e18344f69dea6ec3055d8a5d, type: 3}
+  basicProjectileTint: {r: 1, g: 1, b: 1, a: 1}
+  skillProjectileTint: {r: 1, g: 1, b: 1, a: 1}
+  battleAnimator: {fileID: 0}
+  battleVisual:
+    sprite: {fileID: 21300000, guid: 6d8cd33212a14230a522d68d8004254b, type: 3}
+    animatorController: {fileID: 0}
+    spriteAnimations:
+    - cue: 0
+      frames:
+      - {fileID: 21300000, guid: 6d8cd33212a14230a522d68d8004254b, type: 3}
+      - {fileID: 21300000, guid: 1ec9d4f31e6d4a10804e8597225b99d2, type: 3}
+      - {fileID: 21300000, guid: a790c9ea2e6242d4ab98f9dcb542ad8a, type: 3}
+      - {fileID: 21300000, guid: 36fe1cdf06824e3cac03bede9516294e, type: 3}
+      - {fileID: 21300000, guid: 68c55c07175d4fbc9b5ff6566b8267a2, type: 3}
+      - {fileID: 21300000, guid: 19ee9ecbfe344316ae8a8a3fb16527b6, type: 3}
+      - {fileID: 21300000, guid: 65f18cac9b864a6782a713a32490b652, type: 3}
+      - {fileID: 21300000, guid: 02e6cd5cdae44e53b5738251efea841a, type: 3}
+    - cue: 1
+      frames:
+      - {fileID: 21300000, guid: 4ceffd67e9394a0880313d5d83b05ffa, type: 3}
+      - {fileID: 21300000, guid: e96aa07dd949494c9200a3bc279220da, type: 3}
+      - {fileID: 21300000, guid: 0030e89e91b5445aa100e0245b9772e5, type: 3}
+      - {fileID: 21300000, guid: 977aa005b89545e0a191f1ee8c9a0c45, type: 3}
+      - {fileID: 21300000, guid: 31a5551c5abd41ecb3d7ab758283aa01, type: 3}
+      - {fileID: 21300000, guid: 7aa58b9d94554d76ad3d3c7dbb9dd944, type: 3}
+      - {fileID: 21300000, guid: 5bd254b6b7fa4653a97e5b6b2b7c20f2, type: 3}
+      - {fileID: 21300000, guid: cc441cb60bc94ecb947b70fd5dd5808f, type: 3}
+    - cue: 3
+      frames:
+      - {fileID: 21300000, guid: c383941bb7e14ff1a237acfa01342109, type: 3}
+      - {fileID: 21300000, guid: 644ebc075db443f8b3919db709a5885f, type: 3}
+      - {fileID: 21300000, guid: 87724c998bc142f2864896ca1e362646, type: 3}
+      - {fileID: 21300000, guid: f1157e40b785440e969b3225d8d0e6b7, type: 3}
+      - {fileID: 21300000, guid: 2186e15876684ebd86d8ee3fd0e8b3e2, type: 3}
+      - {fileID: 21300000, guid: 34e3b551bbc84719bfa52b26d695f466, type: 3}
+      - {fileID: 21300000, guid: 7cd1dde2018a4879bbe5e644f73534d4, type: 3}
+      - {fileID: 21300000, guid: 56e0d18dd4be41dca7f09ad87ec0826f, type: 3}
+    - cue: 4
+      frames:
+      - {fileID: 21300000, guid: 188c265e24344decafef1b20335c4036, type: 3}
+      - {fileID: 21300000, guid: b1fd185b9ff2444eb231a8dda46de724, type: 3}
+      - {fileID: 21300000, guid: a3ec3950f0e848d5b291ce46bad7b4c4, type: 3}
+      - {fileID: 21300000, guid: dc5bdb8be09a421abad335ca3af877d0, type: 3}
+      - {fileID: 21300000, guid: 56e1458e050847588196fbff3f80dfde, type: 3}
+      - {fileID: 21300000, guid: 7e10dd9514454fc7910b0c267f6e299d, type: 3}
+      - {fileID: 21300000, guid: 06a72cd6d2d84a8a80e3a175a1506569, type: 3}
+      - {fileID: 21300000, guid: ebe74f9eb27f4dc690f4a2cc3d03298d, type: 3}
+    basicProjectile:
+      sprite: {fileID: 21300000, guid: 21d7195712fa48408fca381c8bb8b6f4, type: 3}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      duration: 1
+      size: 120
+    skillProjectile:
+      sprite: {fileID: 21300000, guid: 56f59ab4e18344f69dea6ec3055d8a5d, type: 3}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      duration: 1
+      size: 150
+  element: 5
+  role: 1
+  synergyTags:
+  - Bird
+  - Wind
+  - Woodpecker
+  - Striker
+  - SSR
+  description: "SSR \uBC14\uB78C\uC18D\uC131 \uB51C\uB7EC \uB531\uB2E4\uAD6C\uB9AC.
+    \n\uBD80\uB9AC\uBD80\uB9AC \uB300\uB9C8\uC655\uC774\uB2E4. \uC544\uB9C8\uB3C4."
+  skillName: "\uBD80\uB9AC\uBD80\uB9AC \uC6B0\uB2E4\uB2E4\uB2E4"
+  skillCooldown: 7
+  skillEffect: 0
+  basicAttackMultiplier: 0.82
+  skillDamageMultiplier: 1.15
+  skillHitCount: 3
+  skillDamageBuffPercent: 0
+  skillDamageBuffDuration: 0
+  lineRepairPercent: 0
+  lineDefensePercentBonus: 0

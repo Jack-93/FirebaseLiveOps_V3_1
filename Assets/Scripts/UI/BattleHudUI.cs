@@ -49,7 +49,9 @@ public sealed class BattleHudUI
     private Image enemyVisualImage;
     private Image playerVisualImage;
     private Image battlefieldBackgroundImage;
+    private Image battlefieldFarBackgroundImage;
     private Image battlefieldMidgroundImage;
+    private Image battlefieldGroundImage;
     private Image battlefieldForegroundImage;
     private Image attackTrailImage;
     private Image skillProjectileImage;
@@ -274,10 +276,15 @@ public sealed class BattleHudUI
 
         RectTransform enemyCard =
             RuntimeUiBinder.FindRect(panel, "EnemyCard");
-        ApplyAnchors(
-            enemyCard,
-            new Vector2(0.02f, 0.34f),
-            new Vector2(0.98f, 0.91f));
+        if (enemyCard == null)
+        {
+            enemyCard = RuntimeUiFactory.CreatePanel(
+                "EnemyCard",
+                panel,
+                new Color32(0, 0, 0, 0),
+                new Vector2(0.02f, 0.34f),
+                new Vector2(0.98f, 0.91f));
+        }
         BindBattlefieldLayers(enemyCard);
 
         statusHud = new BattleStatusHudUI(Danger, Accent, Success);
@@ -388,7 +395,6 @@ public sealed class BattleHudUI
             Success,
             0.58f);
         playerActorView?.Play(BattleAnimationCue.Attack);
-        enemyActorView?.Play(BattleAnimationCue.Hit);
     }
 
     public void HandleCompanionBasicAttackVisual(
@@ -423,7 +429,6 @@ public sealed class BattleHudUI
                 0.42f,
                 42f);
         }
-        enemyActorView?.Play(BattleAnimationCue.Hit);
     }
 
     public void HandlePowerChargedVisual(float current, float max)
@@ -449,7 +454,6 @@ public sealed class BattleHudUI
         StartBattleFlash(Danger, 0.13f);
         ShowPlayerDamage(damage);
         enemyActorView?.Play(BattleAnimationCue.Attack);
-        playerActorView?.Play(BattleAnimationCue.Hit);
     }
 
     public void HandleEnemyDefeatedVisual(int reward)
@@ -475,13 +479,36 @@ public sealed class BattleHudUI
         playerDefeatTimer = 1.8f;
         StartBattleFlash(Danger, 0.22f);
         playerActorView?.Play(BattleAnimationCue.Death);
+        foreach (BattleActorView companionActorView in companionActorViews)
+        {
+            companionActorView?.Play(BattleAnimationCue.Death);
+        }
     }
 
     public void HandleCompanionSkillVisual(
         int slot,
         CharacterData character,
-        int damage)
+        int effectValue)
     {
+        if (character != null &&
+            character.skillEffect == CompanionSkillEffect.RepairPole)
+        {
+            HandleCompanionPoleRepairSkillVisual(
+                slot,
+                character,
+                effectValue);
+            return;
+        }
+        if (character != null &&
+            character.skillEffect == CompanionSkillEffect.PartyDamageBuff)
+        {
+            HandleCompanionPartyDamageBuffSkillVisual(
+                slot,
+                character,
+                effectValue);
+            return;
+        }
+
         enemyAnimationTimer = 0.35f;
         enemyHitShakeTimer = 0.3f;
         attackTrailTimer = 0.24f;
@@ -492,7 +519,7 @@ public sealed class BattleHudUI
             0.11f);
         StartBattleFlash(Accent, 0.18f);
         ShowEnemyDamage(
-            damage,
+            effectValue,
             character?.skillName ?? "SKILL",
             Accent,
             0.72f);
@@ -509,10 +536,89 @@ public sealed class BattleHudUI
                 0.56f,
                 60f);
         }
-        enemyActorView?.Play(BattleAnimationCue.Hit);
         showToast?.Invoke(
             $"{character?.skillName ?? "Skill"}  DMG " +
-            CompactNumberFormatter.Format(damage));
+            CompactNumberFormatter.Format(effectValue));
+    }
+
+    private void HandleCompanionPoleRepairSkillVisual(
+        int slot,
+        CharacterData character,
+        int repairAmount)
+    {
+        playerAnimationTimer = 0.35f;
+        attackTrailTimer = 0.18f;
+        StartSparkles(
+            GetSupportImpactAnchor(),
+            Success,
+            0.48f,
+            0.12f);
+        StartSparkles(
+            GetCompanionImpactAnchor(slot),
+            Gold,
+            0.42f,
+            0.1f);
+        StartBattleFlash(Success, 0.14f);
+        ShowPoleRepair(
+            repairAmount,
+            character?.skillName ?? "REPAIR",
+            0.72f);
+        if (slot >= 0 && slot < companionActorViews.Length)
+        {
+            companionSkillTimers[slot] = 0.84f;
+            companionAnimationDurations[slot] = 0.84f;
+            companionActorViews[slot]?.Play(BattleAnimationCue.Skill);
+        }
+
+        playerActorView?.Play(BattleAnimationCue.Skill);
+        showToast?.Invoke(
+            $"{character?.skillName ?? "Skill"}  \uC804\uBD07\uB300 \uC218\uB9AC +" +
+            CompactNumberFormatter.Format(repairAmount));
+    }
+
+    private void HandleCompanionPartyDamageBuffSkillVisual(
+        int slot,
+        CharacterData character,
+        int buffPercent)
+    {
+        playerAnimationTimer = 0.35f;
+        attackTrailTimer = 0.18f;
+        StartSparkles(
+            GetSupportImpactAnchor(),
+            Accent,
+            0.58f,
+            0.1f);
+        StartSparkles(
+            GetCompanionImpactAnchor(slot),
+            Gold,
+            0.46f,
+            0.1f);
+        StartBattleFlash(Accent, 0.14f);
+        if (slot >= 0 && slot < companionActorViews.Length)
+        {
+            companionSkillTimers[slot] = 0.84f;
+            companionAnimationDurations[slot] = 0.84f;
+            companionActorViews[slot]?.Play(BattleAnimationCue.Skill);
+            StartSkillProjectile(
+                slot,
+                character,
+                true,
+                Accent,
+                0.56f,
+                60f);
+        }
+
+        playerActorView?.Play(BattleAnimationCue.Skill);
+        showToast?.Invoke(
+            $"{character?.skillName ?? "Skill"}  DMG +" +
+            buffPercent + "%  " +
+            Mathf.RoundToInt(
+                Mathf.Max(
+                    0f,
+                    character == null
+                        ? 0f
+                        : character.skillDamageBuffDuration)) +
+            "s");
     }
 
     public void HandleBossChallengeFailed()
@@ -520,6 +626,27 @@ public sealed class BattleHudUI
         enemyAnimationTimer = 0.4f;
         ShowBossWarning(LocalizationManager.Translate("BOSS FAILED"));
         showToast?.Invoke("Boss time expired. Retrying.");
+    }
+
+    public void HandleBossPatternWarningVisual(
+        BossPatternDefinition pattern,
+        float warningSeconds)
+    {
+        enemyAnimationTimer = Mathf.Max(enemyAnimationTimer, 0.35f);
+        enemyHitShakeTimer = Mathf.Max(enemyHitShakeTimer, 0.18f);
+        StartSparkles(
+            GetEnemyImpactAnchor(),
+            Gold,
+            Mathf.Max(0.35f, warningSeconds),
+            0.1f);
+        StartBattleFlash(Gold, 0.12f);
+        ShowBossWarning(
+            $"{LocalizationManager.Translate("BOSS WARNING")}  " +
+            $"{pattern.patternName}");
+        enemyActorView?.Play(BattleAnimationCue.Skill);
+        showToast?.Invoke(
+            $"{pattern.patternName}  " +
+            LocalizationManager.Translate("Incoming"));
     }
 
     public void HandleBossPatternVisual(
@@ -540,7 +667,6 @@ public sealed class BattleHudUI
             $"{pattern.patternName}");
         ShowPlayerDamage(damage);
         enemyActorView?.Play(BattleAnimationCue.Skill);
-        playerActorView?.Play(BattleAnimationCue.Hit);
         showToast?.Invoke(
             $"{pattern.patternName}  DMG " +
             CompactNumberFormatter.Format(damage));
@@ -670,8 +796,18 @@ public sealed class BattleHudUI
             battlefieldBackgroundLayer,
             Vector2.zero,
             Vector2.one);
+        battlefieldFarBackgroundImage = CreateBattlefieldImage(
+            "BattlefieldFarBackground",
+            battlefieldBackgroundLayer,
+            Vector2.zero,
+            Vector2.one);
         battlefieldMidgroundImage = CreateBattlefieldImage(
             "BattlefieldMidground",
+            battlefieldBackgroundLayer,
+            Vector2.zero,
+            Vector2.one);
+        battlefieldGroundImage = CreateBattlefieldImage(
+            "BattlefieldGround",
             battlefieldBackgroundLayer,
             Vector2.zero,
             Vector2.one);
@@ -720,10 +856,21 @@ public sealed class BattleHudUI
             RuntimeUiBinder.FindImage(
                 battlefieldLayer,
                 "BattlefieldMidground");
+        battlefieldFarBackgroundImage =
+            FindOrCreateBattlefieldImage(
+                "BattlefieldFarBackground",
+                battlefieldBackgroundLayer,
+                1);
+        battlefieldGroundImage =
+            FindOrCreateBattlefieldImage(
+                "BattlefieldGround",
+                battlefieldBackgroundLayer,
+                3);
         battlefieldForegroundImage =
             RuntimeUiBinder.FindImage(
                 battlefieldLayer,
                 "BattlefieldForeground");
+        SetBattlefieldLayerOrder();
     }
 
     private void RefreshBattlefieldTheme(int stage)
@@ -734,15 +881,60 @@ public sealed class BattleHudUI
             BattleStageThemeResolver.GetFallbackColor(stage),
             0.38f);
         SetBattlefieldLayer(
+            battlefieldFarBackgroundImage,
+            BattleStageThemeResolver.GetStageFarBackground(stage),
+            Color.clear,
+            0.28f);
+        SetBattlefieldLayer(
             battlefieldMidgroundImage,
             BattleStageThemeResolver.GetStageMidground(stage),
             Color.clear,
             0.24f);
         SetBattlefieldLayer(
+            battlefieldGroundImage,
+            BattleStageThemeResolver.GetStageGround(stage),
+            Color.clear,
+            0.42f);
+        SetBattlefieldLayer(
             battlefieldForegroundImage,
             BattleStageThemeResolver.GetStageForeground(stage),
             Color.clear,
             0.18f);
+    }
+
+    private Image FindOrCreateBattlefieldImage(
+        string name,
+        RectTransform parent,
+        int siblingIndex)
+    {
+        Image image = RuntimeUiBinder.FindImage(battlefieldLayer, name);
+        if (image != null)
+            return image;
+
+        if (parent == null)
+            return null;
+
+        image = CreateBattlefieldImage(
+            name,
+            parent,
+            Vector2.zero,
+            Vector2.one);
+        image.transform.SetSiblingIndex(siblingIndex);
+        return image;
+    }
+
+    private void SetBattlefieldLayerOrder()
+    {
+        SetSibling(battlefieldBackgroundImage, 0);
+        SetSibling(battlefieldFarBackgroundImage, 1);
+        SetSibling(battlefieldMidgroundImage, 2);
+        SetSibling(battlefieldGroundImage, 3);
+    }
+
+    private static void SetSibling(Image image, int index)
+    {
+        if (image != null)
+            image.transform.SetSiblingIndex(index);
     }
 
     private static Image CreateBattlefieldImage(
@@ -1490,6 +1682,33 @@ public sealed class BattleHudUI
         playerDamagePopup.gameObject.SetActive(true);
     }
 
+    private void ShowPoleRepair(
+        int repairAmount,
+        string label,
+        float duration)
+    {
+        if (playerDamagePopup == null ||
+            playerDamageText == null ||
+            playerDamageNumberText == null)
+        {
+            return;
+        }
+
+        playerDamagePopupTimer = duration;
+        SetPopupRect(
+            playerDamagePopup,
+            GetSupportImpactAnchor() + new Vector2(0f, 0.08f),
+            new Vector2(0.5f, 0.2f));
+        playerDamageText.text = string.IsNullOrWhiteSpace(label)
+            ? string.Empty
+            : label;
+        playerDamageText.color = Success;
+        playerDamageNumberText.text = FormatCompactNumber(repairAmount, "+");
+        playerDamageNumberText.color = Success;
+        SetTextAlpha(playerDamageNumberText, 1f);
+        playerDamagePopup.gameObject.SetActive(true);
+    }
+
     private static void UpdateTextAlpha(
         TMP_Text text,
         float timer,
@@ -1851,6 +2070,7 @@ public sealed class BattleHudUI
             Mathf.Lerp(0.3f, 0.95f, pulse));
     }
 
+    // 투사체 특성
     private void UpdateCompanionProjectiles()
     {
         if (battleEffectLayer == null)
@@ -1895,8 +2115,10 @@ public sealed class BattleHudUI
                 companionProjectileSizes[slot] * 1.18f,
                 pulse);
             projectile.sizeDelta = new Vector2(size, size);
-            projectile.localRotation =
-                Quaternion.Euler(0f, 0f, progress * 420f);
+            projectile.localRotation = Quaternion.Euler(0f, 0f, progress * 30f);
+            /* 회전 코드
+             Quaternion.Euler(0f, 0f, progress * 30f);
+            */
             projectileImage.color = new Color(
                 color.r,
                 color.g,

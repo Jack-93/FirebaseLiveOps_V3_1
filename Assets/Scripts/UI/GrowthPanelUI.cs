@@ -80,7 +80,7 @@ public sealed class GrowthPanelUI
         RuntimeUiFactory.CreateText(
             "GrowthSubtitle",
             panel,
-            "Spend Gold to strengthen your hero.",
+            "Spend Gold to reinforce the pole.",
             27,
             new Vector2(0.06f, 0.82f),
             new Vector2(0.94f, 0.88f),
@@ -97,7 +97,7 @@ public sealed class GrowthPanelUI
         healthGrowthRow = CreateUpgradeRow(
             panel,
             "Health",
-            "Increase maximum HP",
+            "Increase pole durability",
             new Vector2(0.06f, 0.35f),
             () => upgradeHealth?.Invoke());
 
@@ -125,10 +125,13 @@ public sealed class GrowthPanelUI
             CompactNumberFormatter.Format(
                 growthManager.GetCost(UpgradeType.Attack)));
         healthGrowthRow.Refresh(
-            LocalizationManager.Text("Health", "\uCCB4\uB825"),
+            LocalizationManager.Text(
+                "Pole Durability",
+                "\uC804\uBD07\uB300 \uB0B4\uAD6C\uB3C4"),
             growthManager.GetLevel(UpgradeType.Health),
-            "HP",
-            CompactNumberFormatter.Format(GetPlayerMaxHealth(battleManager)),
+            LocalizationManager.Text("DUR", "\uB0B4\uAD6C\uB3C4"),
+            CompactNumberFormatter.Format(
+                GetPoleMaxDurability(battleManager)),
             CompactNumberFormatter.Format(
                 growthManager.GetCost(UpgradeType.Health)));
         speedGrowthRow.Refresh(
@@ -187,11 +190,11 @@ public sealed class GrowthPanelUI
             () => upgradeAttackSpeed?.Invoke());
     }
 
-    private static int GetPlayerMaxHealth(BattleManager battleManager)
+    private static int GetPoleMaxDurability(BattleManager battleManager)
     {
         return battleManager == null
             ? 0
-            : battleManager.PlayerMaxHealth;
+            : battleManager.PoleMaxDurability;
     }
 
     private static GrowthUpgradeRowUI CreateUpgradeRow(

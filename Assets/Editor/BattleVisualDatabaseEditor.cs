@@ -51,6 +51,9 @@ public sealed class BattleVisualDatabaseEditor : Editor
 
         using (new EditorGUILayout.HorizontalScope())
         {
+            if (GUILayout.Button("Sync Pipeline"))
+                BattleArtPipelineTools.SyncBattleArtPipeline();
+
             if (GUILayout.Button("Prepare Folders"))
                 BattleArtPipelineTools.PrepareProductionArtFolders();
 

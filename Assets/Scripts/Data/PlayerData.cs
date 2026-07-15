@@ -50,8 +50,14 @@ public class PlayerData
     public Dictionary<string, int> companionStars;
     public string equippedWeapon;
     public string equippedArmor;
+    public string equippedWeaponInstanceId;
+    public string equippedArmorInstanceId;
+    public List<EquipmentInstance> equipmentInstances;
+    public int flightEquipmentCoins;
     public int weaponUpgradeLevel;
     public int armorUpgradeLevel;
+    public int weaponStarForceDowngradeFails;
+    public int armorStarForceDowngradeFails;
     public string dailyQuestDate;
     public int dailyQuestKills;
     public bool dailyQuestClaimed;
@@ -115,8 +121,14 @@ public class PlayerData
         companionStars = new Dictionary<string, int>();
         equippedWeapon = "";
         equippedArmor = "";
+        equippedWeaponInstanceId = "";
+        equippedArmorInstanceId = "";
+        equipmentInstances = new List<EquipmentInstance>();
+        flightEquipmentCoins = 0;
         weaponUpgradeLevel = 0;
         armorUpgradeLevel = 0;
+        weaponStarForceDowngradeFails = 0;
+        armorStarForceDowngradeFails = 0;
         dailyQuestDate = "";
         dailyQuestKills = 0;
         dailyQuestClaimed = false;
@@ -209,8 +221,41 @@ public class PlayerData
         if (equippedArmor == null)
             equippedArmor = "";
 
+        if (equippedWeaponInstanceId == null)
+            equippedWeaponInstanceId = "";
+
+        if (equippedArmorInstanceId == null)
+            equippedArmorInstanceId = "";
+
+        if (equipmentInstances == null)
+            equipmentInstances = new List<EquipmentInstance>();
+
+        equipmentInstances.RemoveAll(instance =>
+            instance == null ||
+            string.IsNullOrWhiteSpace(instance.instanceId) ||
+            string.IsNullOrWhiteSpace(instance.definitionId));
+        foreach (EquipmentInstance instance in equipmentInstances)
+        {
+            if (instance.rolledOptions == null)
+                instance.rolledOptions = new List<EquipmentRolledOption>();
+        }
+
+        flightEquipmentCoins = System.Math.Max(0, flightEquipmentCoins);
+
         weaponUpgradeLevel = System.Math.Max(0, weaponUpgradeLevel);
         armorUpgradeLevel = System.Math.Max(0, armorUpgradeLevel);
+        weaponUpgradeLevel = System.Math.Min(
+            GameBalanceConfig.EquipmentStarForceMaxLevel,
+            weaponUpgradeLevel);
+        armorUpgradeLevel = System.Math.Min(
+            GameBalanceConfig.EquipmentStarForceMaxLevel,
+            armorUpgradeLevel);
+        weaponStarForceDowngradeFails = System.Math.Max(
+            0,
+            weaponStarForceDowngradeFails);
+        armorStarForceDowngradeFails = System.Math.Max(
+            0,
+            armorStarForceDowngradeFails);
 
         if (dailyQuestDate == null)
             dailyQuestDate = "";

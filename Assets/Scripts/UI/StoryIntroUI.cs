@@ -200,10 +200,6 @@ public sealed class StoryIntroUI
         if (artRect == null)
             return;
 
-        artRect.anchorMin = Vector2.zero;
-        artRect.anchorMax = Vector2.one;
-        artRect.offsetMin = Vector2.zero;
-        artRect.offsetMax = Vector2.zero;
         artRect.SetAsFirstSibling();
 
         if (artImage != null)
@@ -242,6 +238,7 @@ public sealed class StoryIntroUI
         Action action)
     {
         RectTransform existing = RuntimeUiBinder.FindRect(parent, name);
+        bool created = existing == null;
         RectTransform rect = existing != null
             ? existing
             : RuntimeUiFactory.CreatePanel(
@@ -251,10 +248,13 @@ public sealed class StoryIntroUI
                 anchorMin,
                 anchorMax);
 
-        rect.anchorMin = anchorMin;
-        rect.anchorMax = anchorMax;
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
+        if (created)
+        {
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
         rect.SetAsLastSibling();
 
         Image image = rect.GetComponent<Image>();

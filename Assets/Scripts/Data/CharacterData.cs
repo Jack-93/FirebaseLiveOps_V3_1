@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine.Serialization;
 
 [CreateAssetMenu(
     fileName = "CharacterData",
@@ -26,8 +27,20 @@ public class CharacterData : ScriptableObject
     public string description;
 
     public string skillName = "Power Strike";
-    public float skillCooldown = 8f;
-    public float skillDamageMultiplier = 2f;
+    public float skillCooldown = 4f;
+    public CompanionSkillEffect skillEffect =
+        CompanionSkillEffect.DamageEnemy;
+    public float basicAttackMultiplier = 1f;
+    public float skillDamageMultiplier = 3f;
+    public int skillHitCount = 1;
+    public float skillDamageBuffPercent;
+    public float skillDamageBuffDuration = 10f;
+    [FormerlySerializedAs("skillHealPercent")]
+    [FormerlySerializedAs("lineRepairPercent")]
+    public float poleRepairPercent = 0.35f;
+    [FormerlySerializedAs("healthPercentBonus")]
+    [FormerlySerializedAs("lineDefensePercentBonus")]
+    public float poleDurabilityPercentBonus;
 
     public BattleActorVisualSet ResolveBattleVisual()
     {

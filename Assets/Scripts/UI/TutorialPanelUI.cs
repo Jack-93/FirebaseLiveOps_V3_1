@@ -11,6 +11,7 @@ public sealed class TutorialPanelUI
     private RectTransform tutorialTextRect;
     private Button tutorialButton;
     private TMP_Text tutorialButtonText;
+    private bool preserveTutorialTextLayout;
 
     public GameObject GameObject => panelObject;
 
@@ -62,6 +63,7 @@ public sealed class TutorialPanelUI
             TextAlignmentOptions.Left,
             new Color32(190, 203, 225, 255));
         tutorialTextRect = tutorialText.GetComponent<RectTransform>();
+        preserveTutorialTextLayout = false;
 
         tutorialButton = RuntimeUiFactory.CreateButton(
             "TutorialAction",
@@ -111,7 +113,7 @@ public sealed class TutorialPanelUI
             ShouldShowActionButton(tutorialManager.CurrentStep);
         if (tutorialButton != null)
             tutorialButton.gameObject.SetActive(showActionButton);
-        if (tutorialTextRect != null)
+        if (tutorialTextRect != null && !preserveTutorialTextLayout)
         {
             tutorialTextRect.anchorMax = showActionButton
                 ? new Vector2(0.72f, 0.58f)
@@ -135,6 +137,7 @@ public sealed class TutorialPanelUI
         tutorialText = RuntimeUiBinder.FindText(panel, "TutorialText");
         tutorialTextRect =
             RuntimeUiBinder.FindRect(panel, "TutorialText");
+        preserveTutorialTextLayout = true;
         tutorialButton =
             RuntimeUiBinder.FindButton(panel, "TutorialAction");
         tutorialButtonText =

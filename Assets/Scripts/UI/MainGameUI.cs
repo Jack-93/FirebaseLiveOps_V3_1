@@ -49,6 +49,7 @@ public class MainGameUI : MonoBehaviour
     private QuestPanelUI questPanelUI;
     private EquipmentPanelUI equipmentPanelUI;
     private EquipmentActionController equipmentActions;
+    private EquipmentCubeModalUI equipmentCubeModalUI;
     private MorePanelUI morePanelUI;
     private ShopPanelUI shopPanelUI;
     private ShopActionController shopActions;
@@ -181,7 +182,7 @@ public class MainGameUI : MonoBehaviour
     private void BuildWorldBackdrop(RectTransform root)
     {
         int stage = PlayerDataManager.Instance?.playerData?.currentStage ?? 1;
-        worldBackdropUI = new WorldBackdropUI(root, stage);
+        worldBackdropUI = new WorldBackdropUI(root, stage, battleManager);
     }
 
     private void BuildTopBar(RectTransform root)
@@ -253,7 +254,6 @@ public class MainGameUI : MonoBehaviour
         morePanelUI = new MorePanelUI(
             root,
             rewardActions.ClaimAllMail,
-            ShowEquipment,
             ShowCollection,
             () => companionActions?.AutoEquip(),
             rewardActions.ClaimDailyReward,
@@ -288,15 +288,23 @@ public class MainGameUI : MonoBehaviour
 
     private void BuildEquipmentPanel(RectTransform root)
     {
+        equipmentCubeModalUI = new EquipmentCubeModalUI(
+            root,
+            applyNew => equipmentActions?.ResolveCubePreview(applyNew));
         equipmentActions = new EquipmentActionController(
             battleManager,
             ShowToast,
-            RefreshEquipment);
+            RefreshEquipment,
+            preview => equipmentCubeModalUI?.Show(preview));
         equipmentPanelUI = new EquipmentPanelUI(
             root,
             ShowMore,
             () => equipmentActions?.Upgrade(EquipmentSlot.Weapon),
-            () => equipmentActions?.Upgrade(EquipmentSlot.Armor));
+            () => equipmentActions?.Upgrade(EquipmentSlot.Armor),
+            () => equipmentActions?.EquipNextOwned(EquipmentSlot.Weapon),
+            () => equipmentActions?.EquipNextOwned(EquipmentSlot.Armor),
+            () => equipmentActions?.RerollOptions(EquipmentSlot.Weapon),
+            () => equipmentActions?.RerollOptions(EquipmentSlot.Armor));
         equipmentPanel = equipmentPanelUI.GameObject;
     }
 
@@ -379,6 +387,7 @@ public class MainGameUI : MonoBehaviour
             ShowGrowth,
             ShowGacha,
             ShowCollection,
+            ShowEquipment,
             ShowMore);
         notificationBadges.RegisterBottomNavigation(bottomNavigationUI);
         navigation = new MainGameNavigationController(

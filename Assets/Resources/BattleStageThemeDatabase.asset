@@ -13,35 +13,47 @@ MonoBehaviour:
   m_Name: BattleStageThemeDatabase
   m_EditorClassIdentifier: Assembly-CSharp::BattleStageThemeDatabase
   themes:
-  - themeName: SunsetPole
+  - themeName: StageMap_Day_01
     stageFrom: 1
-    stageTo: 20
+    stageTo: 10
     priority: 0
+    mapPrefabPath: Prefabs/Maps/StageMap
     background: {fileID: 0}
+    farBackground: {fileID: 0}
     midground: {fileID: 0}
+    ground: {fileID: 0}
     foreground: {fileID: 0}
     fallbackColor: {r: 0.06666667, g: 0.09411765, b: 0.15294118, a: 1}
   - themeName: ForestPole
     stageFrom: 21
     stageTo: 50
     priority: 0
+    mapPrefabPath: 
     background: {fileID: 0}
+    farBackground: {fileID: 0}
     midground: {fileID: 0}
+    ground: {fileID: 0}
     foreground: {fileID: 0}
     fallbackColor: {r: 0.06666667, g: 0.09411765, b: 0.15294118, a: 1}
   - themeName: RooftopPole
     stageFrom: 51
     stageTo: 90
     priority: 0
+    mapPrefabPath: 
     background: {fileID: 0}
+    farBackground: {fileID: 0}
     midground: {fileID: 0}
+    ground: {fileID: 0}
     foreground: {fileID: 0}
     fallbackColor: {r: 0.06666667, g: 0.09411765, b: 0.15294118, a: 1}
   - themeName: RainPole
     stageFrom: 91
     stageTo: 0
     priority: 0
+    mapPrefabPath: 
     background: {fileID: 0}
+    farBackground: {fileID: 0}
     midground: {fileID: 0}
+    ground: {fileID: 0}
     foreground: {fileID: 0}
     fallbackColor: {r: 0.06666667, g: 0.09411765, b: 0.15294118, a: 1}

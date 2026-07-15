@@ -28,17 +28,17 @@ public sealed class CompanionSlotButtonsUI
         {
             int capturedSlot = slot;
             float xMin = 0.05f + slot * 0.32f;
-            Button slotButton;
+            Button slotButton = null;
+            bool buttonFromPrefab = false;
             if (bindExisting)
             {
                 slotButton = RuntimeUiBinder.FindButton(
                     parent,
                     "EquipSlot" + (slot + 1));
-                RuntimeUiBinder.ReplaceButtonAction(
-                    slotButton,
-                    () => toggleSelectedCharacterSlot?.Invoke(capturedSlot));
+                buttonFromPrefab = slotButton != null;
             }
-            else
+
+            if (slotButton == null)
             {
                 slotButton = RuntimeUiFactory.CreateButton(
                     "EquipSlot" + (slot + 1),
@@ -49,7 +49,11 @@ public sealed class CompanionSlotButtonsUI
                     accent,
                     () => toggleSelectedCharacterSlot?.Invoke(capturedSlot));
             }
-            ConfigureSlot(slotButton);
+
+            RuntimeUiBinder.ReplaceButtonAction(
+                slotButton,
+                () => toggleSelectedCharacterSlot?.Invoke(capturedSlot));
+            ConfigureSlot(slotButton, buttonFromPrefab);
             buttons.Add(slotButton);
         }
     }
@@ -82,47 +86,79 @@ public sealed class CompanionSlotButtonsUI
         }
     }
 
-    private void ConfigureSlot(Button button)
+    private void ConfigureSlot(Button button, bool preservePrefabLayout)
     {
         if (button == null)
             return;
 
         TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
-        if (label != null)
+        if (label != null && !preservePrefabLayout)
         {
             label.fontSizeMax = 24f;
             label.alignment = TextAlignmentOptions.Center;
             RectTransform labelRect =
                 label.GetComponent<RectTransform>();
-            if (labelRect != null)
-            {
-                labelRect.anchorMin = new UnityEngine.Vector2(0.08f, 0.02f);
-                labelRect.anchorMax = new UnityEngine.Vector2(0.92f, 0.22f);
-                labelRect.offsetMin = UnityEngine.Vector2.zero;
-                labelRect.offsetMax = UnityEngine.Vector2.zero;
-            }
+            ApplyAnchors(
+                labelRect,
+                new UnityEngine.Vector2(0.08f, 0.02f),
+                new UnityEngine.Vector2(0.92f, 0.22f));
         }
 
         Image portrait = RuntimeUiBinder.FindImage(
             button.transform,
-            "SlotPortrait") ??
-            RuntimeUiFactory.CreateSpriteImage(
+            "SlotPortrait");
+        if (portrait == null)
+        {
+            portrait = RuntimeUiFactory.CreateSpriteImage(
                 "SlotPortrait",
                 button.transform,
                 null,
                 new UnityEngine.Vector2(0.12f, 0.24f),
                 new UnityEngine.Vector2(0.88f, 0.92f));
+        }
+        else if (!preservePrefabLayout)
+        {
+            ApplyAnchors(
+                portrait.GetComponent<RectTransform>(),
+                new UnityEngine.Vector2(0.12f, 0.24f),
+                new UnityEngine.Vector2(0.88f, 0.92f));
+        }
+
         Image plus = RuntimeUiBinder.FindImage(
             button.transform,
-            "SlotPlusIcon") ??
-            RuntimeUiFactory.CreateSpriteImage(
+            "SlotPlusIcon");
+        if (plus == null)
+        {
+            plus = RuntimeUiFactory.CreateSpriteImage(
                 "SlotPlusIcon",
                 button.transform,
                 PrototypeUiArt.PlusIcon,
                 new UnityEngine.Vector2(0.32f, 0.35f),
                 new UnityEngine.Vector2(0.68f, 0.72f));
+        }
+        else if (!preservePrefabLayout)
+        {
+            ApplyAnchors(
+                plus.GetComponent<RectTransform>(),
+                new UnityEngine.Vector2(0.32f, 0.35f),
+                new UnityEngine.Vector2(0.68f, 0.72f));
+        }
         portraitImages.Add(portrait);
         plusImages.Add(plus);
+    }
+
+    private static void ApplyAnchors(
+        RectTransform rect,
+        UnityEngine.Vector2 anchorMin,
+        UnityEngine.Vector2 anchorMax)
+    {
+        if (rect == null)
+            return;
+
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.offsetMin = UnityEngine.Vector2.zero;
+        rect.offsetMax = UnityEngine.Vector2.zero;
     }
 
     private void SetPortrait(int slot, CharacterData equipped)

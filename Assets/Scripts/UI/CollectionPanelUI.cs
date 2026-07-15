@@ -430,15 +430,18 @@ public sealed class CollectionPanelUI
         RuntimeUiBinder.ReplaceButtonAction(
             RuntimeUiBinder.FindButton(panel, "PromoteButton"),
             () => promoteSelectedCharacter?.Invoke());
-        slotBar = RuntimeUiBinder.FindRect(panel, "CompanionSlotBar") ??
-            CreateSlotBar();
+        slotBar = RuntimeUiBinder.FindRect(panel, "CompanionSlotBar");
+        bool slotBarFromPrefab = slotBar != null;
+        if (slotBar == null)
+            slotBar = CreateSlotBar();
         slotButtons = new CompanionSlotButtonsUI(
             slotBar,
             toggleSelectedCharacterSlot,
             PanelLight,
             Accent,
             Gold,
-            Success);
+            Success,
+            slotBarFromPrefab);
         if (detailInfoRoot != null)
             detailInfoRoot.gameObject.SetActive(false);
     }
@@ -624,7 +627,9 @@ public sealed class CollectionPanelUI
 
         for (int index = 0; index < CharactersPerPage; index++)
         {
-            Button characterButton = index < existingButtons.Count
+            bool buttonFromPrefab = index < existingButtons.Count &&
+                existingButtons[index] != null;
+            Button characterButton = buttonFromPrefab
                 ? existingButtons[index]
                 : CreateRuntimeCharacterSlot(index);
             characterButtons[index] = characterButton;
@@ -634,38 +639,41 @@ public sealed class CollectionPanelUI
             characterButton.name = "CharacterSlot_" + (index + 1);
             RectTransform rect =
                 characterButton.GetComponent<RectTransform>();
-            Vector2 anchorMin;
-            Vector2 anchorMax;
-            GetSlotAnchors(index, out anchorMin, out anchorMax);
-            ApplyAnchors(rect, anchorMin, anchorMax);
+            if (!buttonFromPrefab)
+            {
+                Vector2 anchorMin;
+                Vector2 anchorMax;
+                GetSlotAnchors(index, out anchorMin, out anchorMax);
+                ApplyAnchors(rect, anchorMin, anchorMax);
+            }
 
-            characterPortraitImages[index] =
-                RuntimeUiBinder.FindImage(
-                    characterButton.transform,
-                    "Portrait") ??
-                RuntimeUiFactory.CreateSpriteImage(
+            characterPortraitImages[index] = RuntimeUiBinder.FindImage(
+                characterButton.transform,
+                "Portrait");
+            if (characterPortraitImages[index] == null)
+            {
+                characterPortraitImages[index] =
+                    RuntimeUiFactory.CreateSpriteImage(
                     "Portrait",
                     characterButton.transform,
                     null,
                     new Vector2(0.12f, 0.28f),
                     new Vector2(0.88f, 0.9f));
-            ApplyAnchors(
-                characterPortraitImages[index]
-                    ?.GetComponent<RectTransform>(),
-                new Vector2(0.12f, 0.28f),
-                new Vector2(0.88f, 0.9f));
-            characterLockImages[index] =
-                RuntimeUiBinder.FindImage(
-                    characterButton.transform,
-                    "LockIcon") ??
-                CreateLockImage(characterButton.transform);
+            }
+
+            characterLockImages[index] = RuntimeUiBinder.FindImage(
+                characterButton.transform,
+                "LockIcon");
+            if (characterLockImages[index] == null)
+                characterLockImages[index] =
+                    CreateLockImage(characterButton.transform);
 
             TMP_Text labelText = RuntimeUiBinder.FindText(
                 characterButton.transform,
                 "Label") ??
                 characterButton.GetComponentInChildren<TMP_Text>(true);
             characterButtonLabels[index] = labelText;
-            ConfigureCharacterLabel(labelText);
+            ConfigureCharacterLabel(labelText, buttonFromPrefab);
         }
 
         BuildPageControls();
@@ -749,10 +757,7 @@ public sealed class CollectionPanelUI
 
         foreach (Button button in panel.GetComponentsInChildren<Button>(true))
         {
-            if (button == null ||
-                !button.name.StartsWith(
-                    "Character_",
-                    StringComparison.Ordinal))
+            if (button == null || !IsCharacterButtonName(button.name))
             {
                 continue;
             }
@@ -768,6 +773,11 @@ public sealed class CollectionPanelUI
         Button left,
         Button right)
     {
+        int leftIndex = ParseCharacterSlotIndex(left.name);
+        int rightIndex = ParseCharacterSlotIndex(right.name);
+        if (leftIndex >= 0 && rightIndex >= 0)
+            return leftIndex.CompareTo(rightIndex);
+
         RectTransform leftRect = left.GetComponent<RectTransform>();
         RectTransform rightRect = right.GetComponent<RectTransform>();
         if (leftRect == null || rightRect == null)
@@ -779,6 +789,28 @@ public sealed class CollectionPanelUI
             return rowComparison;
 
         return leftRect.anchorMin.x.CompareTo(rightRect.anchorMin.x);
+    }
+
+    private static bool IsCharacterButtonName(string name)
+    {
+        return name.StartsWith(
+                "Character_",
+                StringComparison.Ordinal) ||
+            name.StartsWith(
+                "CharacterSlot_",
+                StringComparison.Ordinal);
+    }
+
+    private static int ParseCharacterSlotIndex(string name)
+    {
+        const string prefix = "CharacterSlot_";
+        if (!name.StartsWith(prefix, StringComparison.Ordinal))
+            return -1;
+
+        int parsed;
+        return int.TryParse(name.Substring(prefix.Length), out parsed)
+            ? parsed
+            : -1;
     }
 
     private Button CreateRuntimeCharacterSlot(int index)
@@ -900,9 +932,14 @@ public sealed class CollectionPanelUI
         rect.offsetMax = Vector2.zero;
     }
 
-    private static void ConfigureCharacterLabel(TMP_Text labelText)
+    private static void ConfigureCharacterLabel(
+        TMP_Text labelText,
+        bool preservePrefabLayout = false)
     {
         if (labelText == null)
+            return;
+
+        if (preservePrefabLayout)
             return;
 
         labelText.alignment = TextAlignmentOptions.Center;

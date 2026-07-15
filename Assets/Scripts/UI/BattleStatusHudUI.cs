@@ -19,6 +19,7 @@ public sealed class BattleStatusHudUI
     private TMP_Text enemyNameText;
     private TMP_Text enemyProgressSeparatorText;
     private TMP_Text enemyProgressSuffixText;
+    private TMP_Text lineDefenseLabelText;
     private TMP_Text powerChargeLabelText;
     private TMP_Text combatStatusText;
     private SpriteNumberText enemyProgressCurrentNumberText;
@@ -137,6 +138,15 @@ public sealed class BattleStatusHudUI
             success,
             new Vector2(0.03f, 0.2f),
             new Vector2(0.32f, 0.235f));
+        lineDefenseLabelText = RuntimeUiFactory.CreateText(
+            "LineDefenseLabelText",
+            parent,
+            "\uC804\uBD07\uB300 \uB0B4\uAD6C\uB3C4",
+            14,
+            new Vector2(0.03f, 0.235f),
+            new Vector2(0.32f, 0.27f),
+            TextAlignmentOptions.Left,
+            Color.white);
         playerHealthCurrentNumberText = new SpriteNumberText(
             parent,
             "PlayerHealthCurrentNumberText",
@@ -212,6 +222,20 @@ public sealed class BattleStatusHudUI
             RuntimeUiBinder.FindText(parent, "EnemyProgressSuffixText");
         combatStatusText =
             RuntimeUiBinder.FindText(parent, "CombatStatus");
+        lineDefenseLabelText =
+            RuntimeUiBinder.FindText(parent, "LineDefenseLabelText");
+        if (lineDefenseLabelText == null)
+        {
+            lineDefenseLabelText = RuntimeUiFactory.CreateText(
+                "LineDefenseLabelText",
+                parent,
+                "\uC804\uBD07\uB300 \uB0B4\uAD6C\uB3C4",
+                14,
+                new Vector2(0.03f, 0.235f),
+                new Vector2(0.32f, 0.27f),
+                TextAlignmentOptions.Left,
+                Color.white);
+        }
         powerChargeLabelText =
             RuntimeUiBinder.FindText(parent, "PowerChargeLabelText");
 
@@ -270,12 +294,18 @@ public sealed class BattleStatusHudUI
             CompactNumberFormatter.Format(battleManager.EnemyMaxHealth));
 
         playerHealthCurrentNumberText.SetText(
-            CompactNumberFormatter.Format(battleManager.PlayerHealth));
+            CompactNumberFormatter.Format(battleManager.PoleDurability));
         playerHealthMaxNumberText.SetText(
-            CompactNumberFormatter.Format(battleManager.PlayerMaxHealth));
+            CompactNumberFormatter.Format(battleManager.PoleMaxDurability));
+        if (lineDefenseLabelText != null)
+        {
+            lineDefenseLabelText.text = LocalizationManager.Text(
+                "Pole Durability",
+                "\uC804\uBD07\uB300 \uB0B4\uAD6C\uB3C4");
+        }
 
         powerChargeLabelText.text =
-            LocalizationManager.Text("Power", "전력");
+            LocalizationManager.Text("Power", "\uC804\uB825");
         powerChargeCurrentNumberText.SetText(
             CompactNumberFormatter.Format(
                 Mathf.RoundToInt(battleManager.PowerCharge)));
@@ -289,8 +319,8 @@ public sealed class BattleStatusHudUI
             battleManager.EnemyMaxHealth);
         BattleHudUiFactory.SetBar(
             playerHealthFill,
-            battleManager.PlayerHealth,
-            battleManager.PlayerMaxHealth);
+            battleManager.PoleDurability,
+            battleManager.PoleMaxDurability);
         BattleHudUiFactory.SetBar(
             powerChargeFill,
             battleManager.PowerCharge,
@@ -320,13 +350,18 @@ public sealed class BattleStatusHudUI
         bool fullPower,
         bool enoughPower)
     {
-        if (!battleManager.IsRunning)
-            return LocalizationManager.Translate("Paused");
+        if (battleManager.IsPoleDeathPlaying)
+            return LocalizationManager.Text(
+                "Pole destroyed...",
+                "\uC804\uBD07\uB300 \uD30C\uAD34\uB428...");
 
         if (battleManager.IsRecovering)
             return LocalizationManager.Text(
                 "Recovering...",
-                "\uD68C\uBCF5 \uC911...");
+                "\uC804\uBD07\uB300 \uBCF5\uAD6C \uC911...");
+
+        if (!battleManager.IsRunning)
+            return LocalizationManager.Translate("Paused");
 
         if (fullPower)
         {

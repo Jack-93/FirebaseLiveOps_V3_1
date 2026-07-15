@@ -1,6 +1,7 @@
 using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public sealed class EquipmentPanelUI
 {
@@ -17,6 +18,12 @@ public sealed class EquipmentPanelUI
     private SpriteNumberText goldNumberText;
     private RectTransform weaponUpgradeFill;
     private RectTransform armorUpgradeFill;
+    private Button weaponSelectorButton;
+    private Button armorSelectorButton;
+    private TMP_Text weaponLevelLabel;
+    private TMP_Text armorLevelLabel;
+    private TMP_Text weaponCostLabel;
+    private TMP_Text armorCostLabel;
 
     public GameObject GameObject => panel == null ? null : panel.gameObject;
 
@@ -40,6 +47,10 @@ public sealed class EquipmentPanelUI
         Action showMore,
         Action upgradeWeapon,
         Action upgradeArmor,
+        Action equipNextWeapon,
+        Action equipNextArmor,
+        Action rerollWeapon,
+        Action rerollArmor,
         bool usePrefab = true)
     {
         if (usePrefab &&
@@ -48,18 +59,37 @@ public sealed class EquipmentPanelUI
                 root,
                 out panel))
         {
-            Bind(showMore, upgradeWeapon, upgradeArmor);
+            Bind(
+                showMore,
+                upgradeWeapon,
+                upgradeArmor,
+                equipNextWeapon,
+                equipNextArmor,
+                rerollWeapon,
+                rerollArmor);
             return;
         }
 
-        BuildGenerated(root, showMore, upgradeWeapon, upgradeArmor);
+        BuildGenerated(
+            root,
+            showMore,
+            upgradeWeapon,
+            upgradeArmor,
+            equipNextWeapon,
+            equipNextArmor,
+            rerollWeapon,
+            rerollArmor);
     }
 
     public void BuildGenerated(
         RectTransform root,
         Action showMore,
         Action upgradeWeapon,
-        Action upgradeArmor)
+        Action upgradeArmor,
+        Action equipNextWeapon,
+        Action equipNextArmor,
+        Action rerollWeapon,
+        Action rerollArmor)
     {
         panel = RuntimeUiFactory.CreatePanel(
             "EquipmentPanel",
@@ -135,10 +165,18 @@ public sealed class EquipmentPanelUI
             card,
             "Armor",
             "ARMOR",
-            "Health",
+            "Pole Durability",
             Success,
             new Vector2(0.07f, 0.45f),
             new Vector2(0.93f, 0.62f));
+        BindLoadoutSelector(
+            "WeaponLoadoutRow",
+            equipNextWeapon,
+            out weaponSelectorButton);
+        BindLoadoutSelector(
+            "ArmorLoadoutRow",
+            equipNextArmor,
+            out armorSelectorButton);
 
         powerLabelText = RuntimeUiFactory.CreateText(
             "EquipmentPowerLabelText",
@@ -189,7 +227,7 @@ public sealed class EquipmentPanelUI
         RuntimeUiFactory.CreateButton(
             "UpgradeWeaponButton",
             card,
-            "UPGRADE WEAPON",
+            "\uBD80\uB9AC\uBD80\uB9AC \uAC15\uD654",
             new Vector2(0.07f, 0.08f),
             new Vector2(0.47f, 0.21f),
             Accent,
@@ -198,11 +236,29 @@ public sealed class EquipmentPanelUI
         RuntimeUiFactory.CreateButton(
             "UpgradeArmorButton",
             card,
-            "UPGRADE ARMOR",
+            "\uBD80\uB9AC\uBD80\uB9AC \uAC15\uD654",
             new Vector2(0.53f, 0.08f),
             new Vector2(0.93f, 0.21f),
             Success,
             () => upgradeArmor?.Invoke());
+
+        RuntimeUiFactory.CreateButton(
+            "RerollWeaponButton",
+            card,
+            "REROLL WEAPON",
+            new Vector2(0.07f, 0.01f),
+            new Vector2(0.47f, 0.07f),
+            Accent,
+            () => rerollWeapon?.Invoke());
+
+        RuntimeUiFactory.CreateButton(
+            "RerollArmorButton",
+            card,
+            "REROLL ARMOR",
+            new Vector2(0.53f, 0.01f),
+            new Vector2(0.93f, 0.07f),
+            Success,
+            () => rerollArmor?.Invoke());
     }
 
     public void Refresh(PlayerData data)
@@ -215,6 +271,10 @@ public sealed class EquipmentPanelUI
             SetSummaryVisible(false);
             RuntimeProgressBar.Set(weaponUpgradeFill, 0, 20);
             RuntimeProgressBar.Set(armorUpgradeFill, 0, 20);
+            if (weaponSelectorButton != null)
+                weaponSelectorButton.interactable = false;
+            if (armorSelectorButton != null)
+                armorSelectorButton.interactable = false;
             return;
         }
 
@@ -239,6 +299,7 @@ public sealed class EquipmentPanelUI
             armorUpgradeFill,
             data.armorUpgradeLevel,
             20);
+        RefreshStarForceLabels(data);
     }
 
     private void SetSummaryVisible(bool visible)
@@ -253,11 +314,34 @@ public sealed class EquipmentPanelUI
     {
         bool hasWeapon = !string.IsNullOrEmpty(data.equippedWeapon);
         bool hasArmor = !string.IsNullOrEmpty(data.equippedArmor);
+        string weaponName = hasWeapon
+            ? FormatEquipmentNameWithOptions(data, EquipmentSlot.Weapon)
+            : LocalizationManager.Translate("None");
+        string armorName = hasArmor
+            ? FormatEquipmentNameWithOptions(data, EquipmentSlot.Armor)
+            : LocalizationManager.Translate("None");
+        string armorValueLabel = LocalizationManager.Text(
+            "Pole Durability",
+            "\uC804\uBD07\uB300 \uB0B4\uAD6C\uB3C4");
+        if (hasArmor)
+        {
+            armorValueLabel += " / " +
+                LocalizationManager.Text(
+                    "Damage Reduction",
+                    "\uD53C\uD574\uAC10\uC18C") +
+                " " +
+                EquipmentManager
+                    .GetArmorPoleDamageReductionPercent(data)
+                    .ToString("0.#") +
+                "%";
+        }
+
         weaponRow?.Refresh(
-            LocalizationManager.Translate("WEAPON"),
-            hasWeapon
-                ? data.equippedWeapon
-                : LocalizationManager.Translate("None"),
+            GetSelectableSection(
+                LocalizationManager.Translate("WEAPON"),
+                data,
+                EquipmentSlot.Weapon),
+            weaponName,
             hasWeapon,
             data.weaponUpgradeLevel,
             LocalizationManager.Translate("Attack"),
@@ -266,23 +350,69 @@ public sealed class EquipmentPanelUI
                 ? EquipmentManager.GetUpgradeCost(data.weaponUpgradeLevel)
                 : -1);
         armorRow?.Refresh(
-            LocalizationManager.Translate("ARMOR"),
-            hasArmor
-                ? data.equippedArmor
-                : LocalizationManager.Translate("None"),
+            GetSelectableSection(
+                LocalizationManager.Translate("ARMOR"),
+                data,
+                EquipmentSlot.Armor),
+            armorName,
             hasArmor,
             data.armorUpgradeLevel,
-            LocalizationManager.Translate("Health"),
+            armorValueLabel,
             EquipmentManager.GetArmorHealth(data),
             hasArmor
                 ? EquipmentManager.GetUpgradeCost(data.armorUpgradeLevel)
                 : -1);
+
+        SetSelectorInteractable(
+            weaponSelectorButton,
+            data,
+            EquipmentSlot.Weapon);
+        SetSelectorInteractable(
+            armorSelectorButton,
+            data,
+            EquipmentSlot.Armor);
+    }
+
+    private void RefreshStarForceLabels(PlayerData data)
+    {
+        SetText(weaponLevelLabel, "\uAC15\uD654");
+        SetText(armorLevelLabel, "\uAC15\uD654");
+        SetText(
+            weaponCostLabel,
+            "\uC131\uACF5\uB960 " +
+            EquipmentManager.GetStarForceSuccessPercent(
+                data.weaponUpgradeLevel).ToString("0") + "%");
+        SetText(
+            armorCostLabel,
+            "\uC131\uACF5\uB960 " +
+            EquipmentManager.GetStarForceSuccessPercent(
+                data.armorUpgradeLevel).ToString("0") + "%");
+    }
+
+    private static string FormatEquipmentNameWithOptions(
+        PlayerData data,
+        EquipmentSlot slot)
+    {
+        string equipmentId = slot == EquipmentSlot.Weapon
+            ? data.equippedWeapon
+            : data.equippedArmor;
+        string name = EquipmentManager.GetEquipmentDisplayName(equipmentId);
+        string options = EquipmentManager.GetEquipmentOptionSummary(
+            data,
+            slot);
+        return string.IsNullOrWhiteSpace(options)
+            ? name
+            : name + "\n" + options;
     }
 
     private void Bind(
         Action showMore,
         Action upgradeWeapon,
-        Action upgradeArmor)
+        Action upgradeArmor,
+        Action equipNextWeapon,
+        Action equipNextArmor,
+        Action rerollWeapon,
+        Action rerollArmor)
     {
         noEquipmentText =
             RuntimeUiBinder.FindText(panel, "EquipmentEmptyText");
@@ -292,6 +422,14 @@ public sealed class EquipmentPanelUI
             RuntimeUiBinder.FindText(panel, "EquipmentPowerLabelText");
         goldLabelText =
             RuntimeUiBinder.FindText(panel, "EquipmentGoldLabelText");
+        weaponLevelLabel =
+            RuntimeUiBinder.FindText(panel, "WeaponLevelLabel");
+        armorLevelLabel =
+            RuntimeUiBinder.FindText(panel, "ArmorLevelLabel");
+        weaponCostLabel =
+            RuntimeUiBinder.FindText(panel, "WeaponCostLabel");
+        armorCostLabel =
+            RuntimeUiBinder.FindText(panel, "ArmorCostLabel");
         powerNumberText = RuntimeUiBinder.BindNumber(
             panel,
             "EquipmentPowerNumberText",
@@ -313,6 +451,28 @@ public sealed class EquipmentPanelUI
         Replace("EquipmentBackButton", showMore);
         Replace("UpgradeWeaponButton", upgradeWeapon);
         Replace("UpgradeArmorButton", upgradeArmor);
+        EnsureRerollButton(
+            "RerollWeaponButton",
+            "\uC635\uC158 \uC7AC\uC124\uC815",
+            new Vector2(0.07f, 0.01f),
+            new Vector2(0.47f, 0.07f),
+            Accent,
+            rerollWeapon);
+        EnsureRerollButton(
+            "RerollArmorButton",
+            "\uC635\uC158 \uC7AC\uC124\uC815",
+            new Vector2(0.53f, 0.01f),
+            new Vector2(0.93f, 0.07f),
+            Success,
+            rerollArmor);
+        BindLoadoutSelector(
+            "WeaponLoadoutRow",
+            equipNextWeapon,
+            out weaponSelectorButton);
+        BindLoadoutSelector(
+            "ArmorLoadoutRow",
+            equipNextArmor,
+            out armorSelectorButton);
     }
 
     private EquipmentLoadoutRowUI BindLoadoutRow(string key)
@@ -346,6 +506,80 @@ public sealed class EquipmentPanelUI
         RuntimeUiBinder.ReplaceButtonAction(
             RuntimeUiBinder.FindButton(panel, buttonName),
             () => action?.Invoke());
+    }
+
+    private void EnsureRerollButton(
+        string buttonName,
+        string label,
+        Vector2 anchorMin,
+        Vector2 anchorMax,
+        Color color,
+        Action action)
+    {
+        Button button = RuntimeUiBinder.FindButton(panel, buttonName);
+        if (button == null)
+        {
+            RectTransform card = RuntimeUiBinder.FindRect(
+                panel,
+                "EquipmentCard");
+            if (card == null)
+                return;
+
+            button = RuntimeUiFactory.CreateButton(
+                buttonName,
+                card,
+                label,
+                anchorMin,
+                anchorMax,
+                color,
+                () => action?.Invoke());
+        }
+
+        RuntimeUiBinder.ReplaceButtonAction(
+            button,
+            () => action?.Invoke());
+    }
+
+    private void BindLoadoutSelector(
+        string rowName,
+        Action action,
+        out Button selectorButton)
+    {
+        selectorButton = null;
+        RectTransform row = RuntimeUiBinder.FindRect(panel, rowName);
+        if (row == null)
+            return;
+
+        selectorButton = row.GetComponent<Button>();
+        if (selectorButton == null)
+            selectorButton = row.gameObject.AddComponent<Button>();
+
+        selectorButton.targetGraphic = row.GetComponent<Image>();
+        RuntimeUiBinder.ReplaceButtonAction(
+            selectorButton,
+            () => action?.Invoke());
+    }
+
+    private static string GetSelectableSection(
+        string section,
+        PlayerData data,
+        EquipmentSlot slot)
+    {
+        return EquipmentManager.GetOwnedEquipment(data, slot).Count > 1
+            ? section + " >"
+            : section;
+    }
+
+    private static void SetSelectorInteractable(
+        Button selectorButton,
+        PlayerData data,
+        EquipmentSlot slot)
+    {
+        if (selectorButton != null)
+        {
+            selectorButton.interactable =
+                EquipmentManager.GetOwnedEquipment(data, slot).Count > 1;
+        }
     }
 
     private static EquipmentLoadoutRowUI CreateLoadoutRow(

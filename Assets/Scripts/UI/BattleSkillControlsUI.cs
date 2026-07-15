@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Text;
 using TMPro;
@@ -22,6 +22,8 @@ public sealed class BattleSkillControlsUI
     private TMP_Text powerChargeButtonText;
     private TMP_Text powerChargeSlashText;
     private RectTransform controlPanel;
+    private RectTransform powerChargeRoot;
+    private RectTransform skillButtonRoot;
     private Button powerChargeButton;
     private Image powerChargeButtonImage;
     private SpriteNumberText powerChargeCurrentNumberText;
@@ -66,22 +68,26 @@ public sealed class BattleSkillControlsUI
     public void Build(RectTransform parent)
     {
         controlPanel = BuildControlPanel(parent);
+        BindControlRoots(true);
         skillStatusText = RuntimeUiFactory.CreateText(
             "SkillStatus",
-            controlPanel,
+            skillButtonRoot,
             "\uB3D9\uB8CC \uC2A4\uD0AC",
             21,
-            new Vector2(0.41f, 0.76f),
-            new Vector2(0.96f, 0.86f),
+            GetSkillStatusAnchorMin(),
+            GetSkillStatusAnchorMax(),
             TextAlignmentOptions.Right,
             gold);
 
+        GetPowerChargeButtonAnchors(
+            out Vector2 powerButtonMin,
+            out Vector2 powerButtonMax);
         powerChargeButton = RuntimeUiFactory.CreateButton(
             "PowerChargeButton",
-            controlPanel,
+            powerChargeRoot,
             "CHARGE POWER",
-            new Vector2(0.04f, 0.16f),
-            new Vector2(0.36f, 0.88f),
+            powerButtonMin,
+            powerButtonMax,
             success,
             ChargePower);
         powerChargeButtonText =
@@ -93,54 +99,69 @@ public sealed class BattleSkillControlsUI
 
         for (int slot = 0; slot < CompanionManager.PartySize; slot++)
         {
-            BuildSkillButton(controlPanel, slot);
+            BuildSkillButton(skillButtonRoot, slot);
         }
     }
 
     public void Bind(RectTransform parent)
     {
-        controlPanel = RuntimeUiBinder.FindRect(parent, "BattleControlCard") ??
-            BuildControlPanel(parent);
+        controlPanel = RuntimeUiBinder.FindRect(parent, "BattleControlCard");
+        if (controlPanel == null)
+            controlPanel = BuildControlPanel(parent);
+        BindControlRoots(false);
         skillStatusText =
             RuntimeUiBinder.FindText(parent, "SkillStatus");
+        bool createdSkillStatusText = skillStatusText == null;
         if (skillStatusText == null)
         {
             skillStatusText = RuntimeUiFactory.CreateText(
                 "SkillStatus",
-                controlPanel,
+                skillButtonRoot,
                 "\uB3D9\uB8CC \uC2A4\uD0AC",
                 21,
-                new Vector2(0.41f, 0.76f),
-                new Vector2(0.96f, 0.86f),
+                GetSkillStatusAnchorMin(),
+                GetSkillStatusAnchorMax(),
                 TextAlignmentOptions.Right,
                 gold);
         }
-        ReparentAndAnchor(
-            skillStatusText.GetComponent<RectTransform>(),
-            controlPanel,
-            new Vector2(0.41f, 0.76f),
-            new Vector2(0.96f, 0.86f));
+        if (createdSkillStatusText)
+        {
+            ReparentAndAnchor(
+                skillStatusText.GetComponent<RectTransform>(),
+                skillButtonRoot,
+                GetSkillStatusAnchorMin(),
+                GetSkillStatusAnchorMax());
+        }
         powerChargeButton =
             RuntimeUiBinder.FindButton(parent, "PowerChargeButton");
         bool createdPowerChargeButton = powerChargeButton == null;
         if (powerChargeButton == null)
         {
+            GetPowerChargeButtonAnchors(
+                out Vector2 powerButtonMin,
+                out Vector2 powerButtonMax);
             powerChargeButton = RuntimeUiFactory.CreateButton(
                 "PowerChargeButton",
-                controlPanel,
+                powerChargeRoot,
                 "CHARGE POWER",
-                new Vector2(0.04f, 0.16f),
-                new Vector2(0.36f, 0.88f),
+                powerButtonMin,
+                powerButtonMax,
                 success,
                 ChargePower);
         }
-        ReparentAndAnchor(
-            powerChargeButton == null
-                ? null
-                : powerChargeButton.GetComponent<RectTransform>(),
-            controlPanel,
-            new Vector2(0.04f, 0.16f),
-            new Vector2(0.36f, 0.88f));
+        if (createdPowerChargeButton)
+        {
+            GetPowerChargeButtonAnchors(
+                out Vector2 powerButtonMin,
+                out Vector2 powerButtonMax);
+            ReparentAndAnchor(
+                powerChargeButton == null
+                    ? null
+                    : powerChargeButton.GetComponent<RectTransform>(),
+                powerChargeRoot,
+                powerButtonMin,
+                powerButtonMax);
+        }
         RuntimeUiBinder.ReplaceButtonAction(
             powerChargeButton,
             ChargePower);
@@ -150,7 +171,7 @@ public sealed class BattleSkillControlsUI
         powerChargeButtonImage = powerChargeButton == null
             ? null
             : powerChargeButton.targetGraphic as Image;
-        ConfigurePowerChargeButtonText();
+        ConfigurePowerChargeButtonText(!createdPowerChargeButton);
         powerChargeSlashText =
             RuntimeUiBinder.FindText(parent, "PowerChargeSlashText");
         if (createdPowerChargeButton)
@@ -178,13 +199,17 @@ public sealed class BattleSkillControlsUI
     private void BuildSkillButton(RectTransform parent, int slot)
     {
         int capturedSlot = slot;
-        float left = 0.42f + slot * 0.18f;
+        GetSkillButtonAnchors(
+            parent,
+            slot,
+            out Vector2 anchorMin,
+            out Vector2 anchorMax);
         Button skillButton = RuntimeUiFactory.CreateButton(
             $"CompanionSkillButton{slot + 1}",
             parent,
             $"S{slot + 1}",
-            new Vector2(left, 0.16f),
-            new Vector2(left + 0.16f, 0.78f),
+            anchorMin,
+            anchorMax,
             panelLight,
             () => UseCompanionSkill(capturedSlot));
         skillButtons[slot] = skillButton;
@@ -245,21 +270,15 @@ public sealed class BattleSkillControlsUI
     private void BindSkillButton(RectTransform parent, int slot)
     {
         int capturedSlot = slot;
-        float left = 0.42f + slot * 0.18f;
         Button skillButton = RuntimeUiBinder.FindButton(
             parent,
             $"CompanionSkillButton{slot + 1}");
         if (skillButton == null)
         {
-            BuildSkillButton(controlPanel, slot);
+            BuildSkillButton(skillButtonRoot, slot);
             return;
         }
         skillButtons[slot] = skillButton;
-        ReparentAndAnchor(
-            skillButton.GetComponent<RectTransform>(),
-            controlPanel,
-            new Vector2(left, 0.16f),
-            new Vector2(left + 0.16f, 0.78f));
         RuntimeUiBinder.ReplaceButtonAction(
             skillButton,
             () => UseCompanionSkill(capturedSlot));
@@ -273,6 +292,18 @@ public sealed class BattleSkillControlsUI
         skillReadyGlowImages[slot] = skillButton == null
             ? null
             : RuntimeUiBinder.FindImage(skillButton.transform, "ReadyGlow");
+        if (skillReadyGlowImages[slot] == null)
+        {
+            skillReadyGlowImages[slot] = RuntimeUiFactory.CreateSpriteImage(
+                "ReadyGlow",
+                skillButton.transform,
+                PrototypeUiArt.SkillFrame,
+                new Vector2(-0.08f, -0.08f),
+                new Vector2(1.08f, 1.08f));
+            skillReadyGlowImages[slot].type = Image.Type.Simple;
+            skillReadyGlowImages[slot].preserveAspect = true;
+            skillReadyGlowImages[slot].color = Color.clear;
+        }
         skillReadyGlowRects[slot] =
             skillReadyGlowImages[slot] == null
                 ? null
@@ -280,20 +311,42 @@ public sealed class BattleSkillControlsUI
         skillPortraitImages[slot] = skillButton == null
             ? null
             : RuntimeUiBinder.FindImage(skillButton.transform, "Portrait");
+        if (skillPortraitImages[slot] == null)
+        {
+            skillPortraitImages[slot] = RuntimeUiFactory.CreateSpriteImage(
+                "Portrait",
+                skillButton.transform,
+                null,
+                new Vector2(0.13f, 0.34f),
+                new Vector2(0.87f, 0.9f));
+        }
         skillCooldownOverlays[slot] = skillButton == null
             ? null
             : RuntimeUiBinder.FindRect(
                 skillButton.transform,
                 "CooldownOverlay");
+        if (skillCooldownOverlays[slot] == null)
+        {
+            skillCooldownOverlays[slot] = RuntimeUiFactory.CreatePanel(
+                "CooldownOverlay",
+                skillButton.transform,
+                new Color32(5, 8, 16, 145),
+                Vector2.zero,
+                Vector2.one);
+            skillCooldownOverlays[slot]
+                .GetComponent<Image>()
+                .raycastTarget = false;
+            skillCooldownOverlays[slot].gameObject.SetActive(false);
+        }
         skillStateNumberTexts[slot] = skillButton == null
             ? null
-            : new SpriteNumberText(
-                RuntimeUiBinder.FindRect(
-                    skillButton.transform,
-                    "SkillStateNumberText"),
-                NumberResourceRoot,
-                17f);
-        ConfigureSkillButtonLayout(slot);
+            : BindOrCreateSpriteNumberText(
+                skillButton.transform,
+                "SkillStateNumberText",
+                17f,
+                new Vector2(0.12f, 0.03f),
+                new Vector2(0.88f, 0.28f));
+        skillStateNumberTexts[slot]?.SetActive(false);
     }
 
     private RectTransform BuildControlPanel(RectTransform parent)
@@ -301,15 +354,7 @@ public sealed class BattleSkillControlsUI
         RectTransform existing =
             RuntimeUiBinder.FindRect(parent, "BattleControlCard");
         if (existing != null)
-        {
-            ReparentAndAnchor(
-                existing,
-                parent,
-                new Vector2(0.02f, 0.02f),
-                new Vector2(0.98f, 0.325f));
-            existing.SetAsLastSibling();
             return existing;
-        }
 
         RectTransform card = RuntimeUiFactory.CreatePanel(
             "BattleControlCard",
@@ -348,6 +393,98 @@ public sealed class BattleSkillControlsUI
         return card;
     }
 
+    private void BindControlRoots(bool createIfMissing)
+    {
+        powerChargeRoot =
+            RuntimeUiBinder.FindRect(controlPanel, "PowerChargeGroup");
+        skillButtonRoot =
+            RuntimeUiBinder.FindRect(controlPanel, "SkillButtonGroup");
+
+        if (createIfMissing && powerChargeRoot == null)
+        {
+            powerChargeRoot = CreateControlGroup(
+                "PowerChargeGroup",
+                new Vector2(0.04f, 0.08f),
+                new Vector2(0.36f, 0.98f));
+        }
+
+        if (createIfMissing && skillButtonRoot == null)
+        {
+            skillButtonRoot = CreateControlGroup(
+                "SkillButtonGroup",
+                new Vector2(0.41f, 0.08f),
+                new Vector2(0.96f, 0.98f));
+        }
+
+        if (powerChargeRoot == null)
+            powerChargeRoot = controlPanel;
+        if (skillButtonRoot == null)
+            skillButtonRoot = controlPanel;
+    }
+
+    private RectTransform CreateControlGroup(
+        string name,
+        Vector2 anchorMin,
+        Vector2 anchorMax)
+    {
+        RectTransform group = RuntimeUiFactory.CreatePanel(
+            name,
+            controlPanel,
+            new Color32(0, 0, 0, 0),
+            anchorMin,
+            anchorMax);
+        group.GetComponent<Image>().raycastTarget = false;
+        return group;
+    }
+
+    private void GetPowerChargeButtonAnchors(
+        out Vector2 anchorMin,
+        out Vector2 anchorMax)
+    {
+        if (powerChargeRoot != controlPanel)
+        {
+            anchorMin = new Vector2(0f, 0.16f);
+            anchorMax = new Vector2(1f, 0.88f);
+            return;
+        }
+
+        anchorMin = new Vector2(0.04f, 0.16f);
+        anchorMax = new Vector2(0.36f, 0.88f);
+    }
+
+    private Vector2 GetSkillStatusAnchorMin()
+    {
+        return skillButtonRoot == controlPanel
+            ? new Vector2(0.41f, 0.76f)
+            : new Vector2(0f, 0.76f);
+    }
+
+    private Vector2 GetSkillStatusAnchorMax()
+    {
+        return skillButtonRoot == controlPanel
+            ? new Vector2(0.96f, 0.86f)
+            : new Vector2(1f, 0.86f);
+    }
+
+    private void GetSkillButtonAnchors(
+        RectTransform parent,
+        int slot,
+        out Vector2 anchorMin,
+        out Vector2 anchorMax)
+    {
+        if (parent != controlPanel)
+        {
+            float left = 0.02f + slot * 0.32f;
+            anchorMin = new Vector2(left, 0.16f);
+            anchorMax = new Vector2(left + 0.28f, 0.78f);
+            return;
+        }
+
+        float controlLeft = 0.42f + slot * 0.18f;
+        anchorMin = new Vector2(controlLeft, 0.16f);
+        anchorMax = new Vector2(controlLeft + 0.16f, 0.78f);
+    }
+
     private static void ReparentAndAnchor(
         RectTransform rect,
         RectTransform parent,
@@ -363,42 +500,6 @@ public sealed class BattleSkillControlsUI
         rect.anchorMax = anchorMax;
         rect.offsetMin = Vector2.zero;
         rect.offsetMax = Vector2.zero;
-    }
-
-    private void ConfigureSkillButtonLayout(int slot)
-    {
-        TMP_Text label = skillButtonTexts[slot];
-        if (label != null)
-        {
-            RectTransform labelRect = label.GetComponent<RectTransform>();
-            ReparentAndAnchor(
-                labelRect,
-                skillButtons[slot].transform as RectTransform,
-                new Vector2(0.06f, 0.03f),
-                new Vector2(0.94f, 0.32f));
-            label.fontSizeMax = 16f;
-            label.fontSizeMin = 10f;
-            label.alignment = TextAlignmentOptions.Center;
-            label.transform.SetAsLastSibling();
-        }
-
-        if (skillPortraitImages[slot] != null)
-        {
-            ReparentAndAnchor(
-                skillPortraitImages[slot].GetComponent<RectTransform>(),
-                skillButtons[slot].transform as RectTransform,
-                new Vector2(0.13f, 0.34f),
-                new Vector2(0.87f, 0.9f));
-        }
-
-        if (skillCooldownOverlays[slot] != null)
-        {
-            ReparentAndAnchor(
-                skillCooldownOverlays[slot],
-                skillButtons[slot].transform as RectTransform,
-                Vector2.zero,
-                Vector2.one);
-        }
     }
 
     private void RefreshPowerButton()
@@ -594,9 +695,13 @@ public sealed class BattleSkillControlsUI
         return (Mathf.Sin(readyPulseTime * 6f) + 1f) * 0.5f;
     }
 
-    private void ConfigurePowerChargeButtonText()
+    private void ConfigurePowerChargeButtonText(
+        bool preservePrefabLayout = false)
     {
         if (powerChargeButtonText == null)
+            return;
+
+        if (preservePrefabLayout)
             return;
 
         RectTransform rect =
@@ -652,24 +757,55 @@ public sealed class BattleSkillControlsUI
         if (powerChargeButton == null)
             return;
 
-        powerChargeCurrentNumberText = new SpriteNumberText(
-            RuntimeUiBinder.FindRect(
+        powerChargeCurrentNumberText = BindOrCreateSpriteNumberText(
+            powerChargeButton.transform,
+            "PowerChargeCurrentNumberText",
+            18f,
+            new Vector2(0.08f, 0.12f),
+            new Vector2(0.31f, 0.42f));
+        if (powerChargeSlashText == null)
+        {
+            powerChargeSlashText = RuntimeUiFactory.CreateText(
+                "PowerChargeSlashText",
                 powerChargeButton.transform,
-                "PowerChargeCurrentNumberText"),
-            NumberResourceRoot,
-            18f);
-        powerChargeMaxNumberText = new SpriteNumberText(
-            RuntimeUiBinder.FindRect(
-                powerChargeButton.transform,
-                "PowerChargeMaxNumberText"),
-            NumberResourceRoot,
-            18f);
-        powerChargeTapNumberText = new SpriteNumberText(
-            RuntimeUiBinder.FindRect(
-                powerChargeButton.transform,
-                "PowerChargeTapNumberText"),
-            NumberResourceRoot,
-            18f);
+                "/",
+                18,
+                new Vector2(0.31f, 0.12f),
+                new Vector2(0.38f, 0.42f),
+                TextAlignmentOptions.Center,
+                Color.white);
+        }
+        powerChargeMaxNumberText = BindOrCreateSpriteNumberText(
+            powerChargeButton.transform,
+            "PowerChargeMaxNumberText",
+            18f,
+            new Vector2(0.38f, 0.12f),
+            new Vector2(0.61f, 0.42f));
+        powerChargeTapNumberText = BindOrCreateSpriteNumberText(
+            powerChargeButton.transform,
+            "PowerChargeTapNumberText",
+            18f,
+            new Vector2(0.64f, 0.12f),
+            new Vector2(0.94f, 0.42f));
+    }
+
+    private static SpriteNumberText BindOrCreateSpriteNumberText(
+        Transform parent,
+        string name,
+        float fontSize,
+        Vector2 anchorMin,
+        Vector2 anchorMax)
+    {
+        RectTransform existing = RuntimeUiBinder.FindRect(parent, name);
+        return existing == null
+            ? new SpriteNumberText(
+                parent,
+                name,
+                NumberResourceRoot,
+                fontSize,
+                anchorMin,
+                anchorMax)
+            : new SpriteNumberText(existing, NumberResourceRoot, fontSize);
     }
 
     private void RefreshPowerChargeNumbers(bool fullPower)
@@ -690,7 +826,7 @@ public sealed class BattleSkillControlsUI
             powerChargeTapNumberText?.SetText(
                 CompactNumberFormatter.Format(
                     Mathf.RoundToInt(
-                        BattleManager.PowerChargePerTapAmount),
+                        battleManager.CurrentPowerChargePerTap),
                     "+"));
             return;
         }
@@ -785,7 +921,7 @@ public sealed class BattleSkillControlsUI
             case CompanionSkillUseResult.BattleNotRunning:
                 return "Battle is not running.";
             case CompanionSkillUseResult.Recovering:
-                return "Power charger is not ready.";
+                return "Pole durability is being restored.";
             case CompanionSkillUseResult.NoEnemy:
                 return "No enemy target.";
             case CompanionSkillUseResult.InvalidSlot:
@@ -801,7 +937,7 @@ public sealed class BattleSkillControlsUI
         {
             showToast?.Invoke(
                 LocalizationManager.Translate(
-                    "Power charger is not ready."));
+                    "Pole durability is being restored."));
             return;
         }
 

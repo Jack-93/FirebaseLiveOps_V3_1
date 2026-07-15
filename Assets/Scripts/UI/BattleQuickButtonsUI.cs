@@ -86,36 +86,94 @@ public sealed class BattleQuickButtonsUI
 
     public void Bind(RectTransform parent)
     {
-        Button questQuickButton =
-            RuntimeUiBinder.FindButton(parent, "QuestQuickButton");
+        Button questQuickButton = FindOrCreateQuickButton(
+            parent,
+            "QuestQuickButton",
+            "QUEST",
+            new Vector2(0.02f, 0.82f),
+            new Vector2(0.19f, 0.89f),
+            () => onQuest?.Invoke());
         RuntimeUiBinder.ReplaceButtonAction(
             questQuickButton,
             () => onQuest?.Invoke());
         QuestQuickBadge =
-            RuntimeUiBinder.FindRect(parent, "QuestQuickBadge");
+            FindOrCreateBadge(questQuickButton, "QuestQuickBadge");
 
-        Button eventQuickButton =
-            RuntimeUiBinder.FindButton(parent, "EventQuickButton");
+        Button eventQuickButton = FindOrCreateQuickButton(
+            parent,
+            "EventQuickButton",
+            "EVENT",
+            new Vector2(0.81f, 0.82f),
+            new Vector2(0.98f, 0.89f),
+            () => onEvent?.Invoke());
         RuntimeUiBinder.ReplaceButtonAction(
             eventQuickButton,
             () => onEvent?.Invoke());
         EventQuickBadge =
-            RuntimeUiBinder.FindRect(parent, "EventQuickBadge");
+            FindOrCreateBadge(eventQuickButton, "EventQuickBadge");
 
-        Button shopQuickButton =
-            RuntimeUiBinder.FindButton(parent, "ShopQuickButton");
+        Button shopQuickButton = FindOrCreateQuickButton(
+            parent,
+            "ShopQuickButton",
+            "SHOP",
+            new Vector2(0.02f, 0.74f),
+            new Vector2(0.19f, 0.81f),
+            () => onShop?.Invoke());
         RuntimeUiBinder.ReplaceButtonAction(
             shopQuickButton,
             () => onShop?.Invoke());
         ShopQuickBadge =
-            RuntimeUiBinder.FindRect(parent, "ShopQuickBadge");
+            FindOrCreateBadge(shopQuickButton, "ShopQuickBadge");
 
-        Button equipmentQuickButton =
-            RuntimeUiBinder.FindButton(parent, "EquipmentQuickButton");
+        Button equipmentQuickButton = FindOrCreateQuickButton(
+            parent,
+            "EquipmentQuickButton",
+            "EQUIPMENT",
+            new Vector2(0.81f, 0.74f),
+            new Vector2(0.98f, 0.81f),
+            () => onEquipment?.Invoke());
         RuntimeUiBinder.ReplaceButtonAction(
             equipmentQuickButton,
             () => onEquipment?.Invoke());
         EquipmentQuickBadge =
-            RuntimeUiBinder.FindRect(parent, "EquipmentQuickBadge");
+            FindOrCreateBadge(equipmentQuickButton, "EquipmentQuickBadge");
+    }
+
+    private static Button FindOrCreateQuickButton(
+        RectTransform parent,
+        string name,
+        string label,
+        Vector2 anchorMin,
+        Vector2 anchorMax,
+        Action action)
+    {
+        Button button = RuntimeUiBinder.FindButton(parent, name);
+        if (button != null)
+            return button;
+
+        return RuntimeUiFactory.CreateButton(
+            name,
+            parent,
+            label,
+            anchorMin,
+            anchorMax,
+            new Color32(24, 35, 58, 210),
+            () => action?.Invoke());
+    }
+
+    private RectTransform FindOrCreateBadge(Button button, string badgeName)
+    {
+        if (button == null)
+            return null;
+
+        RectTransform badge = RuntimeUiBinder.FindRect(
+            button.transform,
+            badgeName);
+        return badge != null
+            ? badge
+            : BattleHudUiFactory.CreateBadge(
+                button,
+                badgeName,
+                badgeColor);
     }
 }

@@ -18,12 +18,16 @@ public static class MorePanelSummaryFormatter
                     !companionManager.IsCharacterItem(item.Key))
                 {
                     builder.AppendLine(
-                        item.Key + "   x" +
+                        EquipmentManager.GetEquipmentDisplayName(item.Key) +
+                        "   x" +
                         CompactNumberFormatter.Format(item.Value));
                 }
             }
         }
 
+        builder.AppendLine(
+            "\uBE44\uD589\uB2E8 \uC7A5\uBE44 \uCF54\uC778   x" +
+            CompactNumberFormatter.Format(data.flightEquipmentCoins));
         builder.AppendLine(
             $"{LocalizationManager.Translate("Mailbox")}   " +
             $"{CompactNumberFormatter.Format(data.mailbox.Count)} " +

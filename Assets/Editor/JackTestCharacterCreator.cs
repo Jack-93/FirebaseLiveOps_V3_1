@@ -89,11 +89,10 @@ public static class JackTestCharacterCreator
         SaveProjectile(JackArtRoot + "/BasicProjectile.png", false);
         SaveProjectile(JackArtRoot + "/SkillProjectile.png", true);
 
-        SaveCue(BattleAnimationCue.Idle, PoseKind.Idle, 4);
-        SaveCue(BattleAnimationCue.Attack, PoseKind.Attack, 4);
-        SaveCue(BattleAnimationCue.Hit, PoseKind.Hit, 4);
-        SaveCue(BattleAnimationCue.Death, PoseKind.Death, 4);
-        SaveCue(BattleAnimationCue.Skill, PoseKind.Skill, 6);
+        SaveCue(BattleAnimationCue.Idle, PoseKind.Idle, 8);
+        SaveCue(BattleAnimationCue.Attack, PoseKind.Attack, 8);
+        SaveCue(BattleAnimationCue.Death, PoseKind.Death, 8);
+        SaveCue(BattleAnimationCue.Skill, PoseKind.Skill, 8);
     }
 
     private static void SaveCue(
@@ -387,7 +386,7 @@ public static class JackTestCharacterCreator
     {
         jack.characterName = CharacterName;
         jack.rarity = "SR";
-        jack.element = CompanionElement.Light;
+        jack.element = CompanionElement.Electric;
         jack.role = CompanionRole.Striker;
         jack.synergyTags = new List<string>
         {

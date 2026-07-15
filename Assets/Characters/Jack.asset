@@ -73,8 +73,13 @@ MonoBehaviour:
   - Bird
   - Electric
   - Magpie
+  - SR
   description: SR magpie companion prototype. A fast rooftop striker that fires charged
     feather shots.
   skillName: Magpie Spark
   skillCooldown: 7.5
+  skillEffect: 0
+  basicAttackMultiplier: 1
   skillDamageMultiplier: 2.2
+  lineRepairPercent: 0.35
+  lineDefensePercentBonus: 0

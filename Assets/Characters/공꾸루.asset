@@ -1,0 +1,96 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edbddcf0806d01c46b7c1bf4982395b7, type: 3}
+  m_Name: "\uACF5\uAFB8\uB8E8"
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterData
+  characterName: "\uACF5\uAFB8\uB8E8"
+  rarity: SSR
+  icon: {fileID: 21300000, guid: 5aec2e921d239cf42a900799978d16f3, type: 3}
+  battleSprite: {fileID: 0}
+  basicProjectileSprite: {fileID: 21300000, guid: 96e76109869d4e7f88953cc0701507e0, type: 3}
+  skillProjectileSprite: {fileID: 21300000, guid: 9e708890c3b84bbdb9a19d4f118c4308, type: 3}
+  basicProjectileTint: {r: 1, g: 1, b: 1, a: 1}
+  skillProjectileTint: {r: 1, g: 1, b: 1, a: 1}
+  battleAnimator: {fileID: 0}
+  battleVisual:
+    sprite: {fileID: 21300000, guid: 5aec2e921d239cf42a900799978d16f3, type: 3}
+    animatorController: {fileID: 0}
+    spriteAnimations:
+    - cue: 0
+      frames:
+      - {fileID: 21300000, guid: 1b17a2cd2de5e9546af0592b8d58741b, type: 3}
+      - {fileID: 21300000, guid: b83018478891d854b9f1d5bbb273984d, type: 3}
+      - {fileID: 21300000, guid: 9b56c77f30a589146817e0ae8a69d472, type: 3}
+      - {fileID: 21300000, guid: efb66da174caa2846bf1329db6f8c16e, type: 3}
+      - {fileID: 21300000, guid: 392c4fa380aa30c499d13ffeaa2310a7, type: 3}
+      - {fileID: 21300000, guid: 87dbd5d00e1377946a4b35a1f9627a72, type: 3}
+    - cue: 1
+      frames:
+      - {fileID: 21300000, guid: 5c7bfe1ef86360748914a372ef6fb975, type: 3}
+      - {fileID: 21300000, guid: 9ed84740047c6e1459220a63d5db60a0, type: 3}
+      - {fileID: 21300000, guid: 15d695c63fd5cb746a62b7afe7b95e57, type: 3}
+      - {fileID: 21300000, guid: cf2a9c7888313144aa34ec292f97cb63, type: 3}
+      - {fileID: 21300000, guid: 8a85f0a099987ff40844607d45aae9ba, type: 3}
+      - {fileID: 21300000, guid: cf70a5e422b8e3443bd5bb6ea8f71f47, type: 3}
+      - {fileID: 21300000, guid: 86fc14d1c415e9b4c9f9c52d399f036f, type: 3}
+      - {fileID: 21300000, guid: 8798acb2c29e4fc4d91f9835a5e59321, type: 3}
+    - cue: 2
+      frames:
+      - {fileID: 21300000, guid: 0f24d250321fe704387c521e55905196, type: 3}
+      - {fileID: 21300000, guid: aa587d65f0a8786498e4b55e08f56491, type: 3}
+      - {fileID: 21300000, guid: f98fa980c71eb6a4c8a5a26c1323056e, type: 3}
+      - {fileID: 21300000, guid: 73f6810e8e24ef7438f16baedcbc823b, type: 3}
+    - cue: 3
+      frames:
+      - {fileID: 21300000, guid: 93e0fd2db8dcb6040bb45af8ecbb1b16, type: 3}
+      - {fileID: 21300000, guid: 4c73bd264a41e6e41bc27889876c09f0, type: 3}
+      - {fileID: 21300000, guid: a721f178d7af05a42a6aa0d64a5bfcea, type: 3}
+      - {fileID: 21300000, guid: 3839d4efb4519e843a92adac1cbbf5b9, type: 3}
+      - {fileID: 21300000, guid: 22a82643e30e7ff408d29695dcfa3663, type: 3}
+      - {fileID: 21300000, guid: 2913c887dfb829e4c9944823eb7b0a3f, type: 3}
+    - cue: 4
+      frames:
+      - {fileID: 21300000, guid: 986a39ae600d6644d8cccd9791df3d94, type: 3}
+      - {fileID: 21300000, guid: 147eb71b786f500479be8283c026320b, type: 3}
+      - {fileID: 21300000, guid: 53cc3a995f853f3409401d47a2846d7c, type: 3}
+      - {fileID: 21300000, guid: 35c3c7a1a3fff1a419bc9d4e99abc3e3, type: 3}
+      - {fileID: 21300000, guid: be4461bd6b3e3ea499d61eff705df546, type: 3}
+      - {fileID: 21300000, guid: d2e08b75e74b05e4681bf94b32ec7dc2, type: 3}
+      - {fileID: 21300000, guid: b69ae1d28d6c0794ab6e0d2eae32e9eb, type: 3}
+      - {fileID: 21300000, guid: 95181c4c6904e3345ae017f6850032aa, type: 3}
+    basicProjectile:
+      sprite: {fileID: 21300000, guid: d6487e823bda7d141b351666b1fa7693, type: 3}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      duration: 0
+      size: 0
+    skillProjectile:
+      sprite: {fileID: 21300000, guid: 39a6c7b280fac7b4396511d7c8c63376, type: 3}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      duration: 0
+      size: 0
+  element: 1
+  role: 3
+  synergyTags:
+  - Bird
+  - Flame
+  - Peacock
+  - Support
+  - SSR
+  description: "SSR \uBD88\uC18D\uC131 \uC11C\uD3EC\uD130 \uACF5\uC791\uC0C8. \n\uAE43\uD138\uC774
+    \uD654\uB824\uD558\uACE0 \uC774\uC058\uB2F9."
+  skillName: "\uD0DC\uC591\uAE43 \uBCF5\uAD6C"
+  skillCooldown: 10
+  skillEffect: 1
+  basicAttackMultiplier: 1
+  skillDamageMultiplier: 1
+  lineRepairPercent: 0.45
+  lineDefensePercentBonus: 0

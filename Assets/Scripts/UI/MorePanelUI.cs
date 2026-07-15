@@ -36,7 +36,6 @@ public sealed class MorePanelUI
     public MorePanelUI(
         RectTransform root,
         Action claimAllMail,
-        Action showEquipment,
         Action showCollection,
         Action autoEquip,
         Action claimDailyReward,
@@ -56,7 +55,6 @@ public sealed class MorePanelUI
         {
             Bind(
                 claimAllMail,
-                showEquipment,
                 showCollection,
                 autoEquip,
                 claimDailyReward,
@@ -72,7 +70,6 @@ public sealed class MorePanelUI
         BuildGenerated(
             root,
             claimAllMail,
-            showEquipment,
             showCollection,
             autoEquip,
             claimDailyReward,
@@ -87,7 +84,6 @@ public sealed class MorePanelUI
     public void BuildGenerated(
         RectTransform root,
         Action claimAllMail,
-        Action showEquipment,
         Action showCollection,
         Action autoEquip,
         Action claimDailyReward,
@@ -126,8 +122,7 @@ public sealed class MorePanelUI
             MutedText);
 
         RectTransform inventoryCard = BuildInventoryCard(
-            claimAllMail,
-            showEquipment);
+            claimAllMail);
         inventoryText = RuntimeUiFactory.CreateText(
             "InventoryText",
             inventoryCard,
@@ -212,8 +207,7 @@ public sealed class MorePanelUI
     }
 
     private RectTransform BuildInventoryCard(
-        Action claimAllMail,
-        Action showEquipment)
+        Action claimAllMail)
     {
         RectTransform card = RuntimeUiFactory.CreatePanel(
             "InventoryCard",
@@ -238,14 +232,6 @@ public sealed class MorePanelUI
             new Vector2(0.95f, 0.88f),
             Gold,
             () => claimAllMail?.Invoke());
-        RuntimeUiFactory.CreateButton(
-            "EquipmentButton",
-            card,
-            "EQUIPMENT",
-            new Vector2(0.71f, 0.12f),
-            new Vector2(0.95f, 0.47f),
-            PanelLight,
-            () => showEquipment?.Invoke());
         return card;
     }
 
@@ -380,7 +366,6 @@ public sealed class MorePanelUI
 
     private void Bind(
         Action claimAllMail,
-        Action showEquipment,
         Action showCollection,
         Action autoEquip,
         Action claimDailyReward,
@@ -397,7 +382,7 @@ public sealed class MorePanelUI
         accountText = RuntimeUiBinder.FindText(panel, "AccountText");
 
         Replace("ClaimMailButton", claimAllMail);
-        Replace("EquipmentButton", showEquipment);
+        Hide("EquipmentButton");
         Replace("CollectionButton", showCollection);
         Replace("BestCompanionButton", autoEquip);
         Replace("DailyRewardButton", claimDailyReward);
@@ -421,6 +406,13 @@ public sealed class MorePanelUI
         RuntimeUiBinder.ReplaceButtonAction(
             RuntimeUiBinder.FindButton(panel, buttonName),
             () => action?.Invoke());
+    }
+
+    private void Hide(string objectName)
+    {
+        Transform target = RuntimeUiBinder.FindTransform(panel, objectName);
+        if (target != null)
+            target.gameObject.SetActive(false);
     }
 
     private static void SetText(TMP_Text text, string value)

@@ -182,12 +182,6 @@ public class BattleActorView : MonoBehaviour
             return frames;
         }
 
-        if (cue == BattleAnimationCue.Death &&
-            TryGetFrames(BattleAnimationCue.Hit, out frames))
-        {
-            return frames;
-        }
-
         if (cue != BattleAnimationCue.Idle &&
             TryGetFrames(BattleAnimationCue.Idle, out frames))
         {

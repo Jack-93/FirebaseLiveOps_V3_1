@@ -86,7 +86,7 @@ public static class CompanionSynergySystem
         if (party.Count >= 3 && elements.Count >= 3)
         {
             result.HealthPercent += 10;
-            result.ActiveEffects.Add("Elemental Harmony: HP +10%");
+            result.ActiveEffects.Add("Elemental Harmony: Pole DUR +10%");
         }
 
         return result;
@@ -113,7 +113,7 @@ public static class CompanionSynergySystem
                 int health = fullParty ? 30 : 15;
                 result.HealthPercent += health;
                 result.ActiveEffects.Add(
-                    $"Guardians {count}: HP +{health}%");
+                    $"Guardians {count}: Pole DUR +{health}%");
                 break;
             case CompanionRole.Support:
                 int speed = fullParty ? 25 : 12;

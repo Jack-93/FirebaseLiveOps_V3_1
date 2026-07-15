@@ -203,7 +203,21 @@ public sealed class ShopProductButtonsUI
         if (bindExisting)
         {
             button = RuntimeUiBinder.FindButton(parent, name);
-            RuntimeUiBinder.ReplaceButtonAction(button, action);
+            if (button == null)
+            {
+                button = RuntimeUiFactory.CreateButton(
+                    name,
+                    parent,
+                    title,
+                    anchorMin,
+                    anchorMax,
+                    color,
+                    action);
+            }
+            else
+            {
+                RuntimeUiBinder.ReplaceButtonAction(button, action);
+            }
         }
         else
         {
@@ -263,12 +277,15 @@ public sealed class ShopProductButtonsUI
             if (titleText != null)
             {
                 titleText.text = LocalizationManager.Translate(title);
-                RectTransform rect =
-                    titleText.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(0.04f, 0.58f);
-                rect.anchorMax = new Vector2(0.96f, 0.96f);
-                titleText.fontSizeMax = 19f;
-                titleText.fontSizeMin = 11f;
+                if (!bindExisting)
+                {
+                    RectTransform rect =
+                        titleText.GetComponent<RectTransform>();
+                    rect.anchorMin = new Vector2(0.04f, 0.58f);
+                    rect.anchorMax = new Vector2(0.96f, 0.96f);
+                    titleText.fontSizeMax = 19f;
+                    titleText.fontSizeMin = 11f;
+                }
             }
 
             resourceNumberText = CreateNumber(
