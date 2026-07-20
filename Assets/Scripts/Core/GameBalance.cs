@@ -6,6 +6,8 @@ public static class GameBalance
 {
     public const int EnemiesPerStage =
         GameBalanceConfig.EnemiesPerStage;
+    public const int BossStageInterval =
+        GameBalanceConfig.BossStageInterval;
     public const int MaxOfflineHours =
         GameBalanceConfig.MaxOfflineHours;
     public const float BossTimeLimit =
@@ -28,6 +30,12 @@ public static class GameBalance
         "Old Tree Cat",
         "Gear Cat"
     };
+
+    public static bool IsBossStage(int stage)
+    {
+        int normalizedStage = Math.Max(1, stage);
+        return normalizedStage % BossStageInterval == 0;
+    }
 
     public static int GetPlayerAttack(PlayerData data)
     {
@@ -83,10 +91,10 @@ public static class GameBalance
 
     public static int GetPlayerMaxHealth(PlayerData data)
     {
-        return GetPoleMaxDurability(data);
+        return GetHeroMaxHealth(data);
     }
 
-    public static int GetPoleMaxDurability(PlayerData data)
+    public static int GetHeroMaxHealth(PlayerData data)
     {
         int baseHealth =
             GameBalanceConfig.PlayerBaseHealth +
@@ -99,14 +107,14 @@ public static class GameBalance
                 ?.GetSynergyResult()
                 .HealthPercent ?? 0;
         synergyPercent +=
-            GetEquippedCompanionPoleDurabilityPercentBonus();
+            GetEquippedCompanionHeroHealthPercentBonus();
         synergyPercent += Mathf.RoundToInt(
-            EquipmentManager.GetPoleDurabilityPercent(data));
+            EquipmentManager.GetHeroHealthPercent(data));
         return Mathf.RoundToInt(
             baseHealth * (1f + synergyPercent / 100f));
     }
 
-    public static int GetPoleDamageAfterArmor(
+    public static int GetHeroDamageAfterArmor(
         PlayerData data,
         int incomingDamage)
     {
@@ -115,13 +123,13 @@ public static class GameBalance
             return 0;
 
         float reductionPercent =
-            EquipmentManager.GetPoleDamageReductionPercent(data);
+            EquipmentManager.GetHeroDamageReductionPercent(data);
         return Mathf.Max(
             1,
             Mathf.RoundToInt(damage * (1f - reductionPercent / 100f)));
     }
 
-    private static int GetEquippedCompanionPoleDurabilityPercentBonus()
+    private static int GetEquippedCompanionHeroHealthPercentBonus()
     {
         List<CharacterData> party =
             CompanionManager.Instance?.GetEquippedParty();
@@ -135,7 +143,7 @@ public static class GameBalance
                 continue;
 
             bonusPercent += Mathf.RoundToInt(
-                Mathf.Max(0f, character.poleDurabilityPercentBonus));
+                Mathf.Max(0f, character.heroHealthPercentBonus));
         }
 
         return bonusPercent;
@@ -212,17 +220,17 @@ public static class GameBalance
     {
         double attackScore =
             GetPlayerAttack(data) / GetPlayerAttackInterval(data);
-        double poleDurabilityScore =
-            GetPoleMaxDurability(data) *
-            GetPoleEffectiveDurabilityMultiplier(data) *
+        double heroHealthScore =
+            GetHeroMaxHealth(data) *
+            GetHeroEffectiveHealthMultiplier(data) *
             0.35d;
-        return ClampToInt(attackScore * 10d + poleDurabilityScore);
+        return ClampToInt(attackScore * 10d + heroHealthScore);
     }
 
-    private static double GetPoleEffectiveDurabilityMultiplier(PlayerData data)
+    private static double GetHeroEffectiveHealthMultiplier(PlayerData data)
     {
         float reductionPercent =
-            EquipmentManager.GetPoleDamageReductionPercent(data);
+            EquipmentManager.GetHeroDamageReductionPercent(data);
         float damageTakenMultiplier =
             Mathf.Clamp(1f - reductionPercent / 100f, 0.1f, 1f);
         return 1d / damageTakenMultiplier;
@@ -237,6 +245,9 @@ public static class GameBalance
 
     public static string GetEnemyName(int stage, bool isBoss)
     {
+        if (isBoss && stage == 10)
+            return "캣베로스";
+
         int index = Math.Max(0, stage - 1) % EnemyNames.Length;
         return isBoss ? BossNames[index] : EnemyNames[index];
     }

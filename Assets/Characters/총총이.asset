@@ -92,5 +92,5 @@ MonoBehaviour:
   skillDamageMultiplier: 1
   skillDamageBuffPercent: 40
   skillDamageBuffDuration: 10
-  lineRepairPercent: 0.35
-  lineDefensePercentBonus: 0
+  heroHealPercent: 0.35
+  heroHealthPercentBonus: 0

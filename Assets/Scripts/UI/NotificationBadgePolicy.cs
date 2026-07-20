@@ -129,16 +129,26 @@ public static class NotificationBadgePolicy
 
         bool weaponReady =
             !string.IsNullOrEmpty(data.equippedWeapon) &&
-            data.weaponUpgradeLevel <
+            EquipmentManager.GetEnhancementLevel(
+                data,
+                EquipmentSlot.Weapon) <
             GameBalanceConfig.EquipmentStarForceMaxLevel &&
             data.gold >=
-            EquipmentManager.GetUpgradeCost(data.weaponUpgradeLevel);
+            EquipmentManager.GetUpgradeCost(
+                EquipmentManager.GetEnhancementLevel(
+                    data,
+                    EquipmentSlot.Weapon));
         bool armorReady =
             !string.IsNullOrEmpty(data.equippedArmor) &&
-            data.armorUpgradeLevel <
+            EquipmentManager.GetEnhancementLevel(
+                data,
+                EquipmentSlot.Armor) <
             GameBalanceConfig.EquipmentStarForceMaxLevel &&
             data.gold >=
-            EquipmentManager.GetUpgradeCost(data.armorUpgradeLevel);
+            EquipmentManager.GetUpgradeCost(
+                EquipmentManager.GetEnhancementLevel(
+                    data,
+                    EquipmentSlot.Armor));
         return weaponReady || armorReady;
     }
 

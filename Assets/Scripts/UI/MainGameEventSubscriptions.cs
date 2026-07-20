@@ -142,18 +142,24 @@ public sealed class MainGameEventSubscriptions : IDisposable
 
         battleManager.OnCompanionBasicAttackPerformed +=
             battleHud.HandleCompanionBasicAttackVisual;
+        battleManager.OnEnemyAttackStarted +=
+            battleHud.HandleEnemyAttackStartedVisual;
         battleManager.OnEnemyAttackPerformed +=
             battleHud.HandleEnemyAttackVisual;
         battleManager.OnEnemyDefeatedVisual +=
             battleHud.HandleEnemyDefeatedVisual;
-        battleManager.OnPlayerDefeated +=
-            battleHud.HandlePlayerDefeatedVisual;
+        battleManager.OnHeroDefeated +=
+            battleHud.HandleHeroDefeatedVisual;
+        battleManager.OnHeroRecovered +=
+            battleHud.HandleHeroRecoveredVisual;
         battleManager.OnCompanionSkillUsed +=
             battleHud.HandleCompanionSkillVisual;
         battleManager.OnBossPatternUsed +=
             battleHud.HandleBossPatternVisual;
         battleManager.OnBossPatternWarning +=
             battleHud.HandleBossPatternWarningVisual;
+        battleManager.OnBossPatternCast +=
+            battleHud.HandleBossPatternCastVisual;
         battleManager.OnBossChallengeFailed +=
             battleHud.HandleBossChallengeFailed;
         battleManager.OnPowerCharged +=
@@ -167,18 +173,24 @@ public sealed class MainGameEventSubscriptions : IDisposable
 
         battleManager.OnCompanionBasicAttackPerformed -=
             battleHud.HandleCompanionBasicAttackVisual;
+        battleManager.OnEnemyAttackStarted -=
+            battleHud.HandleEnemyAttackStartedVisual;
         battleManager.OnEnemyAttackPerformed -=
             battleHud.HandleEnemyAttackVisual;
         battleManager.OnEnemyDefeatedVisual -=
             battleHud.HandleEnemyDefeatedVisual;
-        battleManager.OnPlayerDefeated -=
-            battleHud.HandlePlayerDefeatedVisual;
+        battleManager.OnHeroDefeated -=
+            battleHud.HandleHeroDefeatedVisual;
+        battleManager.OnHeroRecovered -=
+            battleHud.HandleHeroRecoveredVisual;
         battleManager.OnCompanionSkillUsed -=
             battleHud.HandleCompanionSkillVisual;
         battleManager.OnBossPatternUsed -=
             battleHud.HandleBossPatternVisual;
         battleManager.OnBossPatternWarning -=
             battleHud.HandleBossPatternWarningVisual;
+        battleManager.OnBossPatternCast -=
+            battleHud.HandleBossPatternCastVisual;
         battleManager.OnBossChallengeFailed -=
             battleHud.HandleBossChallengeFailed;
         battleManager.OnPowerCharged -=

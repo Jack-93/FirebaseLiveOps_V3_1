@@ -23,11 +23,11 @@ public sealed class BattleHudUI
     private RectTransform playerActorRoot;
     private RectTransform enemyVisual;
     private RectTransform playerVisual;
-    private Vector2 enemyVisualBasePosition;
-    private Vector2 playerVisualBasePosition;
     private RectTransform attackTrail;
     private RectTransform skillProjectile;
     private RectTransform battleFlash;
+    private RectTransform heroHitEffect;
+    private RectTransform enemyProjectile;
     private readonly RectTransform[] sparkleRects =
         new RectTransform[SparkleCount];
     private RectTransform bossWarningPanel;
@@ -56,11 +56,17 @@ public sealed class BattleHudUI
     private Image attackTrailImage;
     private Image skillProjectileImage;
     private Image battleFlashImage;
+    private Image heroHitEffectImage;
+    private Image enemyProjectileImage;
+    private Sprite enemyProjectileDefaultSprite;
+    private Vector2 enemyProjectileDefaultSize;
     private Image rewardIconImage;
     private readonly Image[] sparkleImages =
         new Image[SparkleCount];
 
     private BattleActorView enemyActorView;
+    private BattleActorVisualSet currentEnemyVisual;
+    private BattleMeleeMovementController enemyMeleeMovement;
     private BattleActorView playerActorView;
     private readonly BattleActorView[] companionActorViews =
         new BattleActorView[CompanionManager.PartySize];
@@ -68,8 +74,6 @@ public sealed class BattleHudUI
         new RectTransform[CompanionManager.PartySize];
     private readonly RectTransform[] companionVisualRects =
         new RectTransform[CompanionManager.PartySize];
-    private readonly Vector2[] companionVisualBasePositions =
-        new Vector2[CompanionManager.PartySize];
     private readonly RectTransform[] companionProjectileRects =
         new RectTransform[CompanionManager.PartySize];
     private readonly RectTransform[] companionProjectileTrailRects =
@@ -83,13 +87,19 @@ public sealed class BattleHudUI
     private BattleStatusHudUI statusHud;
     private BattleSkillControlsUI skillControls;
     private BattleQuickButtonsUI quickButtons;
+    private BossPatternPresentation bossPatternPresentation;
 
-    private float enemyAnimationTimer;
-    private float playerAnimationTimer;
     private float playerDefeatTimer;
     private float enemyHitShakeTimer;
     private float enemyDefeatPopTimer;
+    private float enemyRespawnTimer;
     private float playerHitShakeTimer;
+    private float heroHitEffectTimer;
+    private float enemyProjectileTimer;
+    private float enemyProjectileDuration;
+    private bool enemyProjectilePending;
+    private Vector2 enemyProjectileFrom;
+    private Vector2 enemyProjectileTo;
     private float attackTrailTimer;
     private float skillProjectileTimer;
     private float battleFlashTimer;
@@ -104,10 +114,6 @@ public sealed class BattleHudUI
     private Color battleFlashColor = Color.white;
     private Color skillProjectileColor = Accent;
     private float skillProjectileDuration = 0.32f;
-    private readonly float[] companionSkillTimers =
-        new float[CompanionManager.PartySize];
-    private readonly float[] companionAnimationDurations =
-        new float[CompanionManager.PartySize];
     private readonly float[] companionProjectileTimers =
         new float[CompanionManager.PartySize];
     private readonly float[] companionProjectileDurations =
@@ -181,62 +187,15 @@ public sealed class BattleHudUI
         if (TryBuildFromPrefab(root))
             return panel;
 
-        return BuildGenerated(root);
+        throw new InvalidOperationException(
+            "BattleHud prefab is required. Configure battle positions in " +
+            "Assets/Resources/Prefabs/UI/BattleHud.prefab.");
     }
 
     public RectTransform BuildGenerated(RectTransform root)
     {
-        panel = RuntimeUiFactory.CreatePanel(
-            "BattlePanel",
-            root,
-            new Color32(0, 0, 0, 0),
-            new Vector2(0f, 0.12f),
-            new Vector2(1f, 0.9f));
-
-        RuntimeUiFactory.CreateText(
-            "BattleTitle",
-            panel,
-            "BATTLE",
-            30,
-            new Vector2(0.06f, 0.91f),
-            new Vector2(0.3f, 0.97f),
-            TextAlignmentOptions.Left,
-            Accent);
-
-        Button autoButton = RuntimeUiFactory.CreateButton(
-            "AutoAdvanceButton",
-            panel,
-            "AUTO ON",
-            new Vector2(0.75f, 0.91f),
-            new Vector2(0.94f, 0.97f),
-            PanelLight,
-            () => onAutoAdvance?.Invoke());
-        autoAdvanceText = autoButton.GetComponentInChildren<TMP_Text>();
-
-        RectTransform enemyCard = RuntimeUiFactory.CreatePanel(
-            "EnemyCard",
-            panel,
-            new Color32(0, 0, 0, 0),
-            new Vector2(0.02f, 0.34f),
-            new Vector2(0.98f, 0.91f));
-        BuildBattlefieldLayers(enemyCard);
-
-        statusHud = new BattleStatusHudUI(Danger, Accent, Success);
-        statusHud.BuildEnemyName(enemyCard);
-
-        BuildBossWarning(enemyCard);
-        BuildEnemyActor(battlefieldActorLayer);
-        BuildEnemyPopups(battleEffectLayer);
-        BuildCombatEffects(battleEffectLayer);
-        statusHud.BuildEnemyHealth(enemyCard);
-        BuildPlayerSide(battlefieldActorLayer, battleEffectLayer);
-        statusHud.BuildPlayerStatus(enemyCard);
-        BuildCompanionActors(battlefieldActorLayer);
-        SortActorRoots();
-        BuildSkillControls();
-        BuildQuickButtons();
-
-        return panel;
+        throw new InvalidOperationException(
+            "Generated battle HUDs are disabled. Use BattleHud.prefab.");
     }
 
     private bool TryBuildFromPrefab(RectTransform root)
@@ -295,6 +254,11 @@ public sealed class BattleHudUI
         BindEnemyPopups(battleEffectLayer);
         BindCombatEffects(battleEffectLayer);
         BindPlayerSide(battlefieldActorLayer, battleEffectLayer);
+        bossPatternPresentation = new BossPatternPresentation(
+            battleEffectLayer,
+            enemyVisual,
+            enemyActorRoot,
+            enemyActorView);
         BindCompanionActors(battlefieldActorLayer);
         SortActorRoots();
         BindSkillControls();
@@ -340,11 +304,13 @@ public sealed class BattleHudUI
             playerActorView,
             BattleVisualResolver.GetHero());
 
-        ApplyActorVisual(
-            enemyActorView,
-            BattleVisualResolver.GetEnemy(
-                data.currentStage,
-                battleManager.IsBoss));
+        currentEnemyVisual = BattleVisualResolver.GetEnemy(
+            data.currentStage,
+            battleManager.IsBoss,
+            battleManager.CurrentEnemyCombatProfile.AttackType);
+        ApplyActorVisual(enemyActorView, currentEnemyVisual);
+        if (!battleManager.IsBoss)
+            bossPatternPresentation?.HideAll();
 
         for (int slot = 0; slot < CompanionManager.PartySize; slot++)
         {
@@ -379,8 +345,6 @@ public sealed class BattleHudUI
 
     public void HandlePlayerAttackVisual(int damage)
     {
-        playerAnimationTimer = 0.18f;
-        enemyAnimationTimer = 0.25f;
         enemyHitShakeTimer = 0.22f;
         attackTrailTimer = 0.18f;
         StartSparkles(
@@ -402,7 +366,6 @@ public sealed class BattleHudUI
         CharacterData character,
         int damage)
     {
-        enemyAnimationTimer = 0.22f;
         enemyHitShakeTimer = 0.2f;
         attackTrailTimer = 0.14f;
         StartSparkles(
@@ -418,8 +381,6 @@ public sealed class BattleHudUI
             0.55f);
         if (slot >= 0 && slot < companionActorViews.Length)
         {
-            companionSkillTimers[slot] = 0.56f;
-            companionAnimationDurations[slot] = 0.56f;
             companionActorViews[slot]?.Play(BattleAnimationCue.Attack);
             StartSkillProjectile(
                 slot,
@@ -433,7 +394,6 @@ public sealed class BattleHudUI
 
     public void HandlePowerChargedVisual(float current, float max)
     {
-        playerAnimationTimer = 0.14f;
         StartBattleFlash(Success, 0.05f);
         ShowPowerChargePopup(current, max);
         playerActorView?.Play(BattleAnimationCue.Skill);
@@ -441,11 +401,47 @@ public sealed class BattleHudUI
         lastObservedPowerCharge = current;
     }
 
+    public void HandleEnemyAttackStartedVisual(
+        EnemyCombatProfile profile)
+    {
+        if (profile.UsesProjectile)
+        {
+            if (profile.RequiresApproach && enemyMeleeMovement != null)
+            {
+                enemyMeleeMovement.Configure(profile);
+                enemyActorView?.Play(BattleAnimationCue.Move);
+                enemyMeleeMovement.BeginAttack(() =>
+                {
+                    enemyMeleeMovement.HoldPosition();
+                    StartEnemyProjectile(profile);
+                    enemyActorView?.Play(BattleAnimationCue.Attack);
+                });
+            }
+            else
+            {
+                enemyMeleeMovement?.HoldPosition();
+                StartEnemyProjectile(profile);
+                enemyActorView?.Play(BattleAnimationCue.Attack);
+            }
+            return;
+        }
+
+        if (enemyMeleeMovement == null)
+        {
+            ResolveEnemyAttack();
+            return;
+        }
+
+        enemyMeleeMovement.Configure(profile);
+        enemyActorView?.Play(BattleAnimationCue.Move);
+        enemyMeleeMovement.BeginAttack(ResolveEnemyAttack);
+    }
+
     public void HandleEnemyAttackVisual(int damage)
     {
-        enemyAnimationTimer = 0.18f;
-        playerAnimationTimer = 0.25f;
+        enemyMeleeMovement?.HoldPosition();
         playerHitShakeTimer = 0.24f;
+        StartHeroHitEffect();
         StartSparkles(
             GetSupportImpactAnchor(),
             Danger,
@@ -458,12 +454,15 @@ public sealed class BattleHudUI
 
     public void HandleEnemyDefeatedVisual(int reward)
     {
+        enemyMeleeMovement?.CancelAttack();
+        StopEnemyProjectile();
+        bossPatternPresentation?.HideAll();
         bool defeatedBoss =
             battleManager != null &&
             battleManager.LastDefeatedEnemyWasBoss;
 
-        enemyAnimationTimer = 0.4f;
         enemyDefeatPopTimer = 0.52f;
+        enemyRespawnTimer = 0.52f;
         StartSparkles(
             GetEnemyImpactAnchor(),
             defeatedBoss ? Gold : Success,
@@ -474,14 +473,27 @@ public sealed class BattleHudUI
         enemyActorView?.Play(BattleAnimationCue.Death);
     }
 
-    public void HandlePlayerDefeatedVisual()
+    public void HandleHeroDefeatedVisual()
     {
-        playerDefeatTimer = 1.8f;
+        enemyMeleeMovement?.ResetToStartPosition();
+        StopEnemyProjectile();
+        bossPatternPresentation?.HideAll();
+        playerDefeatTimer = 3.55f;
         StartBattleFlash(Danger, 0.22f);
         playerActorView?.Play(BattleAnimationCue.Death);
         foreach (BattleActorView companionActorView in companionActorViews)
         {
             companionActorView?.Play(BattleAnimationCue.Death);
+        }
+    }
+
+    public void HandleHeroRecoveredVisual()
+    {
+        playerDefeatTimer = 0f;
+        playerActorView?.Play(BattleAnimationCue.Idle);
+        foreach (BattleActorView companionActorView in companionActorViews)
+        {
+            companionActorView?.Play(BattleAnimationCue.Idle);
         }
     }
 
@@ -491,9 +503,9 @@ public sealed class BattleHudUI
         int effectValue)
     {
         if (character != null &&
-            character.skillEffect == CompanionSkillEffect.RepairPole)
+            character.skillEffect == CompanionSkillEffect.HealHero)
         {
-            HandleCompanionPoleRepairSkillVisual(
+            HandleCompanionHeroHealSkillVisual(
                 slot,
                 character,
                 effectValue);
@@ -509,7 +521,6 @@ public sealed class BattleHudUI
             return;
         }
 
-        enemyAnimationTimer = 0.35f;
         enemyHitShakeTimer = 0.3f;
         attackTrailTimer = 0.24f;
         StartSparkles(
@@ -525,8 +536,6 @@ public sealed class BattleHudUI
             0.72f);
         if (slot >= 0 && slot < companionActorViews.Length)
         {
-            companionSkillTimers[slot] = 0.84f;
-            companionAnimationDurations[slot] = 0.84f;
             companionActorViews[slot]?.Play(BattleAnimationCue.Skill);
             StartSkillProjectile(
                 slot,
@@ -541,12 +550,11 @@ public sealed class BattleHudUI
             CompactNumberFormatter.Format(effectValue));
     }
 
-    private void HandleCompanionPoleRepairSkillVisual(
+    private void HandleCompanionHeroHealSkillVisual(
         int slot,
         CharacterData character,
-        int repairAmount)
+        int healAmount)
     {
-        playerAnimationTimer = 0.35f;
         attackTrailTimer = 0.18f;
         StartSparkles(
             GetSupportImpactAnchor(),
@@ -559,21 +567,19 @@ public sealed class BattleHudUI
             0.42f,
             0.1f);
         StartBattleFlash(Success, 0.14f);
-        ShowPoleRepair(
-            repairAmount,
+        ShowHeroHeal(
+            healAmount,
             character?.skillName ?? "REPAIR",
             0.72f);
         if (slot >= 0 && slot < companionActorViews.Length)
         {
-            companionSkillTimers[slot] = 0.84f;
-            companionAnimationDurations[slot] = 0.84f;
             companionActorViews[slot]?.Play(BattleAnimationCue.Skill);
         }
 
         playerActorView?.Play(BattleAnimationCue.Skill);
         showToast?.Invoke(
-            $"{character?.skillName ?? "Skill"}  \uC804\uBD07\uB300 \uC218\uB9AC +" +
-            CompactNumberFormatter.Format(repairAmount));
+            $"{character?.skillName ?? "Skill"}  \uCC38\uC0C8 \uD68C\uBCF5 +" +
+            CompactNumberFormatter.Format(healAmount));
     }
 
     private void HandleCompanionPartyDamageBuffSkillVisual(
@@ -581,7 +587,6 @@ public sealed class BattleHudUI
         CharacterData character,
         int buffPercent)
     {
-        playerAnimationTimer = 0.35f;
         attackTrailTimer = 0.18f;
         StartSparkles(
             GetSupportImpactAnchor(),
@@ -596,8 +601,6 @@ public sealed class BattleHudUI
         StartBattleFlash(Accent, 0.14f);
         if (slot >= 0 && slot < companionActorViews.Length)
         {
-            companionSkillTimers[slot] = 0.84f;
-            companionAnimationDurations[slot] = 0.84f;
             companionActorViews[slot]?.Play(BattleAnimationCue.Skill);
             StartSkillProjectile(
                 slot,
@@ -623,16 +626,19 @@ public sealed class BattleHudUI
 
     public void HandleBossChallengeFailed()
     {
-        enemyAnimationTimer = 0.4f;
+        bossPatternPresentation?.HideAll();
         ShowBossWarning(LocalizationManager.Translate("BOSS FAILED"));
         showToast?.Invoke("Boss time expired. Retrying.");
     }
 
-    public void HandleBossPatternWarningVisual(
-        BossPatternDefinition pattern,
-        float warningSeconds)
+    public void HandleBossPatternWarningVisual(BossPatternRuntime runtime)
     {
-        enemyAnimationTimer = Mathf.Max(enemyAnimationTimer, 0.35f);
+        BossPatternDefinition pattern = runtime?.Pattern;
+        if (pattern == null)
+            return;
+
+        float warningSeconds = Mathf.Max(0.1f, pattern.warningSeconds);
+        bossPatternPresentation?.ShowWarning(runtime);
         enemyHitShakeTimer = Mathf.Max(enemyHitShakeTimer, 0.18f);
         StartSparkles(
             GetEnemyImpactAnchor(),
@@ -643,44 +649,77 @@ public sealed class BattleHudUI
         ShowBossWarning(
             $"{LocalizationManager.Translate("BOSS WARNING")}  " +
             $"{pattern.patternName}");
-        enemyActorView?.Play(BattleAnimationCue.Skill);
         showToast?.Invoke(
             $"{pattern.patternName}  " +
             LocalizationManager.Translate("Incoming"));
     }
 
-    public void HandleBossPatternVisual(
-        BossPatternDefinition pattern,
-        int damage)
+    public void HandleBossPatternCastVisual(BossPatternRuntime runtime)
     {
-        enemyAnimationTimer = 0.3f;
-        playerAnimationTimer = 0.3f;
-        playerHitShakeTimer = 0.28f;
-        StartSparkles(
-            GetSupportImpactAnchor(),
-            Danger,
-            0.34f,
-            0.08f);
-        StartBattleFlash(Danger, 0.2f);
+        BossPatternDefinition pattern = runtime?.Pattern;
+        if (pattern == null)
+            return;
+
+        bossPatternPresentation?.ShowCast(runtime);
         ShowBossWarning(
             $"{LocalizationManager.Translate("BOSS SKILL")}  " +
             $"{pattern.patternName}");
-        ShowPlayerDamage(damage);
-        enemyActorView?.Play(BattleAnimationCue.Skill);
-        showToast?.Invoke(
-            $"{pattern.patternName}  DMG " +
-            CompactNumberFormatter.Format(damage));
+    }
+
+    public void HandleBossPatternVisual(
+        BossPatternRuntime runtime,
+        int damage)
+    {
+        BossPatternDefinition pattern = runtime?.Pattern;
+        if (pattern == null)
+            return;
+
+        bossPatternPresentation?.ShowImpact(runtime);
+        if (damage > 0)
+        {
+            playerHitShakeTimer = 0.28f;
+            StartSparkles(
+                GetSupportImpactAnchor(),
+                Danger,
+                0.34f,
+                0.08f);
+            StartBattleFlash(Danger, 0.2f);
+            ShowPlayerDamage(damage);
+            showToast?.Invoke(
+                $"{pattern.patternName}  DMG " +
+                CompactNumberFormatter.Format(damage));
+        }
+        else
+        {
+            ShowBossWarning($"{pattern.patternName}  회피 성공");
+            showToast?.Invoke($"{pattern.patternName}  회피 성공");
+        }
     }
 
     public void UpdateAnimations(float deltaTime)
     {
-        enemyAnimationTimer = Mathf.Max(0f, enemyAnimationTimer - deltaTime);
-        playerAnimationTimer = Mathf.Max(0f, playerAnimationTimer - deltaTime);
+        battleManager?.SetHeroBattlePosition(GetSupportFootAnchor());
+        bossPatternPresentation?.Update(deltaTime);
         playerDefeatTimer = Mathf.Max(0f, playerDefeatTimer - deltaTime);
         enemyHitShakeTimer = Mathf.Max(0f, enemyHitShakeTimer - deltaTime);
         enemyDefeatPopTimer =
             Mathf.Max(0f, enemyDefeatPopTimer - deltaTime);
+        if (enemyRespawnTimer > 0f)
+        {
+            enemyRespawnTimer = Mathf.Max(
+                0f,
+                enemyRespawnTimer - deltaTime);
+            if (enemyRespawnTimer <= 0f)
+            {
+                enemyMeleeMovement?.ResetToStartPosition();
+                StopEnemyProjectile();
+                enemyActorView?.Play(BattleAnimationCue.Idle);
+            }
+        }
         playerHitShakeTimer = Mathf.Max(0f, playerHitShakeTimer - deltaTime);
+        heroHitEffectTimer = Mathf.Max(
+            0f,
+            heroHitEffectTimer - deltaTime);
         attackTrailTimer = Mathf.Max(0f, attackTrailTimer - deltaTime);
         skillProjectileTimer = Mathf.Max(0f, skillProjectileTimer - deltaTime);
         battleFlashTimer = Mathf.Max(0f, battleFlashTimer - deltaTime);
@@ -693,10 +732,8 @@ public sealed class BattleHudUI
             Mathf.Max(0f, powerChargePopupTimer - deltaTime);
         rewardPopupTimer = Mathf.Max(0f, rewardPopupTimer - deltaTime);
 
-        for (int slot = 0; slot < companionSkillTimers.Length; slot++)
+        for (int slot = 0; slot < companionProjectileTimers.Length; slot++)
         {
-            companionSkillTimers[slot] =
-                Mathf.Max(0f, companionSkillTimers[slot] - deltaTime);
             companionProjectileTimers[slot] =
                 Mathf.Max(0f, companionProjectileTimers[slot] - deltaTime);
         }
@@ -710,9 +747,10 @@ public sealed class BattleHudUI
         UpdateSkillProjectile();
         UpdateCompanionProjectiles();
         UpdateSparkles();
+        UpdateHeroHitEffect();
+        UpdateEnemyProjectile(deltaTime);
         UpdateBattleFlash();
         UpdateBossWarning();
-        UpdateCompanionAnimations();
         BattleHudUiFactory.UpdateFloatingPopup(
             enemyDamagePopup,
             enemyDamageText,
@@ -750,87 +788,12 @@ public sealed class BattleHudUI
         UpdateActorPulses();
     }
 
-    private void BuildBossWarning(RectTransform enemyCard)
-    {
-        bossWarningPanel = RuntimeUiFactory.CreatePanel(
-            "BossWarningPanel",
-            enemyCard,
-            new Color32(80, 16, 26, 225),
-            new Vector2(0.24f, 0.76f),
-            new Vector2(0.76f, 0.84f));
-        bossWarningPanel.GetComponent<Image>().raycastTarget = false;
-        bossWarningText = RuntimeUiFactory.CreateText(
-            "BossWarningText",
-            bossWarningPanel,
-            "",
-            24,
-            new Vector2(0.04f, 0.08f),
-            new Vector2(0.96f, 0.92f),
-            TextAlignmentOptions.Center,
-            Gold);
-        bossWarningPanel.gameObject.SetActive(false);
-    }
-
     private void BindBossWarning(RectTransform enemyCard)
     {
         bossWarningPanel =
             RuntimeUiBinder.FindRect(enemyCard, "BossWarningPanel");
         bossWarningText =
             RuntimeUiBinder.FindText(enemyCard, "BossWarningText");
-    }
-
-    private void BuildBattlefieldLayers(RectTransform enemyCard)
-    {
-        battlefieldLayer = CreateNonInteractivePanel(
-            "BattlefieldLayer",
-            enemyCard,
-            Vector2.zero,
-            Vector2.one);
-        battlefieldBackgroundLayer = CreateNonInteractivePanel(
-            "BattlefieldBackgroundLayer",
-            battlefieldLayer,
-            Vector2.zero,
-            Vector2.one);
-        battlefieldBackgroundImage = CreateBattlefieldImage(
-            "BattlefieldBackground",
-            battlefieldBackgroundLayer,
-            Vector2.zero,
-            Vector2.one);
-        battlefieldFarBackgroundImage = CreateBattlefieldImage(
-            "BattlefieldFarBackground",
-            battlefieldBackgroundLayer,
-            Vector2.zero,
-            Vector2.one);
-        battlefieldMidgroundImage = CreateBattlefieldImage(
-            "BattlefieldMidground",
-            battlefieldBackgroundLayer,
-            Vector2.zero,
-            Vector2.one);
-        battlefieldGroundImage = CreateBattlefieldImage(
-            "BattlefieldGround",
-            battlefieldBackgroundLayer,
-            Vector2.zero,
-            Vector2.one);
-        CreateNonInteractivePanel(
-            "BattlefieldGuideLayer",
-            battlefieldLayer,
-            Vector2.zero,
-            Vector2.one);
-        battlefieldActorLayer = CreateNonInteractivePanel(
-            "BattlefieldActorLayer",
-            battlefieldLayer,
-            Vector2.zero,
-            Vector2.one);
-        battleEffectLayer = CreateNonInteractivePanel(
-            "BattlefieldEffectLayer",
-            battlefieldLayer,
-            Vector2.zero,
-            Vector2.one);
-        battlefieldForegroundImage = CreateBattlefieldImage(
-            "BattlefieldForeground",
-            battleEffectLayer,
-            Vector2.zero,
-            Vector2.one);
     }
 
     private void BindBattlefieldLayers(RectTransform enemyCard)
@@ -848,6 +811,22 @@ public sealed class BattleHudUI
         battleEffectLayer =
             RuntimeUiBinder.FindRect(battlefieldLayer, "BattlefieldEffectLayer")
             ?? battlefieldLayer;
+        heroHitEffect =
+            RuntimeUiBinder.FindRect(battleEffectLayer, "HeroHitEffect");
+        heroHitEffectImage = heroHitEffect == null
+            ? null
+            : heroHitEffect.GetComponent<Image>();
+        enemyProjectile =
+            RuntimeUiBinder.FindRect(battleEffectLayer, "EnemyProjectile");
+        enemyProjectileImage = enemyProjectile == null
+            ? null
+            : enemyProjectile.GetComponent<Image>();
+        enemyProjectileDefaultSprite = enemyProjectileImage == null
+            ? null
+            : enemyProjectileImage.sprite;
+        enemyProjectileDefaultSize = enemyProjectile == null
+            ? Vector2.zero
+            : enemyProjectile.sizeDelta;
         battlefieldBackgroundImage =
             RuntimeUiBinder.FindImage(
                 battlefieldLayer,
@@ -1006,87 +985,6 @@ public sealed class BattleHudUI
         rect.offsetMax = Vector2.zero;
     }
 
-    private static RectTransform CreateActorRoot(
-        RectTransform parent,
-        string rootName,
-        string shadowName,
-        Vector2 anchor,
-        Vector2 normalizedSize,
-        Color guideColor)
-    {
-        Vector2 halfSize = new Vector2(normalizedSize.x * 0.5f, 0f);
-        RectTransform root = CreateNonInteractivePanel(
-            rootName,
-            parent,
-            anchor - halfSize,
-            anchor + new Vector2(halfSize.x, normalizedSize.y));
-
-        Image shadowImage = RuntimeUiFactory.CreateSpriteImage(
-            shadowName,
-            root,
-            PrototypeUiArt.ActorShadow,
-            new Vector2(0.12f, -0.03f),
-            new Vector2(0.88f, 0.15f));
-        shadowImage.raycastTarget = false;
-        shadowImage.preserveAspect = false;
-        if (shadowImage.sprite == null)
-            shadowImage.color = new Color32(0, 0, 0, 85);
-
-        CreateActorAnchor(root, "DamageAnchor", 0.84f);
-        CreateActorAnchor(root, "HealthAnchor", 0.98f);
-
-        BattleSlotGuide guide = root.gameObject.AddComponent<BattleSlotGuide>();
-        guide.Configure(rootName, guideColor);
-        return root;
-    }
-
-    private static void CreateActorAnchor(
-        RectTransform root,
-        string name,
-        float y)
-    {
-        GameObject anchor = new GameObject(name, typeof(RectTransform));
-        anchor.transform.SetParent(root, false);
-        RectTransform rect = anchor.GetComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.5f, y);
-        rect.anchorMax = new Vector2(0.5f, y);
-        rect.pivot = new Vector2(0.5f, 0.5f);
-        rect.sizeDelta = Vector2.zero;
-    }
-
-    private void BuildEnemyActor(RectTransform enemyCard)
-    {
-        Vector2 enemyAnchor = BattleLayoutConfig.EnemyAnchor;
-        enemyActorRoot = CreateActorRoot(
-            enemyCard,
-            "EnemyActorRoot",
-            "EnemyShadow",
-            enemyAnchor,
-            new Vector2(0.22f, 0.25f),
-            Danger);
-        enemyVisual = RuntimeUiFactory.CreatePanel(
-            "EnemyVisual",
-            enemyActorRoot,
-            Danger,
-            new Vector2(0.08f, 0.12f),
-            new Vector2(0.92f, 1f));
-        enemyVisualImage = enemyVisual.GetComponent<Image>();
-        enemyVisualImage.raycastTarget = false;
-        enemyVisualBasePosition = enemyVisual.anchoredPosition;
-
-        TMP_Text enemyGlyph = RuntimeUiFactory.CreateText(
-            "EnemyGlyph",
-            enemyVisual,
-            "BOSS",
-            30,
-            Vector2.zero,
-            Vector2.one,
-            TextAlignmentOptions.Center,
-            Color.white);
-        enemyActorView = enemyVisual.gameObject.AddComponent<BattleActorView>();
-        enemyActorView.Initialize(enemyGlyph, Danger);
-    }
-
     private void BindEnemyActor(RectTransform enemyCard)
     {
         enemyActorRoot =
@@ -1097,9 +995,6 @@ public sealed class BattleHudUI
             : enemyVisual.GetComponent<Image>();
         if (enemyVisualImage != null)
             enemyVisualImage.raycastTarget = false;
-        enemyVisualBasePosition = enemyVisual == null
-            ? Vector2.zero
-            : enemyVisual.anchoredPosition;
         TMP_Text enemyGlyph =
             RuntimeUiBinder.FindText(enemyVisual, "EnemyGlyph");
         enemyActorView = enemyVisual == null
@@ -1109,66 +1004,15 @@ public sealed class BattleHudUI
             enemyActorView =
                 enemyVisual.gameObject.AddComponent<BattleActorView>();
         enemyActorView?.Initialize(enemyGlyph, Danger);
+        enemyMeleeMovement = enemyActorRoot == null
+            ? null
+            : enemyActorRoot.GetComponent<BattleMeleeMovementController>();
+        enemyMeleeMovement?.SetImpactAction(ResolveEnemyAttack);
     }
 
-    private void BuildEnemyPopups(RectTransform enemyCard)
+    private void ResolveEnemyAttack()
     {
-        enemyDamagePopup = RuntimeUiFactory.CreatePanel(
-            "EnemyDamagePopup",
-            enemyCard,
-            new Color32(0, 0, 0, 0),
-            BattleLayoutConfig.EnemyAnchor + new Vector2(-0.28f, 0.12f),
-            BattleLayoutConfig.EnemyAnchor + new Vector2(0.28f, 0.34f));
-        enemyDamageText = RuntimeUiFactory.CreateText(
-            "EnemyDamageLabel",
-            enemyDamagePopup,
-            "",
-            18,
-            new Vector2(0f, 0.64f),
-            new Vector2(1f, 1f),
-            TextAlignmentOptions.Center,
-            Gold);
-        enemyDamageNumberText = RuntimeUiFactory.CreateText(
-            "EnemyDamageNumber",
-            enemyDamagePopup,
-            "",
-            58,
-            new Vector2(0f, 0.04f),
-            new Vector2(1f, 0.78f),
-            TextAlignmentOptions.Center,
-            Gold);
-        GameFont.ApplyDamage(enemyDamageNumberText);
-        enemyDamagePopup.gameObject.SetActive(false);
-
-        rewardPopup = RuntimeUiFactory.CreatePanel(
-            "RewardPopup",
-            enemyCard,
-            new Color32(0, 0, 0, 0),
-            BattleLayoutConfig.EnemyAnchor + new Vector2(-0.24f, -0.13f),
-            BattleLayoutConfig.EnemyAnchor + new Vector2(0.24f, 0.07f));
-        rewardPopupText = RuntimeUiFactory.CreateText(
-            "RewardPopupLabel",
-            rewardPopup,
-            "",
-            18,
-            new Vector2(0f, 0.68f),
-            Vector2.one,
-            TextAlignmentOptions.Center,
-            Success);
-        rewardIconImage = RuntimeUiFactory.CreateSpriteImage(
-            "RewardGoldIcon",
-            rewardPopup,
-            PrototypeUiArt.GoldIcon,
-            new Vector2(0.08f, 0.16f),
-            new Vector2(0.28f, 0.64f));
-        rewardNumberText = new SpriteNumberText(
-            rewardPopup,
-            "RewardNumber",
-            NumberResourceRoot,
-            58f,
-            new Vector2(0.18f, 0f),
-            new Vector2(1f, 0.72f));
-        rewardPopup.gameObject.SetActive(false);
+        battleManager?.ResolveEnemyAttack();
     }
 
     private void BindEnemyPopups(RectTransform enemyCard)
@@ -1190,46 +1034,6 @@ public sealed class BattleHudUI
             RuntimeUiBinder.FindRect(enemyCard, "RewardNumber"),
             NumberResourceRoot,
             58f);
-    }
-
-    private void BuildCombatEffects(RectTransform enemyCard)
-    {
-        attackTrail = RuntimeUiFactory.CreatePanel(
-            "AttackTrail",
-            enemyCard,
-            new Color32(255, 255, 255, 0),
-            new Vector2(0.2f, 0.48f),
-            new Vector2(0.8f, 0.52f));
-        attackTrailImage = attackTrail.GetComponent<Image>();
-        attackTrail.localRotation = Quaternion.Euler(0f, 0f, -10f);
-        attackTrail.gameObject.SetActive(false);
-
-        skillProjectile = RuntimeUiFactory.CreatePanel(
-            "SkillProjectile",
-            enemyCard,
-            Accent,
-            Vector2.zero,
-            Vector2.zero);
-        skillProjectile.pivot = new Vector2(0.5f, 0.5f);
-        skillProjectile.sizeDelta = new Vector2(48f, 48f);
-        skillProjectileImage = skillProjectile.GetComponent<Image>();
-        skillProjectileImage.sprite = null;
-        skillProjectileImage.preserveAspect = true;
-        skillProjectileImage.raycastTarget = false;
-        skillProjectile.gameObject.SetActive(false);
-
-        BuildCompanionProjectiles(enemyCard);
-        BuildSparkles(enemyCard);
-
-        battleFlash = RuntimeUiFactory.CreatePanel(
-            "BattleFlash",
-            enemyCard,
-            new Color32(255, 255, 255, 0),
-            Vector2.zero,
-            Vector2.one);
-        battleFlashImage = battleFlash.GetComponent<Image>();
-        battleFlashImage.raycastTarget = false;
-        battleFlash.gameObject.SetActive(false);
     }
 
     private void BindCombatEffects(RectTransform enemyCard)
@@ -1283,160 +1087,6 @@ public sealed class BattleHudUI
             : battleFlash.GetComponent<Image>();
     }
 
-    private void BuildCompanionProjectiles(RectTransform enemyCard)
-    {
-        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
-        {
-            RectTransform trail = RuntimeUiFactory.CreatePanel(
-                $"CompanionProjectileTrail{slot + 1}",
-                enemyCard,
-                new Color32(255, 255, 255, 0),
-                Vector2.zero,
-                Vector2.zero);
-            trail.anchorMin = Vector2.zero;
-            trail.anchorMax = Vector2.zero;
-            trail.pivot = new Vector2(0.5f, 0.5f);
-            trail.sizeDelta = new Vector2(96f, 8f);
-            Image trailImage = trail.GetComponent<Image>();
-            trailImage.raycastTarget = false;
-            trail.gameObject.SetActive(false);
-            companionProjectileTrailRects[slot] = trail;
-            companionProjectileTrailImages[slot] = trailImage;
-
-            RectTransform projectile = RuntimeUiFactory.CreatePanel(
-                $"CompanionProjectile{slot + 1}",
-                enemyCard,
-                Accent,
-                Vector2.zero,
-                Vector2.zero);
-            projectile.anchorMin = Vector2.zero;
-            projectile.anchorMax = Vector2.zero;
-            projectile.pivot = new Vector2(0.5f, 0.5f);
-            projectile.sizeDelta = new Vector2(44f, 44f);
-            Image projectileImage = projectile.GetComponent<Image>();
-            projectileImage.sprite = null;
-            projectileImage.preserveAspect = true;
-            projectileImage.raycastTarget = false;
-            projectile.gameObject.SetActive(false);
-            companionProjectileRects[slot] = projectile;
-            companionProjectileImages[slot] = projectileImage;
-        }
-    }
-
-    private void BuildSparkles(RectTransform enemyCard)
-    {
-        for (int index = 0; index < SparkleCount; index++)
-        {
-            RectTransform sparkle = RuntimeUiFactory.CreatePanel(
-                $"HitSparkle{index + 1}",
-                enemyCard,
-                new Color32(255, 255, 255, 0),
-                Vector2.zero,
-                Vector2.zero);
-            sparkle.anchorMin = Vector2.zero;
-            sparkle.anchorMax = Vector2.zero;
-            sparkle.pivot = new Vector2(0.5f, 0.5f);
-            sparkle.sizeDelta = Vector2.one * 14f;
-            Image image = sparkle.GetComponent<Image>();
-            image.raycastTarget = false;
-            sparkle.gameObject.SetActive(false);
-            sparkleRects[index] = sparkle;
-            sparkleImages[index] = image;
-        }
-    }
-
-    private void BuildPlayerSide(
-        RectTransform actorLayer,
-        RectTransform effectLayer)
-    {
-        RuntimeUiFactory.CreateText(
-            "PlayerName",
-            actorLayer,
-            "SUPPORT SPARROW",
-            24,
-            new Vector2(0.03f, 0.35f),
-            new Vector2(0.24f, 0.4f),
-            TextAlignmentOptions.Left,
-            Accent);
-
-        playerActorRoot = CreateActorRoot(
-            actorLayer,
-            "SupportActorRoot",
-            "SupportShadow",
-            BattleLayoutConfig.SupportSparrowAnchor,
-            new Vector2(0.22f, 0.24f),
-            Success);
-        playerVisual = RuntimeUiFactory.CreatePanel(
-            "PlayerVisual",
-            playerActorRoot,
-            Accent,
-            new Vector2(0.08f, 0.12f),
-            new Vector2(0.92f, 1f));
-        playerVisualImage = playerVisual.GetComponent<Image>();
-        playerVisualImage.raycastTarget = false;
-        playerVisualBasePosition = playerVisual.anchoredPosition;
-
-        TMP_Text playerGlyph = RuntimeUiFactory.CreateText(
-            "PlayerGlyph",
-            playerVisual,
-            "PWR",
-            18,
-            Vector2.zero,
-            Vector2.one,
-            TextAlignmentOptions.Center,
-            Color.white);
-        playerActorView =
-            playerVisual.gameObject.AddComponent<BattleActorView>();
-        playerActorView.Initialize(playerGlyph, Accent);
-
-        powerChargePopup = RuntimeUiFactory.CreatePanel(
-            "PowerChargePopup",
-            effectLayer,
-            new Color32(0, 0, 0, 0),
-            new Vector2(0.03f, 0.42f),
-            new Vector2(0.39f, 0.56f));
-        powerChargePopupText = RuntimeUiFactory.CreateText(
-            "PowerChargePopupText",
-            powerChargePopup,
-            "",
-            28,
-            Vector2.zero,
-            Vector2.one,
-            TextAlignmentOptions.Center,
-            Success);
-        powerChargePopup.gameObject.SetActive(false);
-
-        playerDamagePopup = RuntimeUiFactory.CreatePanel(
-            "PlayerDamagePopup",
-            effectLayer,
-            new Color32(0, 0, 0, 0),
-            BattleLayoutConfig.SupportSparrowAnchor +
-                new Vector2(-0.22f, 0.11f),
-            BattleLayoutConfig.SupportSparrowAnchor +
-                new Vector2(0.22f, 0.29f));
-        playerDamageText = RuntimeUiFactory.CreateText(
-            "PlayerDamageLabel",
-            playerDamagePopup,
-            "",
-            14,
-            new Vector2(0f, 0.68f),
-            new Vector2(1f, 1f),
-            TextAlignmentOptions.Center,
-            Danger);
-        playerDamageNumberText = RuntimeUiFactory.CreateText(
-            "PlayerDamageNumber",
-            playerDamagePopup,
-            "",
-            42,
-            new Vector2(0f, 0f),
-            new Vector2(1f, 0.86f),
-            TextAlignmentOptions.Center,
-            Danger);
-        GameFont.ApplyDamage(playerDamageNumberText);
-        playerDamagePopup.gameObject.SetActive(false);
-
-    }
-
     private void BindPlayerSide(
         RectTransform actorLayer,
         RectTransform effectLayer)
@@ -1450,9 +1100,6 @@ public sealed class BattleHudUI
             : playerVisual.GetComponent<Image>();
         if (playerVisualImage != null)
             playerVisualImage.raycastTarget = false;
-        playerVisualBasePosition = playerVisual == null
-            ? Vector2.zero
-            : playerVisual.anchoredPosition;
         TMP_Text playerGlyph =
             RuntimeUiBinder.FindText(playerVisual, "PlayerGlyph");
         playerActorView = playerVisual == null
@@ -1476,45 +1123,6 @@ public sealed class BattleHudUI
             RuntimeUiBinder.FindText(effectLayer, "PlayerDamageNumber");
     }
 
-    private void BuildCompanionActors(RectTransform enemyCard)
-    {
-        for (int slot = 0; slot < CompanionManager.PartySize; slot++)
-        {
-            Vector2 anchor = BattleLayoutConfig.GetCompanionAnchor(slot);
-            RectTransform companionRoot = CreateActorRoot(
-                enemyCard,
-                $"CompanionActorRoot{slot + 1}",
-                $"CompanionShadow{slot + 1}",
-                anchor,
-                new Vector2(0.2f, 0.21f),
-                Accent);
-            RectTransform companionVisual = RuntimeUiFactory.CreatePanel(
-                $"CompanionVisual{slot + 1}",
-                companionRoot,
-                new Color32(255, 255, 255, 0),
-                new Vector2(0.08f, 0.14f),
-                new Vector2(0.92f, 1f));
-            companionVisual.GetComponent<Image>().raycastTarget = false;
-            companionVisualBasePositions[slot] =
-                companionVisual.anchoredPosition;
-            TMP_Text companionGlyph = RuntimeUiFactory.CreateText(
-                "Glyph",
-                companionVisual,
-                (slot + 1).ToString(),
-                20,
-                Vector2.zero,
-                Vector2.one,
-                TextAlignmentOptions.Center,
-                Color.white);
-            BattleActorView actorView =
-                companionVisual.gameObject.AddComponent<BattleActorView>();
-            actorView.Initialize(companionGlyph, PanelLight);
-            companionActorRoots[slot] = companionRoot;
-            companionActorViews[slot] = actorView;
-            companionVisualRects[slot] = companionVisual;
-        }
-    }
-
     private void BindCompanionActors(RectTransform enemyCard)
     {
         for (int slot = 0; slot < CompanionManager.PartySize; slot++)
@@ -1530,9 +1138,6 @@ public sealed class BattleHudUI
                 : companionVisual.GetComponent<Image>();
             if (companionImage != null)
                 companionImage.raycastTarget = false;
-            companionVisualBasePositions[slot] = companionVisual == null
-                ? Vector2.zero
-                : companionVisual.anchoredPosition;
             TMP_Text companionGlyph =
                 RuntimeUiBinder.FindText(companionVisual, "Glyph");
             BattleActorView actorView = companionVisual == null
@@ -1584,19 +1189,6 @@ public sealed class BattleHudUI
             root.SetAsLastSibling();
     }
 
-    private void BuildSkillControls()
-    {
-        skillControls = new BattleSkillControlsUI(
-            battleManager,
-            companionManager,
-            showToast,
-            PanelLight,
-            Accent,
-            Gold,
-            Success);
-        skillControls.Build(panel);
-    }
-
     private void BindSkillControls()
     {
         skillControls = new BattleSkillControlsUI(
@@ -1608,17 +1200,6 @@ public sealed class BattleHudUI
             Gold,
             Success);
         skillControls.Bind(panel);
-    }
-
-    private void BuildQuickButtons()
-    {
-        quickButtons = new BattleQuickButtonsUI(
-            onQuest,
-            onEvent,
-            onShop,
-            onEquipment,
-            Danger);
-        quickButtons.Build(panel);
     }
 
     private void BindQuickButtons()
@@ -1682,8 +1263,8 @@ public sealed class BattleHudUI
         playerDamagePopup.gameObject.SetActive(true);
     }
 
-    private void ShowPoleRepair(
-        int repairAmount,
+    private void ShowHeroHeal(
+        int healAmount,
         string label,
         float duration)
     {
@@ -1703,7 +1284,7 @@ public sealed class BattleHudUI
             ? string.Empty
             : label;
         playerDamageText.color = Success;
-        playerDamageNumberText.text = FormatCompactNumber(repairAmount, "+");
+        playerDamageNumberText.text = FormatCompactNumber(healAmount, "+");
         playerDamageNumberText.color = Success;
         SetTextAlpha(playerDamageNumberText, 1f);
         playerDamagePopup.gameObject.SetActive(true);
@@ -1833,6 +1414,131 @@ public sealed class BattleHudUI
         battleFlash.gameObject.SetActive(true);
     }
 
+    private void StartHeroHitEffect()
+    {
+        if (heroHitEffect == null ||
+            heroHitEffectImage == null ||
+            battleEffectLayer == null)
+        {
+            return;
+        }
+
+        heroHitEffectTimer = 0.28f;
+        BattleHudUiFactory.SetAnchoredPoint(
+            heroHitEffect,
+            battleEffectLayer,
+            GetSupportImpactAnchor() + new Vector2(0f, 0.12f));
+        heroHitEffect.localScale = Vector3.one * 0.65f;
+        heroHitEffectImage.color = Color.white;
+        heroHitEffect.SetAsLastSibling();
+        heroHitEffect.gameObject.SetActive(true);
+    }
+
+    private void UpdateHeroHitEffect()
+    {
+        if (heroHitEffect == null || heroHitEffectImage == null)
+            return;
+
+        bool active = heroHitEffectTimer > 0f;
+        heroHitEffect.gameObject.SetActive(active);
+        if (!active)
+            return;
+
+        float progress = 1f - Mathf.Clamp01(heroHitEffectTimer / 0.28f);
+        heroHitEffect.localScale = Vector3.one * Mathf.Lerp(
+            0.65f,
+            1.2f,
+            progress);
+        heroHitEffectImage.color = new Color(
+            1f,
+            1f,
+            1f,
+            Mathf.Lerp(1f, 0f, progress));
+    }
+
+    private void StartEnemyProjectile(EnemyCombatProfile profile)
+    {
+        if (enemyProjectile == null ||
+            enemyProjectileImage == null ||
+            battleEffectLayer == null)
+        {
+            ResolveEnemyAttack();
+            return;
+        }
+
+        BattleProjectileVisual projectile =
+            currentEnemyVisual?.GetProjectile(false);
+        float defaultSize = enemyProjectileDefaultSize.x > 0f
+            ? enemyProjectileDefaultSize.x
+            : 112f;
+        enemyProjectileDuration = projectile?.ResolveDuration(
+            profile.ProjectileDuration) ?? profile.ProjectileDuration;
+        enemyProjectileImage.sprite = projectile != null && projectile.HasSprite
+            ? projectile.sprite
+            : enemyProjectileDefaultSprite;
+        float size = projectile?.ResolveSize(defaultSize) ?? defaultSize;
+        enemyProjectile.sizeDelta = new Vector2(size, size);
+        enemyProjectileTimer = enemyProjectileDuration;
+        enemyProjectilePending = true;
+        enemyProjectileFrom = GetEnemyImpactAnchor();
+        enemyProjectileTo =
+            GetSupportImpactAnchor() + new Vector2(0f, 0.1f);
+        enemyProjectile.localScale = Vector3.one * 0.72f;
+        enemyProjectileImage.color = projectile?.ResolveTint(Color.white) ?? Color.white;
+        BattleHudUiFactory.SetAnchoredPoint(
+            enemyProjectile,
+            battleEffectLayer,
+            enemyProjectileFrom);
+        enemyProjectile.SetAsLastSibling();
+        enemyProjectile.gameObject.SetActive(true);
+    }
+
+    private void UpdateEnemyProjectile(float deltaTime)
+    {
+        if (!enemyProjectilePending)
+            return;
+
+        enemyProjectileTimer = Mathf.Max(
+            0f,
+            enemyProjectileTimer - deltaTime);
+        float progress = 1f - Mathf.Clamp01(
+            enemyProjectileTimer / enemyProjectileDuration);
+        progress = Mathf.SmoothStep(0f, 1f, progress);
+        if (enemyProjectile != null && enemyProjectileImage != null)
+        {
+            BattleHudUiFactory.SetAnchoredPoint(
+                enemyProjectile,
+                battleEffectLayer,
+                Vector2.Lerp(
+                    enemyProjectileFrom,
+                    enemyProjectileTo,
+                    progress));
+            enemyProjectile.localScale = Vector3.one * Mathf.Lerp(
+                0.72f,
+                1.08f,
+                Mathf.Sin(progress * Mathf.PI));
+            enemyProjectileImage.color = new Color(
+                1f,
+                1f,
+                1f,
+                Mathf.Lerp(0.7f, 1f, 1f - progress));
+        }
+
+        if (enemyProjectileTimer > 0f)
+            return;
+
+        StopEnemyProjectile();
+        ResolveEnemyAttack();
+    }
+
+    private void StopEnemyProjectile()
+    {
+        enemyProjectilePending = false;
+        enemyProjectileTimer = 0f;
+        if (enemyProjectile != null)
+            enemyProjectile.gameObject.SetActive(false);
+    }
+
     private void StartSparkles(
         Vector2 anchor,
         Color color,
@@ -1878,16 +1584,14 @@ public sealed class BattleHudUI
     {
         return GetActorFootAnchor(
             enemyVisual,
-            enemyActorRoot,
-            BattleLayoutConfig.EnemyAnchor);
+            enemyActorRoot);
     }
 
     private Vector2 GetSupportFootAnchor()
     {
         return GetActorFootAnchor(
             playerVisual,
-            playerActorRoot,
-            BattleLayoutConfig.SupportSparrowAnchor);
+            playerActorRoot);
     }
 
     private Vector2 GetCompanionFootAnchor(int slot)
@@ -1902,16 +1606,14 @@ public sealed class BattleHudUI
                 : null;
         return GetActorFootAnchor(
             visual,
-            root,
-            BattleLayoutConfig.GetCompanionAnchor(slot));
+            root);
     }
 
     private Vector2 GetActorFootAnchor(
         RectTransform visual,
-        RectTransform root,
-        Vector2 fallback)
+        RectTransform root)
     {
-        Vector2 rootAnchor = GetAnchorFoot(root, fallback);
+        Vector2 rootAnchor = GetAnchorFoot(root);
         RectTransform target = visual == null ? root : visual;
         return GetRectFootAnchor(target, rootAnchor);
     }
@@ -1942,12 +1644,10 @@ public sealed class BattleHudUI
                 footLocal.y));
     }
 
-    private static Vector2 GetAnchorFoot(
-        RectTransform root,
-        Vector2 fallback)
+    private static Vector2 GetAnchorFoot(RectTransform root)
     {
         if (root == null)
-            return fallback;
+            return Vector2.zero;
 
         return new Vector2(
             (root.anchorMin.x + root.anchorMax.x) * 0.5f,
@@ -2256,36 +1956,6 @@ public sealed class BattleHudUI
         bossWarningPanel.localScale = Vector3.one * pulse;
     }
 
-    private void UpdateCompanionAnimations()
-    {
-        for (int slot = 0; slot < companionVisualRects.Length; slot++)
-        {
-            RectTransform visual = companionVisualRects[slot];
-            if (visual == null)
-                continue;
-
-            float timer = companionSkillTimers[slot];
-            if (timer <= 0f)
-            {
-                visual.anchoredPosition =
-                    companionVisualBasePositions[slot];
-                visual.localScale = Vector3.one;
-                continue;
-            }
-
-            float duration = Mathf.Max(
-                0.01f,
-                companionAnimationDurations[slot]);
-            float progress = 1f - Mathf.Clamp01(timer / duration);
-            float arc = Mathf.Sin(progress * Mathf.PI);
-            visual.anchoredPosition =
-                companionVisualBasePositions[slot] +
-                new Vector2(arc * 12f, arc * 18f);
-            visual.localScale =
-                Vector3.one * (1f + arc * 0.12f);
-        }
-    }
-
     private void UpdateAttackTrail()
     {
         if (attackTrail == null || attackTrailImage == null)
@@ -2312,12 +1982,6 @@ public sealed class BattleHudUI
     {
         if (enemyVisual != null && enemyVisualImage != null)
         {
-            float shake = enemyHitShakeTimer > 0f
-                ? Mathf.Sin(enemyHitShakeTimer * 90f) *
-                  Mathf.Lerp(0f, 18f, enemyHitShakeTimer / 0.3f)
-                : 0f;
-            enemyVisual.anchoredPosition =
-                enemyVisualBasePosition + new Vector2(shake, 0f);
             float defeatProgress =
                 1f - Mathf.Clamp01(enemyDefeatPopTimer / 0.52f);
             float hitProgress =
@@ -2349,14 +2013,6 @@ public sealed class BattleHudUI
 
         if (playerVisual == null || playerVisualImage == null)
             return;
-
-        float lunge = playerAnimationTimer > 0.12f ? 18f : 0f;
-        float playerShake = playerHitShakeTimer > 0f
-            ? Mathf.Sin(playerHitShakeTimer * 85f) *
-              Mathf.Lerp(0f, 11f, playerHitShakeTimer / 0.28f)
-            : 0f;
-        playerVisual.anchoredPosition =
-            playerVisualBasePosition + new Vector2(lunge - playerShake, 0f);
         playerVisual.localScale = playerDefeatTimer > 0f
             ? Vector3.one * 0.55f
             : playerHitShakeTimer > 0f

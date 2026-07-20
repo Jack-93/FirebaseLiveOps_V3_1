@@ -20,8 +20,6 @@ public sealed class EquipmentPanelUI
     private RectTransform armorUpgradeFill;
     private Button weaponSelectorButton;
     private Button armorSelectorButton;
-    private TMP_Text weaponLevelLabel;
-    private TMP_Text armorLevelLabel;
     private TMP_Text weaponCostLabel;
     private TMP_Text armorCostLabel;
 
@@ -45,12 +43,10 @@ public sealed class EquipmentPanelUI
     public EquipmentPanelUI(
         RectTransform root,
         Action showMore,
-        Action upgradeWeapon,
-        Action upgradeArmor,
+        Action startEnhancement,
+        Action startOptionReset,
         Action equipNextWeapon,
         Action equipNextArmor,
-        Action rerollWeapon,
-        Action rerollArmor,
         bool usePrefab = true)
     {
         if (usePrefab &&
@@ -61,35 +57,29 @@ public sealed class EquipmentPanelUI
         {
             Bind(
                 showMore,
-                upgradeWeapon,
-                upgradeArmor,
+                startEnhancement,
+                startOptionReset,
                 equipNextWeapon,
-                equipNextArmor,
-                rerollWeapon,
-                rerollArmor);
+                equipNextArmor);
             return;
         }
 
         BuildGenerated(
             root,
             showMore,
-            upgradeWeapon,
-            upgradeArmor,
+            startEnhancement,
+            startOptionReset,
             equipNextWeapon,
-            equipNextArmor,
-            rerollWeapon,
-            rerollArmor);
+            equipNextArmor);
     }
 
     public void BuildGenerated(
         RectTransform root,
         Action showMore,
-        Action upgradeWeapon,
-        Action upgradeArmor,
+        Action startEnhancement,
+        Action startOptionReset,
         Action equipNextWeapon,
-        Action equipNextArmor,
-        Action rerollWeapon,
-        Action rerollArmor)
+        Action equipNextArmor)
     {
         panel = RuntimeUiFactory.CreatePanel(
             "EquipmentPanel",
@@ -165,7 +155,7 @@ public sealed class EquipmentPanelUI
             card,
             "Armor",
             "ARMOR",
-            "Pole Durability",
+            "Hero Health",
             Success,
             new Vector2(0.07f, 0.45f),
             new Vector2(0.93f, 0.62f));
@@ -225,40 +215,22 @@ public sealed class EquipmentPanelUI
             new Vector2(0.93f, 0.29f));
 
         RuntimeUiFactory.CreateButton(
-            "UpgradeWeaponButton",
+            "EnhancementButton",
             card,
             "\uBD80\uB9AC\uBD80\uB9AC \uAC15\uD654",
             new Vector2(0.07f, 0.08f),
             new Vector2(0.47f, 0.21f),
             Accent,
-            () => upgradeWeapon?.Invoke());
+            () => startEnhancement?.Invoke());
 
         RuntimeUiFactory.CreateButton(
-            "UpgradeArmorButton",
+            "OptionResetButton",
             card,
-            "\uBD80\uB9AC\uBD80\uB9AC \uAC15\uD654",
+            "\uC635\uC158 \uC7AC\uC124\uC815",
             new Vector2(0.53f, 0.08f),
             new Vector2(0.93f, 0.21f),
             Success,
-            () => upgradeArmor?.Invoke());
-
-        RuntimeUiFactory.CreateButton(
-            "RerollWeaponButton",
-            card,
-            "REROLL WEAPON",
-            new Vector2(0.07f, 0.01f),
-            new Vector2(0.47f, 0.07f),
-            Accent,
-            () => rerollWeapon?.Invoke());
-
-        RuntimeUiFactory.CreateButton(
-            "RerollArmorButton",
-            card,
-            "REROLL ARMOR",
-            new Vector2(0.53f, 0.01f),
-            new Vector2(0.93f, 0.07f),
-            Success,
-            () => rerollArmor?.Invoke());
+            () => startOptionReset?.Invoke());
     }
 
     public void Refresh(PlayerData data)
@@ -293,11 +265,15 @@ public sealed class EquipmentPanelUI
 
         RuntimeProgressBar.Set(
             weaponUpgradeFill,
-            data.weaponUpgradeLevel,
+            EquipmentManager.GetEnhancementLevel(
+                data,
+                EquipmentSlot.Weapon),
             20);
         RuntimeProgressBar.Set(
             armorUpgradeFill,
-            data.armorUpgradeLevel,
+            EquipmentManager.GetEnhancementLevel(
+                data,
+                EquipmentSlot.Armor),
             20);
         RefreshStarForceLabels(data);
     }
@@ -314,6 +290,12 @@ public sealed class EquipmentPanelUI
     {
         bool hasWeapon = !string.IsNullOrEmpty(data.equippedWeapon);
         bool hasArmor = !string.IsNullOrEmpty(data.equippedArmor);
+        int weaponEnhancement = EquipmentManager.GetEnhancementLevel(
+            data,
+            EquipmentSlot.Weapon);
+        int armorEnhancement = EquipmentManager.GetEnhancementLevel(
+            data,
+            EquipmentSlot.Armor);
         string weaponName = hasWeapon
             ? FormatEquipmentNameWithOptions(data, EquipmentSlot.Weapon)
             : LocalizationManager.Translate("None");
@@ -321,7 +303,7 @@ public sealed class EquipmentPanelUI
             ? FormatEquipmentNameWithOptions(data, EquipmentSlot.Armor)
             : LocalizationManager.Translate("None");
         string armorValueLabel = LocalizationManager.Text(
-            "Pole Durability",
+            "Hero Health",
             "\uC804\uBD07\uB300 \uB0B4\uAD6C\uB3C4");
         if (hasArmor)
         {
@@ -331,7 +313,7 @@ public sealed class EquipmentPanelUI
                     "\uD53C\uD574\uAC10\uC18C") +
                 " " +
                 EquipmentManager
-                    .GetArmorPoleDamageReductionPercent(data)
+                    .GetArmorHeroDamageReductionPercent(data)
                     .ToString("0.#") +
                 "%";
         }
@@ -343,12 +325,13 @@ public sealed class EquipmentPanelUI
                 EquipmentSlot.Weapon),
             weaponName,
             hasWeapon,
-            data.weaponUpgradeLevel,
+            weaponEnhancement,
             LocalizationManager.Translate("Attack"),
             EquipmentManager.GetWeaponAttack(data),
             hasWeapon
-                ? EquipmentManager.GetUpgradeCost(data.weaponUpgradeLevel)
-                : -1);
+                ? EquipmentManager.GetUpgradeCost(weaponEnhancement)
+                : -1,
+            EquipmentManager.GetEquipmentIcon(data.equippedWeapon));
         armorRow?.Refresh(
             GetSelectableSection(
                 LocalizationManager.Translate("ARMOR"),
@@ -356,12 +339,13 @@ public sealed class EquipmentPanelUI
                 EquipmentSlot.Armor),
             armorName,
             hasArmor,
-            data.armorUpgradeLevel,
+            armorEnhancement,
             armorValueLabel,
             EquipmentManager.GetArmorHealth(data),
             hasArmor
-                ? EquipmentManager.GetUpgradeCost(data.armorUpgradeLevel)
-                : -1);
+                ? EquipmentManager.GetUpgradeCost(armorEnhancement)
+                : -1,
+            EquipmentManager.GetEquipmentIcon(data.equippedArmor));
 
         SetSelectorInteractable(
             weaponSelectorButton,
@@ -375,18 +359,20 @@ public sealed class EquipmentPanelUI
 
     private void RefreshStarForceLabels(PlayerData data)
     {
-        SetText(weaponLevelLabel, "\uAC15\uD654");
-        SetText(armorLevelLabel, "\uAC15\uD654");
         SetText(
             weaponCostLabel,
             "\uC131\uACF5\uB960 " +
-            EquipmentManager.GetStarForceSuccessPercent(
-                data.weaponUpgradeLevel).ToString("0") + "%");
+                EquipmentManager.GetStarForceSuccessPercent(
+                EquipmentManager.GetEnhancementLevel(
+                    data,
+                    EquipmentSlot.Weapon)).ToString("0") + "%");
         SetText(
             armorCostLabel,
             "\uC131\uACF5\uB960 " +
-            EquipmentManager.GetStarForceSuccessPercent(
-                data.armorUpgradeLevel).ToString("0") + "%");
+                EquipmentManager.GetStarForceSuccessPercent(
+                EquipmentManager.GetEnhancementLevel(
+                    data,
+                    EquipmentSlot.Armor)).ToString("0") + "%");
     }
 
     private static string FormatEquipmentNameWithOptions(
@@ -407,12 +393,10 @@ public sealed class EquipmentPanelUI
 
     private void Bind(
         Action showMore,
-        Action upgradeWeapon,
-        Action upgradeArmor,
+        Action startEnhancement,
+        Action startOptionReset,
         Action equipNextWeapon,
-        Action equipNextArmor,
-        Action rerollWeapon,
-        Action rerollArmor)
+        Action equipNextArmor)
     {
         noEquipmentText =
             RuntimeUiBinder.FindText(panel, "EquipmentEmptyText");
@@ -422,10 +406,6 @@ public sealed class EquipmentPanelUI
             RuntimeUiBinder.FindText(panel, "EquipmentPowerLabelText");
         goldLabelText =
             RuntimeUiBinder.FindText(panel, "EquipmentGoldLabelText");
-        weaponLevelLabel =
-            RuntimeUiBinder.FindText(panel, "WeaponLevelLabel");
-        armorLevelLabel =
-            RuntimeUiBinder.FindText(panel, "ArmorLevelLabel");
         weaponCostLabel =
             RuntimeUiBinder.FindText(panel, "WeaponCostLabel");
         armorCostLabel =
@@ -449,22 +429,8 @@ public sealed class EquipmentPanelUI
                 panel,
                 "ArmorUpgradeProgressBar");
         Replace("EquipmentBackButton", showMore);
-        Replace("UpgradeWeaponButton", upgradeWeapon);
-        Replace("UpgradeArmorButton", upgradeArmor);
-        EnsureRerollButton(
-            "RerollWeaponButton",
-            "\uC635\uC158 \uC7AC\uC124\uC815",
-            new Vector2(0.07f, 0.01f),
-            new Vector2(0.47f, 0.07f),
-            Accent,
-            rerollWeapon);
-        EnsureRerollButton(
-            "RerollArmorButton",
-            "\uC635\uC158 \uC7AC\uC124\uC815",
-            new Vector2(0.53f, 0.01f),
-            new Vector2(0.93f, 0.07f),
-            Success,
-            rerollArmor);
+        Replace("EnhancementButton", startEnhancement);
+        Replace("OptionResetButton", startOptionReset);
         BindLoadoutSelector(
             "WeaponLoadoutRow",
             equipNextWeapon,
@@ -479,11 +445,21 @@ public sealed class EquipmentPanelUI
     {
         RectTransform row =
             RuntimeUiBinder.FindRect(panel, key + "LoadoutRow");
+        Image icon = RuntimeUiBinder.FindImage(
+            row,
+            key + "EquipmentIcon");
+
+        TMP_Text starText = RuntimeUiBinder.FindText(
+            row,
+            key + "LevelLabel");
+        ConfigureLoadoutRowLayout(row, key, starText);
         return new EquipmentLoadoutRowUI(
             row,
+            icon,
             RuntimeUiBinder.FindText(row, key + "SectionText"),
             RuntimeUiBinder.FindText(row, key + "NameText"),
             RuntimeUiBinder.FindText(row, key + "ValueLabelText"),
+            starText,
             RuntimeUiBinder.BindNumber(
                 row,
                 key + "LevelNumberText",
@@ -501,42 +477,48 @@ public sealed class EquipmentPanelUI
                 19f));
     }
 
+    private static void ConfigureLoadoutRowLayout(
+        RectTransform row,
+        string key,
+        TMP_Text starText)
+    {
+        SetAnchors(
+            RuntimeUiBinder.FindRect(row, key + "SectionText"),
+            new Vector2(0.2f, 0.56f),
+            new Vector2(0.37f, 0.92f));
+        SetAnchors(
+            RuntimeUiBinder.FindRect(row, key + "NameText"),
+            new Vector2(0.2f, 0.1f),
+            new Vector2(0.37f, 0.52f));
+        if (starText != null)
+        {
+            SetAnchors(
+                starText.rectTransform,
+                new Vector2(0.39f, 0.56f),
+                new Vector2(0.98f, 0.92f));
+            starText.alignment = TextAlignmentOptions.Center;
+            starText.color = Gold;
+        }
+    }
+
+    private static void SetAnchors(
+        RectTransform rect,
+        Vector2 anchorMin,
+        Vector2 anchorMax)
+    {
+        if (rect == null)
+            return;
+
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+    }
+
     private void Replace(string buttonName, Action action)
     {
         RuntimeUiBinder.ReplaceButtonAction(
             RuntimeUiBinder.FindButton(panel, buttonName),
-            () => action?.Invoke());
-    }
-
-    private void EnsureRerollButton(
-        string buttonName,
-        string label,
-        Vector2 anchorMin,
-        Vector2 anchorMax,
-        Color color,
-        Action action)
-    {
-        Button button = RuntimeUiBinder.FindButton(panel, buttonName);
-        if (button == null)
-        {
-            RectTransform card = RuntimeUiBinder.FindRect(
-                panel,
-                "EquipmentCard");
-            if (card == null)
-                return;
-
-            button = RuntimeUiFactory.CreateButton(
-                buttonName,
-                card,
-                label,
-                anchorMin,
-                anchorMax,
-                color,
-                () => action?.Invoke());
-        }
-
-        RuntimeUiBinder.ReplaceButtonAction(
-            button,
             () => action?.Invoke());
     }
 
@@ -565,9 +547,7 @@ public sealed class EquipmentPanelUI
         PlayerData data,
         EquipmentSlot slot)
     {
-        return EquipmentManager.GetOwnedEquipment(data, slot).Count > 1
-            ? section + " >"
-            : section;
+        return section + " >";
     }
 
     private static void SetSelectorInteractable(
@@ -576,10 +556,7 @@ public sealed class EquipmentPanelUI
         EquipmentSlot slot)
     {
         if (selectorButton != null)
-        {
-            selectorButton.interactable =
-                EquipmentManager.GetOwnedEquipment(data, slot).Count > 1;
-        }
+            selectorButton.interactable = data != null;
     }
 
     private static EquipmentLoadoutRowUI CreateLoadoutRow(
@@ -598,13 +575,20 @@ public sealed class EquipmentPanelUI
             anchorMin,
             anchorMax);
 
+        Image icon = RuntimeUiFactory.CreateSpriteImage(
+            key + "EquipmentIcon",
+            row,
+            null,
+            new Vector2(0.02f, 0.12f),
+            new Vector2(0.18f, 0.88f));
+
         TMP_Text sectionText = RuntimeUiFactory.CreateText(
             key + "SectionText",
             row,
             section,
             20,
-            new Vector2(0.02f, 0.56f),
-            new Vector2(0.28f, 0.92f),
+            new Vector2(0.2f, 0.56f),
+            new Vector2(0.37f, 0.92f),
             TextAlignmentOptions.Left,
             accent);
         TMP_Text nameText = RuntimeUiFactory.CreateText(
@@ -612,26 +596,26 @@ public sealed class EquipmentPanelUI
             row,
             "None",
             20,
-            new Vector2(0.02f, 0.1f),
-            new Vector2(0.36f, 0.52f),
+            new Vector2(0.2f, 0.1f),
+            new Vector2(0.37f, 0.52f),
             TextAlignmentOptions.Left,
             Color.white);
-        RuntimeUiFactory.CreateText(
+        TMP_Text starText = RuntimeUiFactory.CreateText(
             key + "LevelLabel",
             row,
-            "Lv.",
+            "-",
             18,
-            new Vector2(0.38f, 0.56f),
-            new Vector2(0.47f, 0.92f),
-            TextAlignmentOptions.Right,
-            MutedText);
+            new Vector2(0.39f, 0.56f),
+            new Vector2(0.98f, 0.92f),
+            TextAlignmentOptions.Center,
+            Gold);
         SpriteNumberText levelNumberText = new SpriteNumberText(
             row,
             key + "LevelNumberText",
             NumberResourceRoot,
             19f,
-            new Vector2(0.47f, 0.56f),
-            new Vector2(0.6f, 0.92f));
+            new Vector2(0.39f, 0.56f),
+            new Vector2(0.98f, 0.92f));
         TMP_Text valueLabelText = RuntimeUiFactory.CreateText(
             key + "ValueLabelText",
             row,
@@ -669,9 +653,11 @@ public sealed class EquipmentPanelUI
 
         return new EquipmentLoadoutRowUI(
             row,
+            icon,
             sectionText,
             nameText,
             valueLabelText,
+            starText,
             levelNumberText,
             valueNumberText,
             costNumberText);
@@ -692,29 +678,36 @@ public sealed class EquipmentPanelUI
     private sealed class EquipmentLoadoutRowUI
     {
         private readonly RectTransform root;
+        private readonly Image equipmentIcon;
         private readonly TMP_Text sectionText;
         private readonly TMP_Text nameText;
         private readonly TMP_Text valueLabelText;
+        private readonly TMP_Text starText;
         private readonly SpriteNumberText levelNumberText;
         private readonly SpriteNumberText valueNumberText;
         private readonly SpriteNumberText costNumberText;
 
         public EquipmentLoadoutRowUI(
             RectTransform root,
+            Image equipmentIcon,
             TMP_Text sectionText,
             TMP_Text nameText,
             TMP_Text valueLabelText,
+            TMP_Text starText,
             SpriteNumberText levelNumberText,
             SpriteNumberText valueNumberText,
             SpriteNumberText costNumberText)
         {
             this.root = root;
+            this.equipmentIcon = equipmentIcon;
             this.sectionText = sectionText;
             this.nameText = nameText;
             this.valueLabelText = valueLabelText;
+            this.starText = starText;
             this.levelNumberText = levelNumberText;
             this.valueNumberText = valueNumberText;
             this.costNumberText = costNumberText;
+            this.levelNumberText?.SetActive(false);
         }
 
         public void SetActive(bool active)
@@ -730,19 +723,38 @@ public sealed class EquipmentPanelUI
             int level,
             string valueLabel,
             int value,
-            int nextCost)
+            int nextCost,
+            Sprite icon)
         {
             SetText(sectionText, section);
             SetText(nameText, itemName);
             SetText(valueLabelText, valueLabel);
-            levelNumberText?.SetText(hasItem
-                ? CompactNumberFormatter.Format(level)
-                : "-");
+            SetText(
+                starText,
+                hasItem ? GetStarText(level) : "-");
+            if (equipmentIcon != null)
+            {
+                equipmentIcon.sprite = icon;
+                equipmentIcon.color = icon == null
+                    ? Color.clear
+                    : Color.white;
+            }
             valueNumberText?.SetText(
                 CompactNumberFormatter.Format(value, "+"));
             costNumberText?.SetText(nextCost >= 0
                 ? CompactNumberFormatter.Format(nextCost)
                 : "-");
+        }
+
+        private static string GetStarText(int level)
+        {
+            int starCount = Mathf.Clamp(
+                level,
+                0,
+                GameBalanceConfig.EquipmentStarForceMaxLevel);
+            return starCount <= 0
+                ? "\u2606"
+                : new string('\u2605', starCount);
         }
     }
 }

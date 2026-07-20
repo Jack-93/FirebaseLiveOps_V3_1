@@ -58,6 +58,7 @@ public class PlayerData
     public int armorUpgradeLevel;
     public int weaponStarForceDowngradeFails;
     public int armorStarForceDowngradeFails;
+    public bool equipmentInstanceEnhancementsMigrated;
     public string dailyQuestDate;
     public int dailyQuestKills;
     public bool dailyQuestClaimed;
@@ -129,6 +130,7 @@ public class PlayerData
         armorUpgradeLevel = 0;
         weaponStarForceDowngradeFails = 0;
         armorStarForceDowngradeFails = 0;
+        equipmentInstanceEnhancementsMigrated = false;
         dailyQuestDate = "";
         dailyQuestKills = 0;
         dailyQuestClaimed = false;
@@ -238,6 +240,14 @@ public class PlayerData
         {
             if (instance.rolledOptions == null)
                 instance.rolledOptions = new List<EquipmentRolledOption>();
+            instance.enhancementLevel = System.Math.Max(
+                0,
+                System.Math.Min(
+                    GameBalanceConfig.EquipmentStarForceMaxLevel,
+                    instance.enhancementLevel));
+            instance.starForceDowngradeFails = System.Math.Max(
+                0,
+                instance.starForceDowngradeFails);
         }
 
         flightEquipmentCoins = System.Math.Max(0, flightEquipmentCoins);

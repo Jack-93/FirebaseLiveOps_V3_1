@@ -919,7 +919,10 @@ public static class BattleArtPipelineTools
 
     private static bool ShouldUseAnimationCue(BattleAnimationCue cue)
     {
-        return cue != BattleAnimationCue.Hit;
+        return cue != BattleAnimationCue.Hit &&
+            cue != BattleAnimationCue.SkillLeft &&
+            cue != BattleAnimationCue.SkillCenter &&
+            cue != BattleAnimationCue.SkillRight;
     }
 
     private static string FormatReady(bool ready)

@@ -8,6 +8,12 @@ public static class PrototypeBattleArt
     private const string EnemyRoot = "PrototypeArt/Enemies/";
     private const string EnemyAnimationRoot =
         EnemyRoot + "Animations/";
+    private const string ProductionEnemyAnimationRoot =
+        "Battle/Enemies/Animations/";
+    private const string ProductionEnemyAnimatorRoot =
+        "Battle/Enemies/";
+    private const string ProductionEnemyProjectileRoot =
+        "Battle/Enemies/Projectiles/";
     private const string SupportHeroPath =
         "PrototypeArt/Heroes/SupportSparrow";
     private const string FallbackBackground =
@@ -108,6 +114,106 @@ public static class PrototypeBattleArt
         return HasIdleAnimation(animations) ? animations : null;
     }
 
+    public static BattleActorVisualSet GetMeleeCatVisual()
+    {
+        Dictionary<BattleAnimationCue, Sprite[]> animations =
+            LoadProductionEnemyAnimationSet("CatMelee_1");
+        if (!HasIdleAnimation(animations))
+            return null;
+
+        Sprite[] idleFrames = animations[BattleAnimationCue.Idle];
+        RuntimeAnimatorController controller =
+            Resources.Load<RuntimeAnimatorController>(
+                ProductionEnemyAnimatorRoot + "CatMelee_1/CatMelee_1");
+        if (controller != null)
+        {
+            return new BattleActorVisualSet
+            {
+                sprite = idleFrames[0],
+                animatorController = controller
+            };
+        }
+
+        return BattleActorVisualSet.FromPrototype(idleFrames[0], animations);
+    }
+
+    public static BattleActorVisualSet GetMageCatVisual()
+    {
+        Dictionary<BattleAnimationCue, Sprite[]> animations =
+            LoadProductionEnemyAnimationSet("CatMage_1");
+        if (!HasIdleAnimation(animations))
+            return null;
+
+        Sprite[] idleFrames = animations[BattleAnimationCue.Idle];
+        RuntimeAnimatorController controller =
+            Resources.Load<RuntimeAnimatorController>(
+                ProductionEnemyAnimatorRoot + "CatMage_1/CatMage_1");
+        BattleActorVisualSet visual = controller == null
+            ? BattleActorVisualSet.FromPrototype(idleFrames[0], animations)
+            : new BattleActorVisualSet
+            {
+                sprite = idleFrames[0],
+                animatorController = controller
+            };
+        Sprite projectile = Resources.Load<Sprite>(
+            ProductionEnemyProjectileRoot + "CatMage_1_ArcaneBolt");
+        visual.basicProjectile = new BattleProjectileVisual
+        {
+            sprite = projectile,
+            tint = Color.white,
+            duration = 0.62f,
+            size = 112f
+        };
+        return visual;
+    }
+
+    public static BattleActorVisualSet GetDashCatVisual()
+    {
+        Dictionary<BattleAnimationCue, Sprite[]> animations =
+            LoadProductionEnemyAnimationSet("CatDash_1");
+        if (!HasIdleAnimation(animations))
+            return null;
+
+        Sprite[] idleFrames = animations[BattleAnimationCue.Idle];
+        RuntimeAnimatorController controller =
+            Resources.Load<RuntimeAnimatorController>(
+                ProductionEnemyAnimatorRoot + "CatDash_1/CatDash_1");
+        if (controller != null)
+        {
+            return new BattleActorVisualSet
+            {
+                sprite = idleFrames[0],
+                animatorController = controller
+            };
+        }
+
+        return BattleActorVisualSet.FromPrototype(idleFrames[0], animations);
+    }
+
+    public static BattleActorVisualSet GetBossCatCerberusVisual()
+    {
+        const string enemyKey = "BossCatCerberus";
+        Dictionary<BattleAnimationCue, Sprite[]> animations =
+            LoadProductionEnemyAnimationSet(enemyKey);
+        if (!HasIdleAnimation(animations))
+            return null;
+
+        Sprite[] idleFrames = animations[BattleAnimationCue.Idle];
+        RuntimeAnimatorController controller =
+            Resources.Load<RuntimeAnimatorController>(
+                ProductionEnemyAnimatorRoot + enemyKey + "/" + enemyKey);
+        if (controller != null)
+        {
+            return new BattleActorVisualSet
+            {
+                sprite = idleFrames[0],
+                animatorController = controller
+            };
+        }
+
+        return BattleActorVisualSet.FromPrototype(idleFrames[0], animations);
+    }
+
     private static Sprite LoadSprite(string path, string fallbackPath)
     {
         if (string.IsNullOrEmpty(path))
@@ -159,6 +265,46 @@ public static class PrototypeBattleArt
         }
 
         AnimationCache[enemyKey] = animations;
+        return animations;
+    }
+
+    private static Dictionary<BattleAnimationCue, Sprite[]>
+        LoadProductionEnemyAnimationSet(string enemyKey)
+    {
+        if (string.IsNullOrEmpty(enemyKey))
+            return null;
+
+        string cacheKey = "Production/" + enemyKey;
+        if (AnimationCache.TryGetValue(cacheKey, out var cached))
+            return cached;
+
+        Dictionary<BattleAnimationCue, Sprite[]> animations =
+            new Dictionary<BattleAnimationCue, Sprite[]>();
+        BattleAnimationCue[] cues =
+        {
+            BattleAnimationCue.Idle,
+            BattleAnimationCue.Move,
+            BattleAnimationCue.Attack,
+            BattleAnimationCue.Death,
+            BattleAnimationCue.SkillLeft,
+            BattleAnimationCue.SkillCenter,
+            BattleAnimationCue.SkillRight
+        };
+        foreach (BattleAnimationCue cue in cues)
+        {
+            Sprite[] frames = Resources.LoadAll<Sprite>(
+                ProductionEnemyAnimationRoot + enemyKey + "/" + cue);
+            if (frames == null || frames.Length == 0)
+                continue;
+
+            Array.Sort(
+                frames,
+                (left, right) =>
+                    string.CompareOrdinal(left.name, right.name));
+            animations[cue] = frames;
+        }
+
+        AnimationCache[cacheKey] = animations;
         return animations;
     }
 

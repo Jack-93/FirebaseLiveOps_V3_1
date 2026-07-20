@@ -36,11 +36,9 @@ public class CharacterData : ScriptableObject
     public float skillDamageBuffPercent;
     public float skillDamageBuffDuration = 10f;
     [FormerlySerializedAs("skillHealPercent")]
-    [FormerlySerializedAs("lineRepairPercent")]
-    public float poleRepairPercent = 0.35f;
+    public float heroHealPercent = 0.35f;
     [FormerlySerializedAs("healthPercentBonus")]
-    [FormerlySerializedAs("lineDefensePercentBonus")]
-    public float poleDurabilityPercentBonus;
+    public float heroHealthPercentBonus;
 
     public BattleActorVisualSet ResolveBattleVisual()
     {

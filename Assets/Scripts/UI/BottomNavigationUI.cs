@@ -10,6 +10,7 @@ public enum BottomNavigationTab
     Gacha,
     Collection,
     Equipment,
+    Supplies,
     More
 }
 
@@ -21,6 +22,7 @@ public sealed class BottomNavigationUI
     private Button gachaButton;
     private Button collectionButton;
     private Button equipmentButton;
+    private Button suppliesButton;
     private Button moreButton;
 
     public GameObject GameObject => bottom == null ? null : bottom.gameObject;
@@ -45,6 +47,7 @@ public sealed class BottomNavigationUI
         Action showGacha,
         Action showCollection,
         Action showEquipment,
+        Action showSupplies,
         Action showMore,
         bool usePrefab = true)
     {
@@ -60,6 +63,7 @@ public sealed class BottomNavigationUI
                 showGacha,
                 showCollection,
                 showEquipment,
+                showSupplies,
                 showMore);
             return;
         }
@@ -71,6 +75,7 @@ public sealed class BottomNavigationUI
             showGacha,
             showCollection,
             showEquipment,
+            showSupplies,
             showMore);
     }
 
@@ -81,6 +86,7 @@ public sealed class BottomNavigationUI
         Action showGacha,
         Action showCollection,
         Action showEquipment,
+        Action showSupplies,
         Action showMore)
     {
         bottom = RuntimeUiFactory.CreatePanel(
@@ -95,7 +101,7 @@ public sealed class BottomNavigationUI
             bottom,
             "BATTLE",
             new Vector2(0.015f, 0.08f),
-            new Vector2(0.16f, 0.92f),
+            new Vector2(0.14f, 0.92f),
             PanelLight,
             () => showBattle?.Invoke());
 
@@ -103,8 +109,8 @@ public sealed class BottomNavigationUI
             "GrowthNav",
             bottom,
             "GROWTH",
-            new Vector2(0.175f, 0.08f),
-            new Vector2(0.32f, 0.92f),
+            new Vector2(0.15f, 0.08f),
+            new Vector2(0.28f, 0.92f),
             PanelLight,
             () => showGrowth?.Invoke());
         GrowthBadge = CreateBadge(growthButton, "GrowthNavBadge");
@@ -113,8 +119,8 @@ public sealed class BottomNavigationUI
             "GachaNav",
             bottom,
             "GACHA",
-            new Vector2(0.335f, 0.08f),
-            new Vector2(0.48f, 0.92f),
+            new Vector2(0.29f, 0.08f),
+            new Vector2(0.42f, 0.92f),
             Accent,
             () => showGacha?.Invoke());
         GachaBadge = CreateBadge(gachaButton, "GachaNavBadge");
@@ -123,8 +129,8 @@ public sealed class BottomNavigationUI
             "CollectionNav",
             bottom,
             "COMPANIONS",
-            new Vector2(0.495f, 0.08f),
-            new Vector2(0.64f, 0.92f),
+            new Vector2(0.43f, 0.08f),
+            new Vector2(0.56f, 0.92f),
             PanelLight,
             () => showCollection?.Invoke());
         CollectionBadge = CreateBadge(
@@ -134,17 +140,26 @@ public sealed class BottomNavigationUI
         equipmentButton = RuntimeUiFactory.CreateButton(
             "EquipmentNav",
             bottom,
-            "EQUIP",
-            new Vector2(0.655f, 0.08f),
-            new Vector2(0.8f, 0.92f),
+            "\uC637\uC785\uD788\uAE30",
+            new Vector2(0.57f, 0.08f),
+            new Vector2(0.7f, 0.92f),
             PanelLight,
             () => showEquipment?.Invoke());
+
+        suppliesButton = RuntimeUiFactory.CreateButton(
+            "SuppliesNav",
+            bottom,
+            "\uBE44\uD589\uB2E8\n\uBB3C\uC790",
+            new Vector2(0.71f, 0.08f),
+            new Vector2(0.84f, 0.92f),
+            PanelLight,
+            () => showSupplies?.Invoke());
 
         moreButton = RuntimeUiFactory.CreateButton(
             "MoreNav",
             bottom,
             "MORE",
-            new Vector2(0.815f, 0.08f),
+            new Vector2(0.85f, 0.08f),
             new Vector2(0.985f, 0.92f),
             PanelLight,
             () => showMore?.Invoke());
@@ -169,6 +184,9 @@ public sealed class BottomNavigationUI
             equipmentButton,
             active == BottomNavigationTab.Equipment);
         SetNavigationColor(
+            suppliesButton,
+            active == BottomNavigationTab.Supplies);
+        SetNavigationColor(
             moreButton,
             active == BottomNavigationTab.More);
     }
@@ -179,6 +197,7 @@ public sealed class BottomNavigationUI
         Action showGacha,
         Action showCollection,
         Action showEquipment,
+        Action showSupplies,
         Action showMore)
     {
         battleButton = RuntimeUiBinder.FindButton(bottom, "BattleNav");
@@ -188,6 +207,8 @@ public sealed class BottomNavigationUI
             RuntimeUiBinder.FindButton(bottom, "CollectionNav");
         equipmentButton =
             RuntimeUiBinder.FindButton(bottom, "EquipmentNav");
+        suppliesButton =
+            RuntimeUiBinder.FindButton(bottom, "SuppliesNav");
         moreButton = RuntimeUiBinder.FindButton(bottom, "MoreNav");
 
         RuntimeUiBinder.ReplaceButtonAction(
@@ -205,6 +226,9 @@ public sealed class BottomNavigationUI
         RuntimeUiBinder.ReplaceButtonAction(
             equipmentButton,
             () => showEquipment?.Invoke());
+        RuntimeUiBinder.ReplaceButtonAction(
+            suppliesButton,
+            () => showSupplies?.Invoke());
         RuntimeUiBinder.ReplaceButtonAction(
             moreButton,
             () => showMore?.Invoke());

@@ -93,5 +93,5 @@ MonoBehaviour:
   skillEffect: 0
   basicAttackMultiplier: 0.55
   skillDamageMultiplier: 1.6
-  lineRepairPercent: 0.35
-  lineDefensePercentBonus: 25
+  heroHealPercent: 0.35
+  heroHealthPercentBonus: 25

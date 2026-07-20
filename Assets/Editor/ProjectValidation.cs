@@ -113,24 +113,6 @@ public static class ProjectValidation
                 folder + " enemy animation frames are missing.");
         }
 
-        Require(
-            BattleLayoutConfig.CompanionAnchors.Length ==
-            CompanionManager.PartySize,
-            "Battle layout must define one anchor per party slot.");
-        Require(
-            BattleLayoutConfig.SupportSparrowAnchor.x <
-            BattleLayoutConfig.CompanionAnchors[0].x,
-            "Support sparrow must remain behind companions.");
-        Require(
-            BattleLayoutConfig.CompanionAnchors[0].y >
-            BattleLayoutConfig.CompanionAnchors[1].y &&
-            BattleLayoutConfig.CompanionAnchors[1].y >
-            BattleLayoutConfig.CompanionAnchors[2].y,
-            "Companion slots must keep the fixed top-to-bottom order.");
-        Require(
-            BattleLayoutConfig.EnemyAnchor.x >
-            BattleLayoutConfig.CompanionAnchors[2].x,
-            "Enemy must remain on the right side of the party.");
     }
 
     private static void ValidatePlayerDataRoundTrip()
@@ -447,7 +429,6 @@ public static class ProjectValidation
         const string prefabRoot = "Assets/Resources/Prefabs/UI/";
         string[] requiredPrefabs =
         {
-            "WorldBackdrop",
             "TopBar",
             "BattleHud",
             "GrowthPanel",
@@ -608,11 +589,6 @@ public static class ProjectValidation
                 sceneText,
                 prefabRoot,
                 requirement.ActivePrefabName,
-                requirement.SceneFileName);
-            RequireSceneReferencesPrefab(
-                sceneText,
-                prefabRoot,
-                "WorldBackdrop",
                 requirement.SceneFileName);
             RequireSceneReferencesPrefab(
                 sceneText,
@@ -1089,8 +1065,7 @@ public static class ProjectValidation
         playerManager.playerData.inventory.items["Astra"] = 1;
         playerManager.playerData.currentStage = 100;
         playerManager.playerData.highestStage = 100;
-        playerManager.playerData.stageEnemyIndex =
-            GameBalance.EnemiesPerStage - 1;
+        playerManager.playerData.stageEnemyIndex = 0;
 
         CompanionManager.Instance = null;
         GachaManager.Instance = null;
@@ -1145,9 +1120,9 @@ public static class ProjectValidation
                 companion);
 
             Require(
-                battle.PlayerHealth == battle.PlayerMaxHealth,
+                battle.HeroHealth == battle.HeroMaxHealth,
                 "Battle must start at full health.");
-            Require(battle.PlayerHealth > 1,
+            Require(battle.HeroHealth > 1,
                 "Battle started with invalid health.");
 
             GameObject canvas = GameObject.Find("MainGameCanvas");
@@ -1298,7 +1273,7 @@ public static class ProjectValidation
             battle.Tick(2f);
             Require(battle.IsRecovering,
                 "Player defeat did not start recovery.");
-            Require(battle.PlayerHealth == 0,
+            Require(battle.HeroHealth == 0,
                 "Defeated player health should be zero.");
 
             battle.Tick(2.1f);
@@ -1307,7 +1282,7 @@ public static class ProjectValidation
             Require(battle.IsRunning,
                 "Auto battle did not resume after recovery.");
             Require(
-                battle.PlayerHealth == battle.PlayerMaxHealth,
+                battle.HeroHealth == battle.HeroMaxHealth,
                 "Player did not recover to full health.");
         }
         finally

@@ -22,13 +22,15 @@ public class BattleManager : MonoBehaviour
     public event Action<int> OnEnemyDefeatedVisual;
     public event Action<int> OnStageCleared;
     public event Action<int, CharacterData, int> OnCompanionBasicAttackPerformed;
+    public event Action<EnemyCombatProfile> OnEnemyAttackStarted;
     public event Action<int> OnEnemyAttackPerformed;
-    public event Action OnPlayerDefeated;
-    public event Action<int> OnPoleDamaged;
-    public event Action OnPoleDestroyed;
+    public event Action OnHeroDefeated;
+    public event Action OnHeroRecovered;
+    public event Action<int> OnHeroDamaged;
     public event Action<int, CharacterData, int> OnCompanionSkillUsed;
-    public event Action<BossPatternDefinition, float> OnBossPatternWarning;
-    public event Action<BossPatternDefinition, int> OnBossPatternUsed;
+    public event Action<BossPatternRuntime> OnBossPatternWarning;
+    public event Action<BossPatternRuntime> OnBossPatternCast;
+    public event Action<BossPatternRuntime, int> OnBossPatternUsed;
     public event Action OnBossChallengeFailed;
     public event Action OnPowerChargePerformed;
     public event Action<float, float> OnPowerCharged;
@@ -36,19 +38,18 @@ public class BattleManager : MonoBehaviour
     public bool IsInitialized { get; private set; }
     public bool IsRunning { get; private set; }
     public bool IsRecovering => isRecovering;
-    public bool IsPoleDeathPlaying => isPoleDeathPlaying;
+    public bool IsHeroDefeatPlaying => isHeroDefeatPlaying;
     public bool IsBoss { get; private set; }
-    public int PlayerHealth { get; private set; }
-    public int PlayerMaxHealth { get; private set; }
-    public int PoleDurability => PlayerHealth;
-    public int PoleMaxDurability => PlayerMaxHealth;
-    public bool IsPoleDestroyed =>
-        (isPoleDeathPlaying || isRecovering) && PlayerHealth <= 0;
+    public int HeroHealth { get; private set; }
+    public int HeroMaxHealth { get; private set; }
+    public bool IsHeroDefeated =>
+        (isHeroDefeatPlaying || isRecovering) && HeroHealth <= 0;
     public int EnemyHealth { get; private set; }
     public int EnemyMaxHealth { get; private set; }
     public int LastPlayerDamage { get; private set; }
     public int LastEnemyDamage { get; private set; }
     public bool LastDefeatedEnemyWasBoss { get; private set; }
+    public EnemyCombatProfile CurrentEnemyCombatProfile { get; private set; }
     public float PowerCharge { get; private set; }
     public float PowerChargeMax => PowerChargeLimit;
     public float PowerChargeRatio =>
@@ -76,15 +77,20 @@ public class BattleManager : MonoBehaviour
     private PlayerData Data => PlayerDataManager.Instance?.playerData;
 
     private float enemyAttackTimer;
-    private float poleDeathTimer;
+    private float enemyMeleeAttackTimeout;
+    private float heroDefeatTimer;
     private float recoveryTimer;
-    private bool isPoleDeathPlaying;
+    private bool isHeroDefeatPlaying;
     private bool isRecovering;
+    private bool isEnemyMeleeAttackPending;
     private bool isBossPatternWarning;
+    private bool isBossPatternCasting;
     private float bossPatternTimer;
     private float bossPatternWarningTimer;
+    private float bossPatternImpactTimer;
     private int bossPatternIndex;
-    private BossPatternDefinition pendingBossPattern;
+    private BossPatternRuntime pendingBossPattern;
+    private Vector2 heroBattlePosition = new Vector2(0.25f, 0.5f);
     private int enemySpawnSequence;
     private List<BossPatternDefinition> bossPatterns;
     private readonly float[] skillCooldowns =
@@ -98,8 +104,9 @@ public class BattleManager : MonoBehaviour
     private const float PowerChargePerTap = 5f;
     private const float SkillPowerCost = 35f;
     private const float SkillCooldownBoostOnFullCharge = 1.25f;
-    private const float PoleDeathAnimationSeconds = 1.55f;
-    private const float PoleRecoverySeconds = 2f;
+    private const float HeroDefeatAnimationSeconds = 1.55f;
+    private const float HeroRecoverySeconds = 2f;
+    private const float EnemyMeleeAttackTimeoutSeconds = 2.5f;
 
     public void Initialize()
     {
@@ -109,8 +116,8 @@ public class BattleManager : MonoBehaviour
                 "[Battle] PlayerData is not ready.");
 
         data.EnsureInitialized();
-        PlayerMaxHealth = GameBalance.GetPoleMaxDurability(data);
-        PlayerHealth = PlayerMaxHealth;
+        HeroMaxHealth = GameBalance.GetHeroMaxHealth(data);
+        HeroHealth = HeroMaxHealth;
         partyDamageBuffTimer = 0f;
         partyDamageBuffMultiplier = 1f;
         IsInitialized = true;
@@ -159,24 +166,24 @@ public class BattleManager : MonoBehaviour
         if (data == null)
             return;
 
-        int previousMax = Math.Max(1, PlayerMaxHealth);
-        float healthRatio = PlayerHealth / (float)previousMax;
+        int previousMax = Math.Max(1, HeroMaxHealth);
+        float healthRatio = HeroHealth / (float)previousMax;
 
-        PlayerMaxHealth = GameBalance.GetPoleMaxDurability(data);
+        HeroMaxHealth = GameBalance.GetHeroMaxHealth(data);
         if (!IsInitialized)
         {
-            PlayerHealth = PlayerMaxHealth;
+            HeroHealth = HeroMaxHealth;
         }
-        else if (IsPoleDestroyed)
+        else if (IsHeroDefeated)
         {
-            PlayerHealth = 0;
+            HeroHealth = 0;
         }
         else
         {
-            PlayerHealth = Mathf.Clamp(
-                Mathf.RoundToInt(PlayerMaxHealth * healthRatio),
+            HeroHealth = Mathf.Clamp(
+                Mathf.RoundToInt(HeroMaxHealth * healthRatio),
                 1,
-                PlayerMaxHealth);
+                HeroMaxHealth);
         }
 
         NotifyChanged();
@@ -184,7 +191,7 @@ public class BattleManager : MonoBehaviour
 
     private void Update()
     {
-        Tick(Time.deltaTime);
+        Tick(BattleTempo.ScaleDeltaTime(Time.deltaTime));
     }
 
     public void Tick(float deltaTime)
@@ -192,11 +199,11 @@ public class BattleManager : MonoBehaviour
         if (!IsInitialized)
             return;
 
-        if (isPoleDeathPlaying)
+        if (isHeroDefeatPlaying)
         {
-            poleDeathTimer -= deltaTime;
-            if (poleDeathTimer <= 0f)
-                BeginPoleRecovery();
+            heroDefeatTimer -= deltaTime;
+            if (heroDefeatTimer <= 0f)
+                BeginHeroRecovery();
 
             return;
         }
@@ -205,7 +212,7 @@ public class BattleManager : MonoBehaviour
         {
             recoveryTimer -= deltaTime;
             if (recoveryTimer <= 0f)
-                RecoverPole();
+                RestartCurrentStage();
 
             return;
         }
@@ -222,31 +229,49 @@ public class BattleManager : MonoBehaviour
                 return;
             }
 
-            bossPatternTimer -= deltaTime;
             if (isBossPatternWarning)
             {
                 bossPatternWarningTimer -= deltaTime;
                 if (bossPatternWarningTimer <= 0f)
-                    UsePendingBossPattern();
+                    CastPendingBossPattern();
             }
-            else if (bossPatternTimer <= 0f)
+            else if (isBossPatternCasting)
             {
-                WarnBossPattern();
+                bossPatternImpactTimer -= deltaTime;
+                if (bossPatternImpactTimer <= 0f)
+                    ResolvePendingBossPattern();
+            }
+            else
+            {
+                bossPatternTimer -= deltaTime;
+                if (bossPatternTimer <= 0f)
+                    WarnBossPattern();
             }
 
-            if (isRecovering)
+            if (!IsRunning || isRecovering || isHeroDefeatPlaying)
                 return;
         }
 
-        enemyAttackTimer -= deltaTime;
         TickPartyDamageBuff(deltaTime);
         TickCompanionBasicAttacks(deltaTime);
         TickCompanionSkillCooldowns(deltaTime);
 
-        if (!isRecovering && EnemyHealth > 0 && enemyAttackTimer <= 0f)
+        if (IsBoss)
+            return;
+
+        enemyAttackTimer -= deltaTime;
+
+        if (isEnemyMeleeAttackPending)
         {
-            EnemyAttack();
-            enemyAttackTimer = IsBoss ? 1.15f : 1.55f;
+            enemyMeleeAttackTimeout -= deltaTime;
+            if (enemyMeleeAttackTimeout <= 0f)
+                ResolveEnemyAttack();
+        }
+        else if (!isRecovering && EnemyHealth > 0 && enemyAttackTimer <= 0f)
+        {
+            BeginEnemyAttack();
+            enemyAttackTimer =
+                CurrentEnemyCombatProfile.AttackInterval;
         }
     }
 
@@ -280,6 +305,13 @@ public class BattleManager : MonoBehaviour
         }
     }
 
+    public void SetHeroBattlePosition(Vector2 normalizedPosition)
+    {
+        heroBattlePosition = new Vector2(
+            Mathf.Clamp01(normalizedPosition.x),
+            Mathf.Clamp01(normalizedPosition.y));
+    }
+
     private void CompanionBasicAttack(int slot, CharacterData character)
     {
         int damage = GetCompanionBasicDamage(character);
@@ -299,11 +331,40 @@ public class BattleManager : MonoBehaviour
         NotifyChanged();
     }
 
+    public void ResolveEnemyAttack()
+    {
+        if (!isEnemyMeleeAttackPending)
+            return;
+
+        isEnemyMeleeAttackPending = false;
+        enemyMeleeAttackTimeout = 0f;
+        if (isRecovering || isHeroDefeatPlaying || EnemyHealth <= 0)
+            return;
+
+        EnemyAttack();
+    }
+
+    private void BeginEnemyAttack()
+    {
+        if (isEnemyMeleeAttackPending)
+            return;
+
+        isEnemyMeleeAttackPending = true;
+        enemyMeleeAttackTimeout = EnemyMeleeAttackTimeoutSeconds;
+        SafeEvent.Invoke(
+            OnEnemyAttackStarted,
+            CurrentEnemyCombatProfile,
+            "Battle",
+            nameof(OnEnemyAttackStarted));
+    }
+
     private void EnemyAttack()
     {
         int incomingDamage =
-            GameBalance.GetEnemyAttack(Data.currentStage, IsBoss);
-        LastEnemyDamage = ApplyDamageToPole(incomingDamage);
+            Mathf.RoundToInt(
+                GameBalance.GetEnemyAttack(Data.currentStage, IsBoss) *
+                CurrentEnemyCombatProfile.DamageMultiplier);
+        LastEnemyDamage = ApplyDamageToHero(incomingDamage);
         SafeEvent.Invoke(
             OnEnemyAttackPerformed,
             LastEnemyDamage,
@@ -317,32 +378,57 @@ public class BattleManager : MonoBehaviour
         if (bossPatterns == null || bossPatterns.Count == 0)
             return;
 
-        pendingBossPattern =
+        BossPatternDefinition pattern =
             bossPatterns[bossPatternIndex % bossPatterns.Count];
+        int sequence = bossPatternIndex;
         bossPatternIndex++;
-        if (pendingBossPattern == null)
+        if (pattern == null)
         {
             bossPatternTimer = 1f;
             return;
         }
 
+        pendingBossPattern = CreateBossPatternRuntime(pattern, sequence);
         isBossPatternWarning = true;
-        bossPatternWarningTimer = GameBalance.BossPatternWarningSeconds;
+        bossPatternWarningTimer = Mathf.Max(0.1f, pattern.warningSeconds);
         SafeEvent.Invoke(
             OnBossPatternWarning,
             pendingBossPattern,
-            bossPatternWarningTimer,
             "Battle",
             nameof(OnBossPatternWarning));
         NotifyChanged();
     }
 
-    private void UsePendingBossPattern()
+    private void CastPendingBossPattern()
     {
-        BossPatternDefinition pattern = pendingBossPattern;
-        pendingBossPattern = null;
         isBossPatternWarning = false;
         bossPatternWarningTimer = 0f;
+        if (pendingBossPattern?.Pattern == null)
+        {
+            pendingBossPattern = null;
+            bossPatternTimer = 1f;
+            return;
+        }
+
+        isBossPatternCasting = true;
+        bossPatternImpactTimer = Mathf.Max(
+            0.05f,
+            pendingBossPattern.Pattern.impactDelay);
+        SafeEvent.Invoke(
+            OnBossPatternCast,
+            pendingBossPattern,
+            "Battle",
+            nameof(OnBossPatternCast));
+        NotifyChanged();
+    }
+
+    private void ResolvePendingBossPattern()
+    {
+        BossPatternRuntime runtime = pendingBossPattern;
+        pendingBossPattern = null;
+        isBossPatternCasting = false;
+        bossPatternImpactTimer = 0f;
+        BossPatternDefinition pattern = runtime?.Pattern;
         if (pattern == null)
         {
             bossPatternTimer = 1f;
@@ -351,7 +437,7 @@ public class BattleManager : MonoBehaviour
 
         bossPatternTimer = Mathf.Max(1f, pattern.cooldown);
 
-        int hitCount = Mathf.Max(1, pattern.hitCount);
+        int hitCount = GetBossPatternHitCount(runtime);
         int damagePerHit = Mathf.Max(
             1,
             Mathf.RoundToInt(
@@ -360,88 +446,171 @@ public class BattleManager : MonoBehaviour
                     true) *
                 Mathf.Max(0.1f, pattern.damageMultiplier)));
         int totalDamage = damagePerHit * hitCount;
-        LastEnemyDamage = ApplyDamageToPole(totalDamage);
-
-        if (pattern.patternType == BossPatternType.DrainStrike &&
-            pattern.healPercent > 0f)
-        {
-            EnemyHealth = Mathf.Min(
-                EnemyMaxHealth,
-                EnemyHealth +
-                Mathf.RoundToInt(EnemyMaxHealth * pattern.healPercent));
-        }
+        LastEnemyDamage = totalDamage > 0
+            ? ApplyDamageToHero(totalDamage)
+            : 0;
 
         SafeEvent.Invoke(
             OnBossPatternUsed,
-            pattern,
+            runtime,
             LastEnemyDamage,
             "Battle",
             nameof(OnBossPatternUsed));
         NotifyChanged();
     }
 
-    private int ApplyDamageToPole(int incomingDamage)
+    private BossPatternRuntime CreateBossPatternRuntime(
+        BossPatternDefinition pattern,
+        int sequence)
     {
-        int damage = GameBalance.GetPoleDamageAfterArmor(
+        Vector2 target = heroBattlePosition;
+        Vector2[] targets;
+        int safeLane = -1;
+        switch (pattern.patternType)
+        {
+            case BossPatternType.TargetedThunder:
+                targets = new[] { target };
+                break;
+            case BossPatternType.TripleFireBreath:
+                safeLane = sequence % 3;
+                targets = new Vector2[0];
+                break;
+            case BossPatternType.SpiritVolley:
+                targets = new[]
+                {
+                    ClampBattlePosition(target + new Vector2(-0.16f, 0.08f)),
+                    ClampBattlePosition(target + new Vector2(0.16f, 0.08f)),
+                    ClampBattlePosition(target + new Vector2(0f, -0.12f))
+                };
+                break;
+            default:
+                targets = new[] { target };
+                break;
+        }
+
+        return new BossPatternRuntime(
+            pattern,
+            targets,
+            safeLane,
+            sequence);
+    }
+
+    private int GetBossPatternHitCount(BossPatternRuntime runtime)
+    {
+        BossPatternDefinition pattern = runtime.Pattern;
+        switch (pattern.patternType)
+        {
+            case BossPatternType.TripleFireBreath:
+                int heroLane = Mathf.Clamp(
+                    Mathf.FloorToInt(heroBattlePosition.y * 3f),
+                    0,
+                    2);
+                return heroLane == runtime.SafeLaneIndex
+                    ? 0
+                    : Mathf.Max(1, pattern.hitCount);
+            case BossPatternType.SpiritVolley:
+                int spiritHits = 0;
+                foreach (Vector2 target in runtime.TargetPositions)
+                {
+                    if (IsInsidePatternTarget(heroBattlePosition, target, pattern))
+                        spiritHits++;
+                }
+                return spiritHits;
+            default:
+                return runtime.TargetPositions.Length > 0 &&
+                    IsInsidePatternTarget(
+                        heroBattlePosition,
+                        runtime.TargetPositions[0],
+                        pattern)
+                    ? 1
+                    : 0;
+        }
+    }
+
+    private static bool IsInsidePatternTarget(
+        Vector2 position,
+        Vector2 target,
+        BossPatternDefinition pattern)
+    {
+        float radiusX = Mathf.Max(0.01f, pattern.targetRadiusX);
+        float radiusY = Mathf.Max(0.01f, pattern.targetRadiusY);
+        float x = (position.x - target.x) / radiusX;
+        float y = (position.y - target.y) / radiusY;
+        return x * x + y * y <= 1f;
+    }
+
+    private static Vector2 ClampBattlePosition(Vector2 position)
+    {
+        return new Vector2(
+            Mathf.Clamp(position.x, 0.08f, 0.92f),
+            Mathf.Clamp(position.y, 0.08f, 0.92f));
+    }
+
+    private int ApplyDamageToHero(int incomingDamage)
+    {
+        int damage = GameBalance.GetHeroDamageAfterArmor(
             Data,
             incomingDamage);
-        int previousHealth = PlayerHealth;
-        PlayerHealth = Math.Max(0, PlayerHealth - damage);
-        int actualDamage = previousHealth - PlayerHealth;
+        int previousHealth = HeroHealth;
+        HeroHealth = Math.Max(0, HeroHealth - damage);
+        int actualDamage = previousHealth - HeroHealth;
         if (actualDamage > 0)
         {
             SafeEvent.Invoke(
-                OnPoleDamaged,
+                OnHeroDamaged,
                 actualDamage,
                 "Battle",
-                nameof(OnPoleDamaged));
+                nameof(OnHeroDamaged));
         }
 
-        if (PlayerHealth <= 0)
-            BeginPoleDeathSequence();
+        if (HeroHealth <= 0)
+            BeginHeroDefeatSequence();
 
         return actualDamage;
     }
 
-    private void BeginPoleDeathSequence()
+    private void BeginHeroDefeatSequence()
     {
-        if (isPoleDeathPlaying || isRecovering)
+        if (isHeroDefeatPlaying || isRecovering)
             return;
 
         IsRunning = false;
-        isPoleDeathPlaying = true;
+        isHeroDefeatPlaying = true;
         isRecovering = false;
-        poleDeathTimer = PoleDeathAnimationSeconds;
+        heroDefeatTimer = HeroDefeatAnimationSeconds;
         SafeEvent.Invoke(
-            OnPlayerDefeated,
+            OnHeroDefeated,
             "Battle",
-            nameof(OnPlayerDefeated));
-        SafeEvent.Invoke(
-            OnPoleDestroyed,
-            "Battle",
-            nameof(OnPoleDestroyed));
+            nameof(OnHeroDefeated));
     }
 
-    private void BeginPoleRecovery()
+    private void BeginHeroRecovery()
     {
         if (isRecovering)
             return;
 
-        isPoleDeathPlaying = false;
+        isHeroDefeatPlaying = false;
         isRecovering = true;
-        recoveryTimer = GetPoleRecoverySeconds();
+        recoveryTimer = GetHeroRecoverySeconds();
         NotifyChanged();
     }
 
-    private void RecoverPole()
+    private void RestartCurrentStage()
     {
-        isPoleDeathPlaying = false;
+        isHeroDefeatPlaying = false;
         isRecovering = false;
-        PlayerHealth = PlayerMaxHealth;
+        HeroHealth = HeroMaxHealth;
         partyDamageBuffTimer = 0f;
         partyDamageBuffMultiplier = 1f;
+        PlayerData data = Data;
+        if (data != null)
+            data.stageEnemyIndex = 0;
         SpawnEnemy();
         IsRunning = true;
+        SafeEvent.Invoke(
+            OnHeroRecovered,
+            "Battle",
+            nameof(OnHeroRecovered));
         NotifyChanged();
     }
 
@@ -481,7 +650,7 @@ public class BattleManager : MonoBehaviour
     {
         remainingCooldown = 0f;
 
-        if (isPoleDeathPlaying || isRecovering)
+        if (isHeroDefeatPlaying || isRecovering)
             return CompanionSkillUseResult.Recovering;
         if (!IsRunning)
             return CompanionSkillUseResult.BattleNotRunning;
@@ -547,8 +716,8 @@ public class BattleManager : MonoBehaviour
         int effectValue;
         switch (character.skillEffect)
         {
-            case CompanionSkillEffect.RepairPole:
-                effectValue = ApplyCompanionPoleRepair(character);
+            case CompanionSkillEffect.HealHero:
+                effectValue = ApplyCompanionHeroHeal(character);
                 break;
             case CompanionSkillEffect.PartyDamageBuff:
                 effectValue = ApplyCompanionPartyDamageBuff(character);
@@ -604,21 +773,21 @@ public class BattleManager : MonoBehaviour
         return Mathf.RoundToInt(percent);
     }
 
-    private int ApplyCompanionPoleRepair(CharacterData character)
+    private int ApplyCompanionHeroHeal(CharacterData character)
     {
-        float repairPercent =
-            Mathf.Clamp01(character.poleRepairPercent);
-        int repairAmount = Math.Max(
+        float healPercent =
+            Mathf.Clamp01(character.heroHealPercent);
+        int healAmount = Math.Max(
             1,
             Mathf.RoundToInt(
-                PlayerMaxHealth *
-                repairPercent *
-                GetEquipmentPoleRepairMultiplier()));
-        int previousHealth = PlayerHealth;
-        PlayerHealth = Math.Min(
-            PlayerMaxHealth,
-            PlayerHealth + repairAmount);
-        return Math.Max(0, PlayerHealth - previousHealth);
+                HeroMaxHealth *
+                healPercent *
+                GetEquipmentHeroHealingMultiplier()));
+        int previousHealth = HeroHealth;
+        HeroHealth = Math.Min(
+            HeroMaxHealth,
+            HeroHealth + healAmount);
+        return Math.Max(0, HeroHealth - previousHealth);
     }
 
     private int GetCompanionBasicDamage(CharacterData character)
@@ -665,17 +834,17 @@ public class BattleManager : MonoBehaviour
         return 1f + Mathf.Max(0f, percent) / 100f;
     }
 
-    private float GetEquipmentPoleRepairMultiplier()
+    private float GetEquipmentHeroHealingMultiplier()
     {
         return 1f +
-            EquipmentManager.GetPoleRepairPercent(Data) / 100f;
+            EquipmentManager.GetHeroHealingPercent(Data) / 100f;
     }
 
-    private float GetPoleRecoverySeconds()
+    private float GetHeroRecoverySeconds()
     {
         float speedPercent =
-            EquipmentManager.GetPoleRecoverySpeedPercent(Data);
-        return PoleRecoverySeconds /
+            EquipmentManager.GetHeroRecoverySpeedPercent(Data);
+        return HeroRecoverySeconds /
             (1f + Mathf.Max(0f, speedPercent) / 100f);
     }
 
@@ -731,24 +900,17 @@ public class BattleManager : MonoBehaviour
 
         bool defeatedBoss = IsBoss;
         LastDefeatedEnemyWasBoss = defeatedBoss;
-        if (defeatedBoss)
+        bool firstClear = clearedStage >= data.highestStage;
+        if (firstClear)
         {
-            bool firstClear = clearedStage >= data.highestStage;
-            if (firstClear)
-            {
-                data.highestStage = clearedStage + 1;
+            data.highestStage = clearedStage + 1;
+            if (defeatedBoss)
                 data.level++;
-            }
-
-            data.currentStage = data.autoAdvance
-                ? Math.Min(clearedStage + 1, data.highestStage)
-                : clearedStage;
-            data.stageEnemyIndex = 0;
         }
-        else
-        {
-            data.stageEnemyIndex++;
-        }
+        data.currentStage = data.autoAdvance
+            ? Math.Min(clearedStage + 1, data.highestStage)
+            : clearedStage;
+        data.stageEnemyIndex = 0;
 
         SafeEvent.Invoke(
             OnEnemyDefeatedVisual,
@@ -765,7 +927,7 @@ public class BattleManager : MonoBehaviour
             "Battle",
             nameof(OnEnemyDefeated));
 
-        if (defeatedBoss)
+        if (firstClear)
         {
             SafeEvent.Invoke(
                 OnStageCleared,
@@ -799,8 +961,9 @@ public class BattleManager : MonoBehaviour
     {
         PlayerData data = Data;
         enemySpawnSequence++;
-        IsBoss =
-            data.stageEnemyIndex >= GameBalance.EnemiesPerStage - 1;
+        IsBoss = GameBalance.IsBossStage(data.currentStage);
+        CurrentEnemyCombatProfile =
+            EnemyCombatProfileResolver.Resolve(data.currentStage, IsBoss);
         EnemyMaxHealth =
             GameBalance.GetEnemyMaxHealth(data.currentStage, IsBoss);
         EnemyHealth = EnemyMaxHealth;
@@ -813,9 +976,13 @@ public class BattleManager : MonoBehaviour
         bossPatternTimer = GetFirstBossPatternCooldown();
         pendingBossPattern = null;
         isBossPatternWarning = false;
+        isBossPatternCasting = false;
         bossPatternWarningTimer = 0f;
+        bossPatternImpactTimer = 0f;
         ResetCompanionAttackTimers();
-        enemyAttackTimer = IsBoss ? 1.15f : 1.55f;
+        isEnemyMeleeAttackPending = false;
+        enemyMeleeAttackTimeout = 0f;
+        enemyAttackTimer = CurrentEnemyCombatProfile.AttackInterval;
     }
 
     private void ResetBossChallenge()
@@ -823,12 +990,16 @@ public class BattleManager : MonoBehaviour
         EnemyHealth = EnemyMaxHealth;
         BossTimeRemaining = GameBalance.BossTimeLimit;
         ResetCompanionAttackTimers();
-        enemyAttackTimer = 1.15f;
+        isEnemyMeleeAttackPending = false;
+        enemyMeleeAttackTimeout = 0f;
+        enemyAttackTimer = CurrentEnemyCombatProfile.AttackInterval;
         bossPatternIndex = 0;
         bossPatternTimer = GetFirstBossPatternCooldown();
         pendingBossPattern = null;
         isBossPatternWarning = false;
+        isBossPatternCasting = false;
         bossPatternWarningTimer = 0f;
+        bossPatternImpactTimer = 0f;
         SafeEvent.Invoke(
             OnBossChallengeFailed,
             "Battle",

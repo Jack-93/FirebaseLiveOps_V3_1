@@ -22,9 +22,10 @@ public static class GameBalanceConfig
         1
     };
 
-    public const int EnemiesPerStage = 5;
+    public const int EnemiesPerStage = 1;
+    public const int BossStageInterval = 10;
     public const int MaxOfflineHours = 8;
-    public const float BossTimeLimit = 30f;
+    public const float BossTimeLimit = 40f;
     public const float BossPatternWarningSeconds = 1.25f;
 
     public const int PlayerBaseAttack = 8;
@@ -39,14 +40,14 @@ public static class GameBalanceConfig
     public const float PlayerAbsoluteMinAttackInterval = 0.2f;
 
     public const double EnemyBaseHealth = 42d;
-    // Stage 1-30: free progression should fund Attack, Pole DUR, and SPD together.
+    // Stage 1-30: free progression should fund attack, hero HP, and speed.
     public const double EnemyHealthGrowth = 1.135d;
     public const double EnemyStageHealthCycleBonus = 0.04d;
-    public const double BossHealthMultiplier = 3.5d;
+    public const double BossHealthMultiplier = 6d;
     public const double EnemyBaseAttack = 4d;
     public const double EnemyAttackGrowth = 1.065d;
     public const double EnemyStageAttackCycleBonus = 0.03d;
-    public const double BossAttackMultiplier = 1.45d;
+    public const double BossAttackMultiplier = 1.8d;
     public const double EnemyBaseGold = 14d;
     public const double EnemyGoldGrowth = 1.15d;
     public const double EnemyStageGoldCycleBonus = 0.05d;
@@ -75,10 +76,13 @@ public static class GameBalanceConfig
     public const float NormalEquipmentDropChance = 0.12f;
     public const int EquipmentOptionMinPercent = 1;
     public const int EquipmentOptionMaxPercent = 15;
+    public const int EquipmentRandomOptionMinLines = 0;
+    public const int EquipmentRandomOptionMaxLines = 3;
     public const int EquipmentCoinTier0 = 5;
     public const int EquipmentCoinTier1 = 15;
     public const int EquipmentCoinTier2 = 40;
     public const int EquipmentCoinTier3 = 100;
+    public const int EquipmentRerollCoinTier0 = 5;
     public const int EquipmentRerollCoinTier1 = 10;
     public const int EquipmentRerollCoinTier2 = 30;
     public const int EquipmentRerollCoinTier3 = 75;

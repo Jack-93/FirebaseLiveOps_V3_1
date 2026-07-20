@@ -90,6 +90,10 @@ public static class PlayerDataConverter
                 "armorStarForceDowngradeFails",
                 data.armorStarForceDowngradeFails
             },
+            {
+                "equipmentInstanceEnhancementsMigrated",
+                data.equipmentInstanceEnhancementsMigrated
+            },
             { "dailyQuestDate", data.dailyQuestDate },
             { "dailyQuestKills", data.dailyQuestKills },
             { "dailyQuestClaimed", data.dailyQuestClaimed },
@@ -193,6 +197,10 @@ public static class PlayerDataConverter
                 values,
                 "armorStarForceDowngradeFails",
                 0),
+            equipmentInstanceEnhancementsMigrated = GetBool(
+                values,
+                "equipmentInstanceEnhancementsMigrated",
+                false),
             dailyQuestDate = GetString(values, "dailyQuestDate", ""),
             dailyQuestKills = GetInt(values, "dailyQuestKills", 0),
             dailyQuestClaimed =
@@ -465,6 +473,11 @@ public static class PlayerDataConverter
             {
                 { "instanceId", instance.instanceId ?? "" },
                 { "definitionId", instance.definitionId ?? "" },
+                { "enhancementLevel", instance.enhancementLevel },
+                {
+                    "starForceDowngradeFails",
+                    instance.starForceDowngradeFails
+                },
                 { "rolledOptions", rolledOptions }
             });
         }
@@ -487,7 +500,13 @@ public static class PlayerDataConverter
             EquipmentInstance instance = new EquipmentInstance
             {
                 instanceId = GetDictionaryString(dictionary, "instanceId"),
-                definitionId = GetDictionaryString(dictionary, "definitionId")
+                definitionId = GetDictionaryString(dictionary, "definitionId"),
+                enhancementLevel = GetDictionaryInt(
+                    dictionary,
+                    "enhancementLevel"),
+                starForceDowngradeFails = GetDictionaryInt(
+                    dictionary,
+                    "starForceDowngradeFails")
             };
             if (dictionary.Contains("rolledOptions"))
             {

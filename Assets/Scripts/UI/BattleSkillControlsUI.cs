@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.Text;
 using TMPro;
@@ -921,7 +921,7 @@ public sealed class BattleSkillControlsUI
             case CompanionSkillUseResult.BattleNotRunning:
                 return "Battle is not running.";
             case CompanionSkillUseResult.Recovering:
-                return "Pole durability is being restored.";
+                return "Sparrow is regrouping.";
             case CompanionSkillUseResult.NoEnemy:
                 return "No enemy target.";
             case CompanionSkillUseResult.InvalidSlot:
@@ -937,7 +937,7 @@ public sealed class BattleSkillControlsUI
         {
             showToast?.Invoke(
                 LocalizationManager.Translate(
-                    "Pole durability is being restored."));
+                    "Sparrow is regrouping."));
             return;
         }
 

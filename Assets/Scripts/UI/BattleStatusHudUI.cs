@@ -139,9 +139,9 @@ public sealed class BattleStatusHudUI
             new Vector2(0.03f, 0.2f),
             new Vector2(0.32f, 0.235f));
         lineDefenseLabelText = RuntimeUiFactory.CreateText(
-            "LineDefenseLabelText",
+            "HeroHealthLabelText",
             parent,
-            "\uC804\uBD07\uB300 \uB0B4\uAD6C\uB3C4",
+            "\uCC38\uC0C8 \uC774\uB4F1\uBCD1 \uCCB4\uB825",
             14,
             new Vector2(0.03f, 0.235f),
             new Vector2(0.32f, 0.27f),
@@ -294,14 +294,14 @@ public sealed class BattleStatusHudUI
             CompactNumberFormatter.Format(battleManager.EnemyMaxHealth));
 
         playerHealthCurrentNumberText.SetText(
-            CompactNumberFormatter.Format(battleManager.PoleDurability));
+            CompactNumberFormatter.Format(battleManager.HeroHealth));
         playerHealthMaxNumberText.SetText(
-            CompactNumberFormatter.Format(battleManager.PoleMaxDurability));
+            CompactNumberFormatter.Format(battleManager.HeroMaxHealth));
         if (lineDefenseLabelText != null)
         {
             lineDefenseLabelText.text = LocalizationManager.Text(
-                "Pole Durability",
-                "\uC804\uBD07\uB300 \uB0B4\uAD6C\uB3C4");
+                "Hero Health",
+                "\uCC38\uC0C8 \uC774\uB4F1\uBCD1 \uCCB4\uB825");
         }
 
         powerChargeLabelText.text =
@@ -319,8 +319,8 @@ public sealed class BattleStatusHudUI
             battleManager.EnemyMaxHealth);
         BattleHudUiFactory.SetBar(
             playerHealthFill,
-            battleManager.PoleDurability,
-            battleManager.PoleMaxDurability);
+            battleManager.HeroHealth,
+            battleManager.HeroMaxHealth);
         BattleHudUiFactory.SetBar(
             powerChargeFill,
             battleManager.PowerCharge,
@@ -350,15 +350,15 @@ public sealed class BattleStatusHudUI
         bool fullPower,
         bool enoughPower)
     {
-        if (battleManager.IsPoleDeathPlaying)
+        if (battleManager.IsHeroDefeatPlaying)
             return LocalizationManager.Text(
-                "Pole destroyed...",
-                "\uC804\uBD07\uB300 \uD30C\uAD34\uB428...");
+                "Sparrow down...",
+                "\uCC38\uC0C8 \uC774\uB4F1\uBCD1 \uC791\uC804 \uBD88\uB2A5...");
 
         if (battleManager.IsRecovering)
             return LocalizationManager.Text(
                 "Recovering...",
-                "\uC804\uBD07\uB300 \uBCF5\uAD6C \uC911...");
+                "\uD604\uC7AC \uC2A4\uD14C\uC774\uC9C0 \uC7AC\uC815\uBE44 \uC911...");
 
         if (!battleManager.IsRunning)
             return LocalizationManager.Translate("Paused");
@@ -389,8 +389,8 @@ public sealed class BattleStatusHudUI
             dangerTime
                 ? danger
                 : Color.white;
-        enemyProgressSeparatorText.gameObject.SetActive(!battleManager.IsBoss);
-        enemyProgressMaxNumberText.SetActive(!battleManager.IsBoss);
+        enemyProgressSeparatorText.gameObject.SetActive(false);
+        enemyProgressMaxNumberText.SetActive(false);
         enemyProgressSuffixText.gameObject.SetActive(battleManager.IsBoss);
         enemyProgressSuffixText.color = dangerTime ? danger : Color.white;
 
@@ -404,10 +404,7 @@ public sealed class BattleStatusHudUI
         }
 
         enemyProgressCurrentNumberText.SetText(
-            CompactNumberFormatter.Format(data.stageEnemyIndex + 1));
-        enemyProgressMaxNumberText.SetText(
-            CompactNumberFormatter.Format(
-                GameBalance.EnemiesPerStage - 1));
+            CompactNumberFormatter.Format(data.currentStage));
     }
 
     private static RectTransform FindFill(

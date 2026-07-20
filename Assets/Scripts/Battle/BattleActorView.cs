@@ -9,14 +9,18 @@ public enum BattleAnimationCue
     Attack,
     Hit,
     Death,
-    Skill
+    Skill,
+    Move,
+    SkillLeft,
+    SkillCenter,
+    SkillRight
 }
 
 public class BattleActorView : MonoBehaviour
 {
     public bool HasSprite => currentBaseSprite != null || currentSprite != null;
 
-    private const float SpriteFrameSeconds = 0.3f;
+    private float activeSpriteFrameSeconds;
 
     private Image image;
     private Animator animator;
@@ -58,6 +62,12 @@ public class BattleActorView : MonoBehaviour
 
         if (animator == null)
             animator = GetComponent<Animator>();
+        if (animator != null)
+        {
+            animator.speed = controller == null
+                ? 1f
+                : BattleTempo.SimulationSpeed;
+        }
         if (animator != null && currentController != controller)
         {
             currentController = controller;
@@ -132,8 +142,8 @@ public class BattleActorView : MonoBehaviour
             return;
         }
 
-        spriteFrameTimer += Time.deltaTime;
-        if (spriteFrameTimer < SpriteFrameSeconds)
+        spriteFrameTimer += BattleTempo.ScaleDeltaTime(Time.deltaTime);
+        if (spriteFrameTimer < activeSpriteFrameSeconds)
             return;
 
         spriteFrameTimer = 0f;
@@ -166,6 +176,7 @@ public class BattleActorView : MonoBehaviour
         activeSpriteFrames = frames;
         activeSpriteFrameIndex = 0;
         activeSpriteLoop = loop;
+        activeSpriteFrameSeconds = GetFrameSeconds(cue);
         spriteFrameTimer = 0f;
         ApplySprite(frames[0]);
         return true;
@@ -243,10 +254,33 @@ public class BattleActorView : MonoBehaviour
         activeSpriteFrames = null;
         activeSpriteFrameIndex = 0;
         spriteFrameTimer = 0f;
+        activeSpriteFrameSeconds = 0f;
         activeSpriteLoop = false;
 
         if (resetSprite)
             ApplySprite(currentBaseSprite);
+    }
+
+    private static float GetFrameSeconds(BattleAnimationCue cue)
+    {
+        switch (cue)
+        {
+            case BattleAnimationCue.Idle:
+                return 1f / 8f;
+            case BattleAnimationCue.Move:
+                return 1f / 10f;
+            case BattleAnimationCue.Attack:
+            case BattleAnimationCue.Skill:
+            case BattleAnimationCue.SkillLeft:
+            case BattleAnimationCue.SkillCenter:
+            case BattleAnimationCue.SkillRight:
+                return 1f / 12f;
+            case BattleAnimationCue.Death:
+            case BattleAnimationCue.Hit:
+                return 1f / 10f;
+            default:
+                return 0.1f;
+        }
     }
 
     private void ApplySprite(Sprite sprite)

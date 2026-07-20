@@ -20,6 +20,7 @@ public class MainGameUI : MonoBehaviour
     private GameObject morePanel;
     private GameObject collectionPanel;
     private GameObject equipmentPanel;
+    private GameObject suppliesPanel;
     private GameObject questPanel;
     private GameObject shopPanel;
     private GameObject eventPanel;
@@ -50,6 +51,11 @@ public class MainGameUI : MonoBehaviour
     private EquipmentPanelUI equipmentPanelUI;
     private EquipmentActionController equipmentActions;
     private EquipmentCubeModalUI equipmentCubeModalUI;
+    private EquipmentActionFlowModalUI equipmentActionFlowModalUI;
+    private EquipmentEnhancementResultModalUI equipmentEnhancementResultModalUI;
+    private EquipmentInventoryModalUI equipmentInventoryModalUI;
+    private EquipmentItemActionModalUI equipmentItemActionModalUI;
+    private FlightSuppliesPanelUI flightSuppliesPanelUI;
     private MorePanelUI morePanelUI;
     private ShopPanelUI shopPanelUI;
     private ShopActionController shopActions;
@@ -95,6 +101,7 @@ public class MainGameUI : MonoBehaviour
         RefreshMore();
         RefreshCollection();
         RefreshEquipment();
+        RefreshSupplies();
         RefreshQuests();
         RefreshShop();
         RefreshEvent();
@@ -144,7 +151,8 @@ public class MainGameUI : MonoBehaviour
     private void Update()
     {
         toastUI?.Update(Time.unscaledDeltaTime);
-        battleHud?.UpdateAnimations(Time.unscaledDeltaTime);
+        battleHud?.UpdateAnimations(
+            BattleTempo.ScaleDeltaTime(Time.unscaledDeltaTime));
     }
 
     private void BuildInterface()
@@ -164,6 +172,7 @@ public class MainGameUI : MonoBehaviour
         BuildMorePanel(portraitRoot);
         BuildCollectionPanel(portraitRoot);
         BuildEquipmentPanel(portraitRoot);
+        BuildFlightSuppliesPanel(portraitRoot);
         BuildQuestPanel(portraitRoot);
         BuildShopPanel(portraitRoot);
         BuildEventPanel(portraitRoot);
@@ -182,7 +191,7 @@ public class MainGameUI : MonoBehaviour
     private void BuildWorldBackdrop(RectTransform root)
     {
         int stage = PlayerDataManager.Instance?.playerData?.currentStage ?? 1;
-        worldBackdropUI = new WorldBackdropUI(root, stage, battleManager);
+        worldBackdropUI = new WorldBackdropUI(root, stage);
     }
 
     private void BuildTopBar(RectTransform root)
@@ -288,23 +297,51 @@ public class MainGameUI : MonoBehaviour
 
     private void BuildEquipmentPanel(RectTransform root)
     {
+        equipmentEnhancementResultModalUI =
+            new EquipmentEnhancementResultModalUI(root);
         equipmentCubeModalUI = new EquipmentCubeModalUI(
             root,
-            applyNew => equipmentActions?.ResolveCubePreview(applyNew));
+            applyNew =>
+            {
+                equipmentActions?.ResolveCubePreview(applyNew);
+                equipmentActionFlowModalUI?.RefreshCurrentSelection();
+            });
         equipmentActions = new EquipmentActionController(
             battleManager,
             ShowToast,
             RefreshEquipment,
             preview => equipmentCubeModalUI?.Show(preview));
+        equipmentItemActionModalUI = new EquipmentItemActionModalUI(
+            root,
+            instanceId => equipmentActions?.Equip(instanceId) ?? false,
+            instanceId => equipmentActions?.Dismantle(instanceId) ?? false,
+            () => equipmentInventoryModalUI?.Refresh());
+        equipmentInventoryModalUI = new EquipmentInventoryModalUI(
+            root,
+            instance => equipmentItemActionModalUI?.Show(instance));
+        equipmentActionFlowModalUI = new EquipmentActionFlowModalUI(
+            root,
+            (action, slot) =>
+            {
+                if (action == EquipmentActionKind.Enhancement)
+                {
+                    return equipmentActions?.Upgrade(
+                        slot,
+                        result => equipmentEnhancementResultModalUI?.Show(
+                            result)) ?? false;
+                }
+
+                return equipmentActions?.RerollOptions(slot) ?? false;
+            });
         equipmentPanelUI = new EquipmentPanelUI(
             root,
             ShowMore,
-            () => equipmentActions?.Upgrade(EquipmentSlot.Weapon),
-            () => equipmentActions?.Upgrade(EquipmentSlot.Armor),
-            () => equipmentActions?.EquipNextOwned(EquipmentSlot.Weapon),
-            () => equipmentActions?.EquipNextOwned(EquipmentSlot.Armor),
-            () => equipmentActions?.RerollOptions(EquipmentSlot.Weapon),
-            () => equipmentActions?.RerollOptions(EquipmentSlot.Armor));
+            () => equipmentActionFlowModalUI?.ShowSelection(
+                EquipmentActionKind.Enhancement),
+            () => equipmentActionFlowModalUI?.ShowSelection(
+                EquipmentActionKind.OptionReset),
+            () => equipmentInventoryModalUI?.Show(),
+            () => equipmentInventoryModalUI?.Show());
         equipmentPanel = equipmentPanelUI.GameObject;
     }
 
@@ -316,6 +353,14 @@ public class MainGameUI : MonoBehaviour
             () => rewardActions?.ClaimCurrentQuest(),
             () => rewardActions?.ClaimAchievements());
         questPanel = questPanelUI.GameObject;
+    }
+
+    private void BuildFlightSuppliesPanel(RectTransform root)
+    {
+        flightSuppliesPanelUI = new FlightSuppliesPanelUI(
+            root,
+            () => equipmentInventoryModalUI?.Show());
+        suppliesPanel = flightSuppliesPanelUI.GameObject;
     }
     private void BuildShopPanel(RectTransform root)
     {
@@ -388,6 +433,7 @@ public class MainGameUI : MonoBehaviour
             ShowGacha,
             ShowCollection,
             ShowEquipment,
+            ShowSupplies,
             ShowMore);
         notificationBadges.RegisterBottomNavigation(bottomNavigationUI);
         navigation = new MainGameNavigationController(
@@ -398,6 +444,7 @@ public class MainGameUI : MonoBehaviour
             morePanel,
             collectionPanel,
             equipmentPanel,
+            suppliesPanel,
             questPanel,
             shopPanel,
             eventPanel,
@@ -538,6 +585,12 @@ public class MainGameUI : MonoBehaviour
         equipmentPanelUI?.Refresh(PlayerDataManager.Instance?.playerData);
     }
 
+    private void RefreshSupplies()
+    {
+        flightSuppliesPanelUI?.Refresh(
+            PlayerDataManager.Instance?.playerData);
+    }
+
     private void RefreshQuests()
     {
         questPanelUI?.Refresh(
@@ -610,6 +663,7 @@ public class MainGameUI : MonoBehaviour
         battleManager?.RefreshPlayerStats();
         RefreshGrowth();
         RefreshTopBar();
+        RefreshSupplies();
     }
 
     private void HandleGrowthUpdated(UpgradeType type)
@@ -662,6 +716,12 @@ public class MainGameUI : MonoBehaviour
     {
         navigation?.ShowEquipment();
         RefreshEquipment();
+    }
+
+    private void ShowSupplies()
+    {
+        navigation?.ShowSupplies();
+        RefreshSupplies();
     }
 
     private void ShowQuests()

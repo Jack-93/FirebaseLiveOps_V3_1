@@ -30,8 +30,14 @@ public sealed class ProductionArtImporter : AssetPostprocessor
 
     private static int GetMaxTextureSize(string path)
     {
-        if (path.Contains("/Backgrounds/"))
+        if (path.Contains("/Backgrounds/") || path.Contains("/MapAssets/"))
             return 2048;
+
+        if (path.Contains("/Battle/Companions/") ||
+            path.Contains("/Battle/Enemies/"))
+        {
+            return 2048;
+        }
 
         if (path.Contains("/UI/") || path.Contains("/Projectiles/"))
             return 512;

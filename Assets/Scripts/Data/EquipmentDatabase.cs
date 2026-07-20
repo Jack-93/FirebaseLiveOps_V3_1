@@ -8,11 +8,11 @@ public enum EquipmentOptionType
     AttackPercent,
     SkillDamagePercent,
     BossDamagePercent,
-    PoleDurabilityPercent,
-    PoleDamageReductionPercent,
-    PoleRepairPercent,
+    HeroHealthPercent,
+    HeroDamageReductionPercent,
+    HeroHealingPercent,
     PowerChargePerTapFlat,
-    PoleRecoverySpeedPercent
+    HeroRecoverySpeedPercent
 }
 
 [Serializable]
@@ -35,6 +35,8 @@ public sealed class EquipmentInstance
 {
     public string instanceId;
     public string definitionId;
+    public int enhancementLevel;
+    public int starForceDowngradeFails;
     public List<EquipmentRolledOption> rolledOptions =
         new List<EquipmentRolledOption>();
 }

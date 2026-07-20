@@ -94,7 +94,7 @@ public sealed class TitleScreenUI
         RuntimeUiFactory.CreateText(
             "ArtNeededDescription",
             artPanel,
-            "Birds defend the neighborhood pole from cats.",
+            "Sparrows survive cat raids with their flight squad.",
             25,
             new Vector2(0.32f, 0.16f),
             new Vector2(0.9f, 0.36f),

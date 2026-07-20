@@ -9,6 +9,7 @@ public sealed class MainGameNavigationController
     private readonly GameObject morePanel;
     private readonly GameObject collectionPanel;
     private readonly GameObject equipmentPanel;
+    private readonly GameObject suppliesPanel;
     private readonly GameObject questPanel;
     private readonly GameObject shopPanel;
     private readonly GameObject eventPanel;
@@ -23,6 +24,7 @@ public sealed class MainGameNavigationController
         GameObject morePanel,
         GameObject collectionPanel,
         GameObject equipmentPanel,
+        GameObject suppliesPanel,
         GameObject questPanel,
         GameObject shopPanel,
         GameObject eventPanel,
@@ -36,6 +38,7 @@ public sealed class MainGameNavigationController
         this.morePanel = morePanel;
         this.collectionPanel = collectionPanel;
         this.equipmentPanel = equipmentPanel;
+        this.suppliesPanel = suppliesPanel;
         this.questPanel = questPanel;
         this.shopPanel = shopPanel;
         this.eventPanel = eventPanel;
@@ -71,6 +74,11 @@ public sealed class MainGameNavigationController
     public void ShowEquipment()
     {
         Show(equipmentPanel, BottomNavigationTab.Equipment);
+    }
+
+    public void ShowSupplies()
+    {
+        Show(suppliesPanel, BottomNavigationTab.Supplies);
     }
 
     public void ShowQuests()
@@ -118,6 +126,8 @@ public sealed class MainGameNavigationController
             collectionPanel.SetActive(active == collectionPanel);
         if (equipmentPanel != null)
             equipmentPanel.SetActive(active == equipmentPanel);
+        if (suppliesPanel != null)
+            suppliesPanel.SetActive(active == suppliesPanel);
         if (questPanel != null)
             questPanel.SetActive(active == questPanel);
         if (shopPanel != null)

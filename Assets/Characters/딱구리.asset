@@ -93,5 +93,5 @@ MonoBehaviour:
   skillHitCount: 3
   skillDamageBuffPercent: 0
   skillDamageBuffDuration: 0
-  lineRepairPercent: 0
-  lineDefensePercentBonus: 0
+  heroHealPercent: 0
+  heroHealthPercentBonus: 0

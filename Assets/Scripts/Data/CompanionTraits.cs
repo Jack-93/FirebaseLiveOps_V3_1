@@ -20,7 +20,6 @@ public enum CompanionRole
 public enum CompanionSkillEffect
 {
     DamageEnemy,
-    RepairLine = 1,
-    RepairPole = 1,
+    HealHero = 1,
     PartyDamageBuff = 2
 }

@@ -62,7 +62,7 @@ public sealed class GrowthActionController
                 return "Attack";
             case UpgradeType.Health:
                 return LocalizationManager.Text(
-                    "Pole Durability",
+                    "Hero Health",
                     "\uC804\uBD07\uB300 \uB0B4\uAD6C\uB3C4");
             case UpgradeType.AttackSpeed:
                 return "Attack Speed";

@@ -161,8 +161,43 @@ public static class BattleVisualResolver
             null);
     }
 
-    public static BattleActorVisualSet GetEnemy(int stage, bool boss)
+    public static BattleActorVisualSet GetEnemy(
+        int stage,
+        bool boss,
+        EnemyAttackType attackType)
     {
+        if (boss)
+        {
+            BattleActorVisualSet cerberus =
+                PrototypeBattleArt.GetBossCatCerberusVisual();
+            if (cerberus != null && cerberus.HasActorVisual)
+                return cerberus;
+        }
+
+        if (!boss && attackType == EnemyAttackType.Melee)
+        {
+            BattleActorVisualSet meleeCat =
+                PrototypeBattleArt.GetMeleeCatVisual();
+            if (meleeCat != null && meleeCat.HasActorVisual)
+                return meleeCat;
+        }
+
+        if (!boss && attackType == EnemyAttackType.Ranged)
+        {
+            BattleActorVisualSet mageCat =
+                PrototypeBattleArt.GetMageCatVisual();
+            if (mageCat != null && mageCat.HasActorVisual)
+                return mageCat;
+        }
+
+        if (!boss && attackType == EnemyAttackType.Dash)
+        {
+            BattleActorVisualSet dashCat =
+                PrototypeBattleArt.GetDashCatVisual();
+            if (dashCat != null && dashCat.HasActorVisual)
+                return dashCat;
+        }
+
         LoadDatabase();
         BattleVisualProfile profile =
             database?.GetEnemy(stage, boss);

@@ -19,32 +19,25 @@ public sealed class EquipmentActionController
         this.showCubePreview = showCubePreview;
     }
 
-    public void Upgrade(EquipmentSlot slot)
+    public bool Upgrade(
+        EquipmentSlot slot,
+        Action<EquipmentStarForceResult> showResult)
     {
         if (EquipmentManager.Instance == null)
-            return;
+            return false;
 
         if (!EquipmentManager.Instance.TryStarForce(slot, out var result))
         {
             showToast?.Invoke(
                 "\uBD80\uB9AC\uBD80\uB9AC \uAC15\uD654\uB97C \uD560 \uC218 \uC5C6\uAC70\uB098 " +
                 "\uACE8\uB4DC\uAC00 \uBD80\uC871\uD569\uB2C8\uB2E4.");
-            return;
+            return false;
         }
 
         battleManager?.RefreshPlayerStats();
         refreshEquipment?.Invoke();
-        if (result.success)
-        {
-            showToast?.Invoke(result.chanceTime
-                ? $"\uBD80\uB9AC\uBD80\uB9AC \uAC15\uD654 \uD655\uC815 \uC131\uACF5! {result.currentStar}\uC131"
-                : $"\uBD80\uB9AC\uBD80\uB9AC \uAC15\uD654 \uC131\uACF5! {result.currentStar}\uC131");
-            return;
-        }
-
-        showToast?.Invoke(result.downgraded
-            ? $"\uBD80\uB9AC\uBD80\uB9AC \uAC15\uD654 \uC2E4\uD328: {result.currentStar}\uC131"
-            : "\uBD80\uB9AC\uBD80\uB9AC \uAC15\uD654 \uC2E4\uD328: \uB2E8\uACC4 \uC720\uC9C0");
+        showResult?.Invoke(result);
+        return true;
     }
 
     public void HandleDropped(string itemName)
@@ -72,10 +65,42 @@ public sealed class EquipmentActionController
         showToast?.Invoke($"Equipped: {equipped.DisplayName}");
     }
 
-    public void RerollOptions(EquipmentSlot slot)
+    public bool Equip(string instanceId)
+    {
+        if (EquipmentManager.Instance == null ||
+            !EquipmentManager.Instance.TryEquip(instanceId))
+        {
+            showToast?.Invoke("\uC7A5\uBE44\uB97C \uCC29\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+            return false;
+        }
+
+        battleManager?.RefreshPlayerStats();
+        refreshEquipment?.Invoke();
+        showToast?.Invoke("\uC7A5\uBE44\uB97C \uCC29\uC6A9\uD588\uC2B5\uB2C8\uB2E4.");
+        return true;
+    }
+
+    public bool Dismantle(string instanceId)
+    {
+        if (EquipmentManager.Instance == null ||
+            !EquipmentManager.Instance.TryDismantle(instanceId, out var result))
+        {
+            showToast?.Invoke(
+                "\uCC29\uC6A9 \uC911\uC778 \uC7A5\uBE44\uB294 \uD574\uCCB4\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+            return false;
+        }
+
+        refreshEquipment?.Invoke();
+        showToast?.Invoke(
+            result.equipmentName + " \uD574\uCCB4: \uBE44\uD589\uB2E8 \uC7A5\uBE44 \uCF54\uC778 x" +
+            result.coinReward);
+        return true;
+    }
+
+    public bool RerollOptions(EquipmentSlot slot)
     {
         if (EquipmentManager.Instance == null)
-            return;
+            return false;
 
         if (!EquipmentManager.Instance.TryCreateCubePreview(
                 slot,
@@ -84,11 +109,12 @@ public sealed class EquipmentActionController
             showToast?.Invoke(
                 "\uC635\uC158 \uC7AC\uC124\uC815\uC744 \uD560 \uC218 \uC5C6\uAC70\uB098 " +
                 "\uBE44\uD589\uB2E8 \uC7A5\uBE44 \uCF54\uC778\uC774 \uBD80\uC871\uD569\uB2C8\uB2E4.");
-            return;
+            return false;
         }
 
         refreshEquipment?.Invoke();
         showCubePreview?.Invoke(preview);
+        return true;
     }
 
     public void ResolveCubePreview(bool applyNew)

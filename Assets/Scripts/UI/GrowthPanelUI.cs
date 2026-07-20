@@ -80,7 +80,7 @@ public sealed class GrowthPanelUI
         RuntimeUiFactory.CreateText(
             "GrowthSubtitle",
             panel,
-            "Spend Gold to reinforce the pole.",
+            "Spend Gold to reinforce the sparrow.",
             27,
             new Vector2(0.06f, 0.82f),
             new Vector2(0.94f, 0.88f),
@@ -97,7 +97,7 @@ public sealed class GrowthPanelUI
         healthGrowthRow = CreateUpgradeRow(
             panel,
             "Health",
-            "Increase pole durability",
+            "Increase sparrow health",
             new Vector2(0.06f, 0.35f),
             () => upgradeHealth?.Invoke());
 
@@ -126,12 +126,12 @@ public sealed class GrowthPanelUI
                 growthManager.GetCost(UpgradeType.Attack)));
         healthGrowthRow.Refresh(
             LocalizationManager.Text(
-                "Pole Durability",
+                "Hero Health",
                 "\uC804\uBD07\uB300 \uB0B4\uAD6C\uB3C4"),
             growthManager.GetLevel(UpgradeType.Health),
             LocalizationManager.Text("DUR", "\uB0B4\uAD6C\uB3C4"),
             CompactNumberFormatter.Format(
-                GetPoleMaxDurability(battleManager)),
+                GetHeroMaxHealth(battleManager)),
             CompactNumberFormatter.Format(
                 growthManager.GetCost(UpgradeType.Health)));
         speedGrowthRow.Refresh(
@@ -190,11 +190,11 @@ public sealed class GrowthPanelUI
             () => upgradeAttackSpeed?.Invoke());
     }
 
-    private static int GetPoleMaxDurability(BattleManager battleManager)
+    private static int GetHeroMaxHealth(BattleManager battleManager)
     {
         return battleManager == null
             ? 0
-            : battleManager.PoleMaxDurability;
+            : battleManager.HeroMaxHealth;
     }
 
     private static GrowthUpgradeRowUI CreateUpgradeRow(

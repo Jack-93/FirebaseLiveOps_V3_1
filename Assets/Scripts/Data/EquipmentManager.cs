@@ -25,10 +25,29 @@ public sealed class EquipmentCubePreview
     public List<EquipmentRolledOption> newOptions;
 }
 
+public sealed class EquipmentDismantleResult
+{
+    public string equipmentName;
+    public int coinReward;
+}
+
 public class EquipmentManager : MonoBehaviour
 {
     private const string EquipmentDatabaseResourcePath =
         "EquipmentDatabase";
+
+    private static readonly Dictionary<string, string> LegacyEquipmentIdMap =
+        new Dictionary<string, string>
+        {
+            { "Wooden Blade", "equip101" },
+            { "Iron Blade", "equip102" },
+            { "Moon Blade", "equip103" },
+            { "Nova Blade", "equip104" },
+            { "Cloth Vest", "equip201" },
+            { "Iron Guard", "equip202" },
+            { "Moon Guard", "equip203" },
+            { "Nova Guard", "equip204" }
+        };
 
     public static EquipmentManager Instance;
 
@@ -114,23 +133,6 @@ public class EquipmentManager : MonoBehaviour
         if (item == null)
             return;
 
-        if (FindInstanceByDefinition(data, item.id) != null)
-        {
-            int coins = GetDismantleCoinReward(item.tier);
-            data.flightEquipmentCoins += coins;
-            SafeEvent.Invoke(
-                OnEquipmentDropped,
-                item.DisplayName + " dismantled: " + coins +
-                " Flight Equipment Coins",
-                "Equipment",
-                nameof(OnEquipmentDropped));
-            SafeEvent.Invoke(
-                OnEquipmentChanged,
-                "Equipment",
-                nameof(OnEquipmentChanged));
-            return;
-        }
-
         EquipmentInstance instance = CreateInstance(item);
         data.equipmentInstances.Add(instance);
         SetInventoryEquipmentCount(data, item.id, 1);
@@ -173,6 +175,46 @@ public class EquipmentManager : MonoBehaviour
         return true;
     }
 
+    public bool TryDismantle(
+        string instanceId,
+        out EquipmentDismantleResult result)
+    {
+        result = null;
+        PlayerData data = PlayerDataManager.Instance?.playerData;
+        if (data == null)
+            return false;
+
+        EnsureEquipmentInstances(data);
+        EquipmentInstance instance = FindInstance(data, instanceId);
+        EquipmentDefinition item = instance == null
+            ? null
+            : GetDatabase()?.Find(instance.definitionId);
+        if (item == null || IsEquippedInstance(data, instance.instanceId))
+            return false;
+
+        if (!data.equipmentInstances.Remove(instance))
+            return false;
+
+        SetInventoryEquipmentCount(
+            data,
+            item.id,
+            FindInstanceByDefinition(data, item.id) == null ? 0 : 1);
+        int coinReward = GetDismantleCoinReward(item.tier);
+        data.flightEquipmentCoins += coinReward;
+        result = new EquipmentDismantleResult
+        {
+            equipmentName = item.DisplayName,
+            coinReward = coinReward
+        };
+
+        PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
+        SafeEvent.Invoke(
+            OnEquipmentChanged,
+            "Equipment",
+            nameof(OnEquipmentChanged));
+        return true;
+    }
+
     public bool TryEquipNextOwned(
         EquipmentSlot slot,
         out EquipmentDefinition equipped)
@@ -206,8 +248,18 @@ public class EquipmentManager : MonoBehaviour
         PlayerData data,
         EquipmentSlot slot)
     {
-        List<EquipmentInstance> owned =
-            new List<EquipmentInstance>();
+        List<EquipmentInstance> owned = GetOwnedEquipment(data);
+        owned.RemoveAll(instance => GetDatabase()?.Find(
+            instance.definitionId)?.slot != slot);
+
+        return owned;
+    }
+
+    public static List<EquipmentInstance> GetOwnedEquipment(
+        PlayerData data)
+    {
+        List<EquipmentInstance> owned = new List<EquipmentInstance>();
+        EnsureEquipmentInstances(data);
         if (data?.equipmentInstances == null)
             return owned;
 
@@ -217,15 +269,8 @@ public class EquipmentManager : MonoBehaviour
 
         foreach (EquipmentInstance instance in data.equipmentInstances)
         {
-            EquipmentDefinition item = instance == null
-                ? null
-                : database.Find(instance.definitionId);
-            if (item == null || item.slot != slot)
-            {
-                continue;
-            }
-
-            owned.Add(instance);
+            if (instance != null && database.Find(instance.definitionId) != null)
+                owned.Add(instance);
         }
 
         owned.Sort((left, right) =>
@@ -234,8 +279,13 @@ public class EquipmentManager : MonoBehaviour
                 database.Find(left.definitionId);
             EquipmentDefinition rightDefinition =
                 database.Find(right.definitionId);
-            int tierComparison = leftDefinition.tier.CompareTo(
-                rightDefinition.tier);
+            int slotComparison = leftDefinition.slot.CompareTo(
+                rightDefinition.slot);
+            if (slotComparison != 0)
+                return slotComparison;
+
+            int tierComparison = rightDefinition.tier.CompareTo(
+                leftDefinition.tier);
             return tierComparison != 0
                 ? tierComparison
                 : string.CompareOrdinal(left.instanceId, right.instanceId);
@@ -343,7 +393,8 @@ public class EquipmentManager : MonoBehaviour
         EquipmentDefinition item = instance == null
             ? null
             : GetDatabase()?.Find(instance.definitionId, slot);
-        if (item == null || GetRolledOptionCount(item.tier) <= 0)
+        int optionLineCount = GetOptionLineCount(instance?.rolledOptions);
+        if (item == null || optionLineCount <= 0)
             return false;
 
         int cost = GetRerollCoinCost(item.tier);
@@ -358,7 +409,7 @@ public class EquipmentManager : MonoBehaviour
             equipmentName = item.DisplayName,
             coinCost = cost,
             currentOptions = CloneRolledOptions(instance.rolledOptions),
-            newOptions = RollOptions(item)
+            newOptions = RollOptions(item, optionLineCount)
         };
         pendingCubePreview = preview;
         PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
@@ -412,7 +463,7 @@ public class EquipmentManager : MonoBehaviour
         int flatAttack =
             GameBalanceConfig.EquipmentWeaponBaseAttack +
             item.tier * GameBalanceConfig.EquipmentWeaponAttackPerTier +
-            data.weaponUpgradeLevel *
+            GetEnhancementLevel(data, EquipmentSlot.Weapon) *
             GameBalanceConfig.EquipmentWeaponAttackPerLevel;
         return flatAttack;
     }
@@ -428,11 +479,11 @@ public class EquipmentManager : MonoBehaviour
             ? 0
             : GameBalanceConfig.EquipmentArmorBaseHealth +
               item.tier * GameBalanceConfig.EquipmentArmorHealthPerTier +
-              data.armorUpgradeLevel *
+              GetEnhancementLevel(data, EquipmentSlot.Armor) *
               GameBalanceConfig.EquipmentArmorHealthPerLevel;
     }
 
-    public static float GetArmorPoleDamageReductionPercent(PlayerData data)
+    public static float GetArmorHeroDamageReductionPercent(PlayerData data)
     {
         if (data == null)
             return 0f;
@@ -446,7 +497,7 @@ public class EquipmentManager : MonoBehaviour
             GameBalanceConfig.EquipmentArmorBaseDamageReductionPercent +
             item.tier *
             GameBalanceConfig.EquipmentArmorDamageReductionPerTier +
-            data.armorUpgradeLevel *
+            GetEnhancementLevel(data, EquipmentSlot.Armor) *
             GameBalanceConfig.EquipmentArmorDamageReductionPerLevel;
         return Mathf.Clamp(
             percent,
@@ -454,13 +505,13 @@ public class EquipmentManager : MonoBehaviour
             GameBalanceConfig.EquipmentArmorMaxDamageReductionPercent);
     }
 
-    public static float GetPoleDamageReductionPercent(PlayerData data)
+    public static float GetHeroDamageReductionPercent(PlayerData data)
     {
         return Mathf.Clamp(
-            GetArmorPoleDamageReductionPercent(data) +
+            GetArmorHeroDamageReductionPercent(data) +
             GetOptionPercent(
                 data,
-                EquipmentOptionType.PoleDamageReductionPercent),
+                EquipmentOptionType.HeroDamageReductionPercent),
             0f,
             GameBalanceConfig.EquipmentArmorMaxDamageReductionPercent);
     }
@@ -472,20 +523,20 @@ public class EquipmentManager : MonoBehaviour
             GetOptionPercent(data, EquipmentOptionType.AttackPercent));
     }
 
-    public static float GetPoleDurabilityPercent(PlayerData data)
+    public static float GetHeroHealthPercent(PlayerData data)
     {
         return Mathf.Max(
             0f,
             GetOptionPercent(
                 data,
-                EquipmentOptionType.PoleDurabilityPercent));
+                EquipmentOptionType.HeroHealthPercent));
     }
 
-    public static float GetPoleRepairPercent(PlayerData data)
+    public static float GetHeroHealingPercent(PlayerData data)
     {
         return Mathf.Max(
             0f,
-            GetOptionPercent(data, EquipmentOptionType.PoleRepairPercent));
+            GetOptionPercent(data, EquipmentOptionType.HeroHealingPercent));
     }
 
     public static float GetSkillDamagePercent(PlayerData data)
@@ -511,22 +562,18 @@ public class EquipmentManager : MonoBehaviour
                 EquipmentOptionType.PowerChargePerTapFlat));
     }
 
-    public static float GetPoleRecoverySpeedPercent(PlayerData data)
+    public static float GetHeroRecoverySpeedPercent(PlayerData data)
     {
         return Mathf.Max(
             0f,
             GetOptionPercent(
                 data,
-                EquipmentOptionType.PoleRecoverySpeedPercent));
+                EquipmentOptionType.HeroRecoverySpeedPercent));
     }
 
     public static string GetEquipmentOptionSummary(string equipmentId)
     {
-        EquipmentDefinition item = GetDatabase()?.Find(equipmentId);
-        if (item?.options == null || item.options.Count == 0)
-            return "";
-
-        return GetEquipmentOptionSummary(item, 0);
+        return "";
     }
 
     public static string GetEquipmentOptionSummary(
@@ -536,50 +583,8 @@ public class EquipmentManager : MonoBehaviour
         if (data == null)
             return "";
 
-        string equipmentId = slot == EquipmentSlot.Weapon
-            ? data.equippedWeapon
-            : data.equippedArmor;
-        int upgradeLevel = slot == EquipmentSlot.Weapon
-            ? data.weaponUpgradeLevel
-            : data.armorUpgradeLevel;
-        EquipmentDefinition item =
-            GetDatabase()?.Find(equipmentId, slot);
-        string baseOptions = GetEquipmentOptionSummary(item, upgradeLevel);
         EquipmentInstance instance = GetEquippedInstance(data, slot);
-        string rolledOptions = FormatRolledOptions(instance);
-        if (string.IsNullOrWhiteSpace(rolledOptions))
-            return baseOptions;
-
-        string rolledText = rolledOptions.TrimStart(' ', '+');
-        return string.IsNullOrWhiteSpace(baseOptions)
-            ? rolledText
-            : baseOptions + ", " + rolledText;
-    }
-
-    private static string GetEquipmentOptionSummary(
-        EquipmentDefinition item,
-        int upgradeLevel)
-    {
-        if (item?.options == null || item.options.Count == 0)
-            return "";
-
-        string summary = "";
-        for (int index = 0; index < item.options.Count; index++)
-        {
-            EquipmentOption option = item.options[index];
-            float value = GetOptionValue(
-                option,
-                Mathf.Max(0, upgradeLevel));
-            if (option == null || Mathf.Approximately(value, 0f))
-                continue;
-
-            if (summary.Length > 0)
-                summary += ", ";
-            summary += GetOptionLabel(option.type) + " +" +
-                FormatOptionValue(option.type, value);
-        }
-
-        return summary;
+        return FormatRolledOptions(instance);
     }
 
     public static string GetEquipmentDisplayName(string equipmentId)
@@ -607,54 +612,11 @@ public class EquipmentManager : MonoBehaviour
         if (data == null)
             return 0f;
 
-        float total = 0f;
-        total += GetOptionValue(
-            GetDatabase()?.Find(data.equippedWeapon, EquipmentSlot.Weapon),
-            type,
-            data.weaponUpgradeLevel);
-        total += GetOptionValue(
-            GetDatabase()?.Find(data.equippedArmor, EquipmentSlot.Armor),
-            type,
-            data.armorUpgradeLevel);
-        total += GetRolledOptionValue(
+        return GetRolledOptionValue(
             GetEquippedInstance(data, EquipmentSlot.Weapon),
-            type);
-        total += GetRolledOptionValue(
+            type) + GetRolledOptionValue(
             GetEquippedInstance(data, EquipmentSlot.Armor),
             type);
-        return total;
-    }
-
-    private static float GetOptionValue(
-        EquipmentDefinition item,
-        EquipmentOptionType type,
-        int upgradeLevel)
-    {
-        if (item?.options == null)
-            return 0f;
-
-        float total = 0f;
-        foreach (EquipmentOption option in item.options)
-        {
-            if (option == null || option.type != type)
-                continue;
-
-            total += GetOptionValue(option, upgradeLevel);
-        }
-
-        return total;
-    }
-
-    private static float GetOptionValue(
-        EquipmentOption option,
-        int upgradeLevel)
-    {
-        if (option == null)
-            return 0f;
-
-        return option.value +
-            option.valuePerUpgradeLevel *
-            Mathf.Max(0, upgradeLevel);
     }
 
     private static string GetOptionLabel(EquipmentOptionType type)
@@ -667,16 +629,16 @@ public class EquipmentManager : MonoBehaviour
                 return LocalizationManager.Text("Skill Damage", "스킬피해");
             case EquipmentOptionType.BossDamagePercent:
                 return LocalizationManager.Text("Boss Damage", "보스피해");
-            case EquipmentOptionType.PoleDurabilityPercent:
-                return LocalizationManager.Text("Pole DUR", "전봇대내구");
-            case EquipmentOptionType.PoleDamageReductionPercent:
+            case EquipmentOptionType.HeroHealthPercent:
+                return LocalizationManager.Text("Hero HP", "참새체력");
+            case EquipmentOptionType.HeroDamageReductionPercent:
                 return LocalizationManager.Text("Damage Reduction", "피해감소");
-            case EquipmentOptionType.PoleRepairPercent:
-                return LocalizationManager.Text("Repair", "수리");
+            case EquipmentOptionType.HeroHealingPercent:
+                return LocalizationManager.Text("Healing", "회복량");
             case EquipmentOptionType.PowerChargePerTapFlat:
                 return LocalizationManager.Text("Charge", "충전");
-            case EquipmentOptionType.PoleRecoverySpeedPercent:
-                return LocalizationManager.Text("Recovery", "복구");
+            case EquipmentOptionType.HeroRecoverySpeedPercent:
+                return LocalizationManager.Text("Reentry", "재정비");
             default:
                 return type.ToString();
         }
@@ -695,6 +657,17 @@ public class EquipmentManager : MonoBehaviour
     public static int GetUpgradeCost(int currentLevel)
     {
         return GetStarForceCost(currentLevel);
+    }
+
+    public static int GetEnhancementLevel(
+        PlayerData data,
+        EquipmentSlot slot)
+    {
+        EquipmentInstance instance = GetEquippedInstance(data, slot);
+        return Mathf.Clamp(
+            instance?.enhancementLevel ?? 0,
+            0,
+            GameBalanceConfig.EquipmentStarForceMaxLevel);
     }
 
     public static int GetStarForceCost(int currentStar)
@@ -746,12 +719,18 @@ public class EquipmentManager : MonoBehaviour
         }
     }
 
+    public static EquipmentDefinition GetEquipmentDefinition(
+        string equipmentId)
+    {
+        return GetDatabase()?.Find(equipmentId);
+    }
+
     public static int GetRerollCoinCost(int tier)
     {
         switch (Mathf.Max(0, tier))
         {
             case 0:
-                return 0;
+                return GameBalanceConfig.EquipmentRerollCoinTier0;
             case 1:
                 return GameBalanceConfig.EquipmentRerollCoinTier1;
             case 2:
@@ -761,11 +740,28 @@ public class EquipmentManager : MonoBehaviour
         }
     }
 
+    public static int GetOptionResetCoinCost(
+        PlayerData data,
+        EquipmentSlot slot)
+    {
+        if (data == null)
+            return -1;
+
+        string equipmentId = slot == EquipmentSlot.Weapon
+            ? data.equippedWeapon
+            : data.equippedArmor;
+        EquipmentDefinition item = GetDatabase()?.Find(
+            equipmentId,
+            slot);
+        EquipmentInstance instance = GetEquippedInstance(data, slot);
+        return item == null || GetOptionLineCount(instance?.rolledOptions) <= 0
+            ? -1
+            : GetRerollCoinCost(item.tier);
+    }
+
     private static int GetStarForce(PlayerData data, EquipmentSlot slot)
     {
-        return slot == EquipmentSlot.Weapon
-            ? data.weaponUpgradeLevel
-            : data.armorUpgradeLevel;
+        return GetEnhancementLevel(data, slot);
     }
 
     private static void SetStarForce(
@@ -773,19 +769,23 @@ public class EquipmentManager : MonoBehaviour
         EquipmentSlot slot,
         int value)
     {
-        if (slot == EquipmentSlot.Weapon)
-            data.weaponUpgradeLevel = value;
-        else
-            data.armorUpgradeLevel = value;
+        EquipmentInstance instance = GetEquippedInstance(data, slot);
+        if (instance != null)
+        {
+            instance.enhancementLevel = Mathf.Clamp(
+                value,
+                0,
+                GameBalanceConfig.EquipmentStarForceMaxLevel);
+        }
     }
 
     private static int GetStarForceDowngradeFails(
         PlayerData data,
         EquipmentSlot slot)
     {
-        return slot == EquipmentSlot.Weapon
-            ? data.weaponStarForceDowngradeFails
-            : data.armorStarForceDowngradeFails;
+        return Mathf.Max(
+            0,
+            GetEquippedInstance(data, slot)?.starForceDowngradeFails ?? 0);
     }
 
     private static void SetStarForceDowngradeFails(
@@ -793,10 +793,9 @@ public class EquipmentManager : MonoBehaviour
         EquipmentSlot slot,
         int value)
     {
-        if (slot == EquipmentSlot.Weapon)
-            data.weaponStarForceDowngradeFails = value;
-        else
-            data.armorStarForceDowngradeFails = value;
+        EquipmentInstance instance = GetEquippedInstance(data, slot);
+        if (instance != null)
+            instance.starForceDowngradeFails = Mathf.Max(0, value);
     }
 
     private static void EnsureEquipmentInstances(PlayerData data)
@@ -805,6 +804,7 @@ public class EquipmentManager : MonoBehaviour
             return;
 
         data.EnsureInitialized();
+        MigrateLegacyEquipmentIds(data);
         EquipmentDatabase database = GetDatabase();
         if (database?.equipment == null)
             return;
@@ -818,18 +818,12 @@ public class EquipmentManager : MonoBehaviour
                 continue;
             }
 
-            if (FindInstanceByDefinition(data, item.id) == null)
-            {
+            int instanceCount = CountInstancesByDefinition(data, item.id);
+            for (int index = instanceCount; index < count; index++)
                 data.equipmentInstances.Add(CreateInstance(item, false));
-            }
 
-            if (count > 1)
-            {
-                data.flightEquipmentCoins +=
-                    (count - 1) * GetDismantleCoinReward(item.tier);
-            }
-
-            SetInventoryEquipmentCount(data, item.id, 1);
+            // Equipment is now tracked only as individual instances.
+            SetInventoryEquipmentCount(data, item.id, 0);
         }
 
         EnsureEquippedInstance(
@@ -842,6 +836,101 @@ public class EquipmentManager : MonoBehaviour
             EquipmentSlot.Armor,
             data.equippedArmor,
             data.equippedArmorInstanceId);
+        MigrateLegacySlotEnhancements(data);
+    }
+
+    private static void MigrateLegacyEquipmentIds(PlayerData data)
+    {
+        if (data == null)
+            return;
+
+        data.equippedWeapon = MapLegacyEquipmentId(data.equippedWeapon);
+        data.equippedArmor = MapLegacyEquipmentId(data.equippedArmor);
+
+        if (data.equipmentInstances != null)
+        {
+            foreach (EquipmentInstance instance in data.equipmentInstances)
+            {
+                if (instance != null)
+                {
+                    instance.definitionId = MapLegacyEquipmentId(
+                        instance.definitionId);
+                }
+            }
+        }
+
+        if (data.inventory?.items == null)
+            return;
+
+        foreach (KeyValuePair<string, string> entry in LegacyEquipmentIdMap)
+        {
+            if (!data.inventory.items.TryGetValue(
+                    entry.Key,
+                    out int legacyCount))
+            {
+                continue;
+            }
+
+            if (legacyCount > 0)
+            {
+                data.inventory.items.TryGetValue(
+                    entry.Value,
+                    out int currentCount);
+                data.inventory.items[entry.Value] =
+                    Mathf.Max(0, currentCount) + legacyCount;
+            }
+
+            data.inventory.items.Remove(entry.Key);
+        }
+    }
+
+    private static string MapLegacyEquipmentId(string equipmentId)
+    {
+        return !string.IsNullOrWhiteSpace(equipmentId) &&
+            LegacyEquipmentIdMap.TryGetValue(
+                equipmentId,
+                out string mappedId)
+            ? mappedId
+            : equipmentId;
+    }
+
+    private static void MigrateLegacySlotEnhancements(PlayerData data)
+    {
+        if (data == null || data.equipmentInstanceEnhancementsMigrated)
+            return;
+
+        MigrateLegacySlotEnhancement(
+            GetEquippedInstance(data, EquipmentSlot.Weapon),
+            data.weaponUpgradeLevel,
+            data.weaponStarForceDowngradeFails);
+        MigrateLegacySlotEnhancement(
+            GetEquippedInstance(data, EquipmentSlot.Armor),
+            data.armorUpgradeLevel,
+            data.armorStarForceDowngradeFails);
+        data.weaponUpgradeLevel = 0;
+        data.armorUpgradeLevel = 0;
+        data.weaponStarForceDowngradeFails = 0;
+        data.armorStarForceDowngradeFails = 0;
+        data.equipmentInstanceEnhancementsMigrated = true;
+    }
+
+    private static void MigrateLegacySlotEnhancement(
+        EquipmentInstance instance,
+        int enhancementLevel,
+        int downgradeFails)
+    {
+        if (instance == null)
+            return;
+
+        instance.enhancementLevel = Mathf.Max(
+            instance.enhancementLevel,
+            Mathf.Clamp(
+                enhancementLevel,
+                0,
+                GameBalanceConfig.EquipmentStarForceMaxLevel));
+        instance.starForceDowngradeFails = Mathf.Max(
+            instance.starForceDowngradeFails,
+            Mathf.Max(0, downgradeFails));
     }
 
     private static void EnsureEquippedInstance(
@@ -892,9 +981,19 @@ public class EquipmentManager : MonoBehaviour
     private static List<EquipmentRolledOption> RollOptions(
         EquipmentDefinition item)
     {
+        int lineCount = UnityEngine.Random.Range(
+            GameBalanceConfig.EquipmentRandomOptionMinLines,
+            GameBalanceConfig.EquipmentRandomOptionMaxLines + 1);
+        return RollOptions(item, lineCount);
+    }
+
+    private static List<EquipmentRolledOption> RollOptions(
+        EquipmentDefinition item,
+        int lineCount)
+    {
         List<EquipmentRolledOption> options =
             new List<EquipmentRolledOption>();
-        int count = GetRolledOptionCount(item.tier);
+        int count = Mathf.Clamp(lineCount, 0, 3);
         List<EquipmentOptionType> pool = item.slot == EquipmentSlot.Weapon
             ? new List<EquipmentOptionType>
             {
@@ -904,10 +1003,10 @@ public class EquipmentManager : MonoBehaviour
             }
             : new List<EquipmentOptionType>
             {
-                EquipmentOptionType.PoleDurabilityPercent,
-                EquipmentOptionType.PoleDamageReductionPercent,
-                EquipmentOptionType.PoleRepairPercent,
-                EquipmentOptionType.PoleRecoverySpeedPercent
+                EquipmentOptionType.HeroHealthPercent,
+                EquipmentOptionType.HeroDamageReductionPercent,
+                EquipmentOptionType.HeroHealingPercent,
+                EquipmentOptionType.HeroRecoverySpeedPercent
             };
 
         for (int index = 0; index < count && pool.Count > 0; index++)
@@ -927,12 +1026,20 @@ public class EquipmentManager : MonoBehaviour
         return options;
     }
 
-    private static int GetRolledOptionCount(int tier)
+    private static int GetOptionLineCount(
+        List<EquipmentRolledOption> options)
     {
-        if (tier <= 0)
+        if (options == null)
             return 0;
 
-        return tier >= 3 ? 2 : 1;
+        int count = 0;
+        foreach (EquipmentRolledOption option in options)
+        {
+            if (option != null && option.value > 0f)
+                count++;
+        }
+
+        return count;
     }
 
     private static EquipmentInstance GetEquippedInstance(
@@ -944,6 +1051,15 @@ public class EquipmentManager : MonoBehaviour
             slot == EquipmentSlot.Weapon
                 ? data?.equippedWeaponInstanceId
                 : data?.equippedArmorInstanceId);
+    }
+
+    private static bool IsEquippedInstance(
+        PlayerData data,
+        string instanceId)
+    {
+        return !string.IsNullOrWhiteSpace(instanceId) &&
+            (data?.equippedWeaponInstanceId == instanceId ||
+             data?.equippedArmorInstanceId == instanceId);
     }
 
     private static EquipmentInstance FindInstance(
@@ -972,6 +1088,26 @@ public class EquipmentManager : MonoBehaviour
 
         return data.equipmentInstances.Find(instance =>
             instance != null && instance.definitionId == definitionId);
+    }
+
+    private static int CountInstancesByDefinition(
+        PlayerData data,
+        string definitionId)
+    {
+        if (data?.equipmentInstances == null ||
+            string.IsNullOrWhiteSpace(definitionId))
+        {
+            return 0;
+        }
+
+        int count = 0;
+        foreach (EquipmentInstance instance in data.equipmentInstances)
+        {
+            if (instance != null && instance.definitionId == definitionId)
+                count++;
+        }
+
+        return count;
     }
 
     private static void EquipInstance(
