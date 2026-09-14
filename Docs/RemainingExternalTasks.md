@@ -1,7 +1,7 @@
 # Remaining External Tasks
 
-현재 로컬 코드와 자동 검증으로 처리할 수 있는 작업은 완료했다.
-아래 항목은 외부 에셋, 실제 계정 설정, 실기기 또는 출시 결정이 필요하다.
+아래 항목은 외부 에셋, 실제 계정 설정, 실기기 또는 출시 결정이 필요한 확인 목록이다. 항목이 남아 있다는 이유만으로 관련 코드나 아트가 전혀 없다는 뜻은 아니다.
+2026-09-15 현재 로컬 구현과 재검증이 필요한 작업도 남아 있다. 최신 범위와 검증 상태는 [개발 진행 현황](ProgressStatus-2026-09-15.md)을 기준으로 확인한다.
 
 ## 아트 / 사운드
 
@@ -43,8 +43,9 @@
 
 ## 출시 전
 
-- `GameBalanceConfig.PrototypeMinimumGold`를 `0`으로 변경
-- `GameBalanceConfig.PrototypeMinimumGems`를 `0`으로 변경
+- [x] `GameBalanceConfig.PrototypeMinimumGold`는 `0`이다. (2026-09-15 코드 확인)
+- [x] `GameBalanceConfig.PrototypeMinimumGems`는 `0`이다. (2026-09-15 코드 확인)
+- [ ] 기존 저장 데이터의 재화와 초기 경제 밸런스는 실제 플레이로 별도 검증한다.
 - 릴리즈 키스토어 생성 및 안전한 별도 보관
 - Release AAB 빌드
 - 내부 테스트 트랙 업로드

@@ -164,8 +164,16 @@ public static class BattleVisualResolver
     public static BattleActorVisualSet GetEnemy(
         int stage,
         bool boss,
-        EnemyAttackType attackType)
+        EnemyAttackType attackType,
+        EnemyDefinition definition = null)
     {
+        if (!boss &&
+            definition?.visual != null &&
+            definition.visual.HasActorVisual)
+        {
+            return definition.visual;
+        }
+
         if (boss)
         {
             BattleActorVisualSet cerberus =

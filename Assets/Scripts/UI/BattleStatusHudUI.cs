@@ -15,6 +15,9 @@ public sealed class BattleStatusHudUI
     private RectTransform enemyHealthFill;
     private RectTransform playerHealthFill;
     private RectTransform powerChargeFill;
+    private RectTransform enemyProgressCurrentRoot;
+    private RectTransform enemyProgressMaxRoot;
+    private RectTransform enemyProgressSeparatorRoot;
     private Image powerChargeFillImage;
     private TMP_Text enemyNameText;
     private TMP_Text enemyProgressSeparatorText;
@@ -30,6 +33,9 @@ public sealed class BattleStatusHudUI
     private SpriteNumberText playerHealthMaxNumberText;
     private SpriteNumberText powerChargeCurrentNumberText;
     private SpriteNumberText powerChargeMaxNumberText;
+    private float enemyProgressPulseTimer;
+
+    private const float EnemyProgressPulseDuration = 0.42f;
 
     public BattleStatusHudUI(
         Color danger,
@@ -279,6 +285,16 @@ public sealed class BattleStatusHudUI
             parent,
             "PowerChargeMaxNumberText",
             18f);
+
+        enemyProgressCurrentRoot = RuntimeUiBinder.FindRect(
+            parent,
+            "EnemyProgressCurrentNumberText");
+        enemyProgressMaxRoot = RuntimeUiBinder.FindRect(
+            parent,
+            "EnemyProgressMaxNumberText");
+        enemyProgressSeparatorRoot = RuntimeUiBinder.FindRect(
+            parent,
+            "EnemyProgressSeparatorText");
     }
 
     public void Refresh(BattleManager battleManager, PlayerData data)
@@ -345,6 +361,27 @@ public sealed class BattleStatusHudUI
                     : Color.white;
     }
 
+    public void PulseEnemyProgress()
+    {
+        enemyProgressPulseTimer = EnemyProgressPulseDuration;
+    }
+
+    public void UpdateAnimations(float deltaTime)
+    {
+        enemyProgressPulseTimer = Mathf.Max(
+            0f,
+            enemyProgressPulseTimer - deltaTime);
+        float progress = 1f - Mathf.Clamp01(
+            enemyProgressPulseTimer / EnemyProgressPulseDuration);
+        float pulse = enemyProgressPulseTimer > 0f
+            ? Mathf.Sin(progress * Mathf.PI)
+            : 0f;
+
+        SetScale(enemyProgressCurrentRoot, 1f + pulse * 0.28f);
+        SetScale(enemyProgressSeparatorRoot, 1f + pulse * 0.14f);
+        SetScale(enemyProgressMaxRoot, 1f + pulse * 0.14f);
+    }
+
     private static string GetCombatStatusText(
         BattleManager battleManager,
         bool fullPower,
@@ -404,7 +441,13 @@ public sealed class BattleStatusHudUI
         }
 
         enemyProgressCurrentNumberText.SetText(
-            CompactNumberFormatter.Format(data.currentStage));
+            CompactNumberFormatter.Format(
+                battleManager.CurrentWaveEnemyNumber));
+        enemyProgressSeparatorText.gameObject.SetActive(true);
+        enemyProgressMaxNumberText.SetActive(true);
+        enemyProgressMaxNumberText.SetText(
+            CompactNumberFormatter.Format(
+                battleManager.CurrentWaveEnemyCount));
     }
 
     private static RectTransform FindFill(
@@ -424,5 +467,11 @@ public sealed class BattleStatusHudUI
             RuntimeUiBinder.FindRect(parent, name),
             NumberResourceRoot,
             characterHeight);
+    }
+
+    private static void SetScale(RectTransform rect, float scale)
+    {
+        if (rect != null)
+            rect.localScale = Vector3.one * scale;
     }
 }

@@ -95,15 +95,16 @@ public sealed class EquipmentItemActionModalUI
         selectedInstance = instance;
         isDismantleConfirm = false;
         bool equipped = IsEquipped(instance.instanceId);
-        titleText.text = "\uC7A5\uBE44 \uC120\uD0DD";
+        titleText.text = "\uC544\uC774\uD15C \uC815\uBCF4";
         icon.sprite = definition.icon;
         icon.color = icon.sprite == null ? Color.clear : Color.white;
-        typeText.text = definition.slot == EquipmentSlot.Weapon
+        string slotName = definition.slot == EquipmentSlot.Weapon
             ? "\uBB34\uAE30"
             : "\uBC29\uC5B4\uAD6C";
+        typeText.text = GetTierLabel(definition.tier) + "  " + slotName;
         nameText.text = definition.DisplayName;
         starsText.text = GetStarText(instance.enhancementLevel);
-        optionsText.text = GetOptionsText(instance);
+        optionsText.text = "\uB79C\uB364 \uC635\uC158\n" + GetOptionsText(instance);
         coinText.text = "\uD574\uCCB4 \uBCF4\uC0C1: \uBE44\uD589\uB2E8 \uC7A5\uBE44 \uCF54\uC778 x" +
             EquipmentManager.GetDismantleCoinReward(definition.tier);
         instructionText.text = equipped
@@ -175,6 +176,15 @@ public sealed class EquipmentItemActionModalUI
         return string.IsNullOrWhiteSpace(options)
             ? "\uC635\uC158 \uC5C6\uC74C"
             : options.Replace(", ", "\n");
+    }
+
+    private static string GetTierLabel(int tier)
+    {
+        string[] labels =
+        {
+            "D", "G", "B", "A", "S", "SS", "SSS", "X", "XX", "XXX"
+        };
+        return labels[Mathf.Clamp(tier, 0, labels.Length - 1)];
     }
 
     private static void SetText(TMP_Text text, string value)

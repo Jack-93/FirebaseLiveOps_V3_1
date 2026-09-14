@@ -4,8 +4,6 @@ using UnityEngine;
 
 public static class GameBalance
 {
-    public const int EnemiesPerStage =
-        GameBalanceConfig.EnemiesPerStage;
     public const int BossStageInterval =
         GameBalanceConfig.BossStageInterval;
     public const int MaxOfflineHours =
@@ -178,6 +176,23 @@ public static class GameBalance
         return ClampToInt(value);
     }
 
+    public static int GetWaveEnemyMaxHealth(
+        int stage,
+        bool isBoss,
+        int enemyCount,
+        float stageHealthBudgetMultiplier)
+    {
+        int stageHealth = GetEnemyMaxHealth(stage, isBoss);
+        if (isBoss)
+            return stageHealth;
+
+        int count = Math.Max(1, enemyCount);
+        float budget = Mathf.Max(0.1f, stageHealthBudgetMultiplier);
+        return Math.Max(
+            1,
+            Mathf.RoundToInt(stageHealth * budget / count));
+    }
+
     public static int GetEnemyAttack(int stage, bool isBoss)
     {
         double value =
@@ -202,6 +217,23 @@ public static class GameBalance
             value *= GameBalanceConfig.BossGoldMultiplier;
 
         return Math.Max(1, ClampToInt(value));
+    }
+
+    public static int GetWaveEnemyGold(
+        int stage,
+        bool isBoss,
+        int enemyIndex,
+        int enemyCount)
+    {
+        int stageGold = GetEnemyGold(stage, isBoss);
+        if (isBoss)
+            return stageGold;
+
+        int count = Math.Max(1, enemyCount);
+        int index = Mathf.Clamp(enemyIndex, 0, count - 1);
+        int baseReward = stageGold / count;
+        int remainder = stageGold % count;
+        return baseReward + (index < remainder ? 1 : 0);
     }
 
     public static int GetUpgradeCost(UpgradeType type, int currentLevel)

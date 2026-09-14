@@ -1,0 +1,121 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8651f7c3f47d4be083b048692d9007a4, type: 3}
+  m_Name: StageWaveDatabase
+  m_EditorClassIdentifier:
+  enemies:
+  - enemyId: CatMelee_1
+    displayName: "\uADFC\uC811 \uACE0\uC591\uC774"
+    attackType: 0
+    attackRange: 110
+    approachSpeed: 500
+    attackInterval: 2
+    projectileDuration: 0.25
+    damageMultiplier: 1
+    visual:
+      sprite: {fileID: 0}
+      animatorController: {fileID: 0}
+      spriteAnimations: []
+      basicProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+      skillProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+  - enemyId: CatMage_1
+    displayName: "\uB9C8\uBC95\uC0AC \uACE0\uC591\uC774"
+    attackType: 1
+    attackRange: 225
+    approachSpeed: 420
+    attackInterval: 2.5
+    projectileDuration: 0.62
+    damageMultiplier: 0.9
+    visual:
+      sprite: {fileID: 0}
+      animatorController: {fileID: 0}
+      spriteAnimations: []
+      basicProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+      skillProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+  - enemyId: CatDash_1
+    displayName: "\uB3CC\uC9C4 \uACE0\uC591\uC774"
+    attackType: 2
+    attackRange: 96
+    approachSpeed: 900
+    attackInterval: 2.6
+    projectileDuration: 0.2
+    damageMultiplier: 1.1
+    visual:
+      sprite: {fileID: 0}
+      animatorController: {fileID: 0}
+      spriteAnimations: []
+      basicProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+      skillProjectile:
+        sprite: {fileID: 0}
+        tint: {r: 1, g: 1, b: 1, a: 1}
+        duration: 0
+        size: 0
+  rules:
+  - chapterFrom: 1
+    chapterTo: 0
+    chapterStageFrom: 1
+    chapterStageTo: 3
+    priority: 0
+    enemyCount: 2
+    maxConsecutiveSameType: 2
+    guaranteeEveryAllowedType: 0
+    stageHealthBudgetMultiplier: 1
+    allowedAttackTypes:
+    - 0
+    - 1
+    - 2
+  - chapterFrom: 1
+    chapterTo: 0
+    chapterStageFrom: 4
+    chapterStageTo: 6
+    priority: 0
+    enemyCount: 3
+    maxConsecutiveSameType: 2
+    guaranteeEveryAllowedType: 0
+    stageHealthBudgetMultiplier: 1
+    allowedAttackTypes:
+    - 0
+    - 1
+    - 2
+  - chapterFrom: 1
+    chapterTo: 0
+    chapterStageFrom: 7
+    chapterStageTo: 9
+    priority: 0
+    enemyCount: 4
+    maxConsecutiveSameType: 2
+    guaranteeEveryAllowedType: 1
+    stageHealthBudgetMultiplier: 1
+    allowedAttackTypes:
+    - 0
+    - 1
+    - 2

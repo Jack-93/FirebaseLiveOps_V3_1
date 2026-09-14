@@ -77,7 +77,8 @@ public sealed class BossPatternPresentation
                         0,
                         thunderWarning,
                         runtime.TargetPositions[0],
-                        new Vector2(154f, 154f));
+                        GetTargetVisualSize(runtime.Pattern),
+                        false);
                 }
                 break;
             case BossPatternType.TripleFireBreath:
@@ -92,25 +93,22 @@ public sealed class BossPatternPresentation
                         fireWarning,
                         new Vector2(0.5f, (lane + 0.5f) / 3f),
                         new Vector2(
-                            effectLayer.rect.width * 0.92f,
-                            effectLayer.rect.height * 0.27f));
+                            effectLayer.rect.width,
+                            effectLayer.rect.height / 3f),
+                        false);
                 }
                 break;
             case BossPatternType.SpiritVolley:
-                if (runtime.TargetPositions.Length > 0)
+                for (int index = 0;
+                     index < runtime.TargetPositions.Length && index < 3;
+                     index++)
                 {
-                    Vector2 center = Vector2.zero;
-                    foreach (Vector2 target in runtime.TargetPositions)
-                        center += target;
-                    center /= runtime.TargetPositions.Length;
-                    float warningSize = Mathf.Min(
-                        effectLayer.rect.width * 0.5f,
-                        effectLayer.rect.height * 0.8f);
                     ShowWarningAt(
-                        0,
+                        index,
                         spiritWarning,
-                        center,
-                        new Vector2(warningSize, warningSize));
+                        runtime.TargetPositions[index],
+                        GetTargetVisualSize(runtime.Pattern),
+                        false);
                 }
                 break;
         }
@@ -156,9 +154,10 @@ public sealed class BossPatternPresentation
                         new Vector2(0.52f, (lane + 0.5f) / 3f),
                         travel,
                         new Vector2(
-                            effectLayer.rect.width * 0.88f,
-                            effectLayer.rect.height * 0.28f),
-                        true);
+                            effectLayer.rect.width,
+                            effectLayer.rect.height / 3f),
+                        true,
+                        false);
                 }
                 break;
             case BossPatternType.SpiritVolley:
@@ -225,11 +224,9 @@ public sealed class BossPatternPresentation
             }
 
             float pulse = Mathf.Sin(travelProgress * Mathf.PI);
-            float direction = state.stationary ? -1f : 1f;
-            projectile.localScale = new Vector3(
-                direction * Mathf.Lerp(0.88f, 1.08f, pulse),
-                Mathf.Lerp(0.88f, 1.08f, pulse),
-                1f);
+            projectile.localScale = state.stationary
+                ? new Vector3(-1f, 1f, 1f)
+                : Vector3.one * Mathf.Lerp(0.88f, 1.08f, pulse);
 
             float fade = state.elapsed <= state.travelDuration
                 ? 1f
@@ -261,7 +258,8 @@ public sealed class BossPatternPresentation
         int index,
         Sprite sprite,
         Vector2 point,
-        Vector2 size)
+        Vector2 size,
+        bool preserveAspect = true)
     {
         if (index < 0 || index >= warnings.Length)
             return;
@@ -272,7 +270,7 @@ public sealed class BossPatternPresentation
             return;
 
         image.sprite = sprite;
-        image.preserveAspect = true;
+        image.preserveAspect = preserveAspect;
         image.color = Color.white;
         warning.sizeDelta = size;
         warning.localScale = Vector3.one;
@@ -288,7 +286,8 @@ public sealed class BossPatternPresentation
         Vector2 to,
         float travelDuration,
         Vector2 size,
-        bool stationary)
+        bool stationary,
+        bool preserveAspect = true)
     {
         if (index < 0 || index >= projectiles.Length)
             return;
@@ -299,7 +298,7 @@ public sealed class BossPatternPresentation
             return;
 
         image.sprite = sprite;
-        image.preserveAspect = true;
+        image.preserveAspect = preserveAspect;
         image.color = Color.white;
         projectile.sizeDelta = size;
         projectile.localScale = stationary
@@ -318,6 +317,18 @@ public sealed class BossPatternPresentation
             travelDuration = travelDuration,
             lifeDuration = travelDuration + 0.18f
         };
+    }
+
+    private Vector2 GetTargetVisualSize(BossPatternDefinition pattern)
+    {
+        if (pattern == null || effectLayer == null)
+            return new Vector2(154f, 154f);
+
+        return new Vector2(
+            effectLayer.rect.width *
+            Mathf.Clamp(pattern.targetRadiusX, 0.01f, 0.5f) * 2f,
+            effectLayer.rect.height *
+            Mathf.Clamp(pattern.targetRadiusY, 0.01f, 0.5f) * 2f);
     }
 
     private Vector2 GetEnemyImpactAnchor()

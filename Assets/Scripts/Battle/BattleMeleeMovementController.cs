@@ -13,7 +13,10 @@ public sealed class BattleMeleeMovementController : MonoBehaviour
     private RectTransform actorParent;
     private Vector3 homeLocalPosition;
     private Action onImpact;
+    private bool impactPending;
     private State state;
+
+    public bool IsMoving => state == State.Approaching;
 
     private enum State
     {
@@ -37,7 +40,7 @@ public sealed class BattleMeleeMovementController : MonoBehaviour
         if (actorRoot == null || actorParent == null)
             return;
 
-        if (state == State.Approaching)
+        if (state != State.Idle)
             UpdateApproach();
     }
 
@@ -63,7 +66,31 @@ public sealed class BattleMeleeMovementController : MonoBehaviour
             return;
         }
 
+        impactPending = true;
         state = State.Approaching;
+        UpdateApproach();
+    }
+
+    public void BeginPursuit()
+    {
+        if (attackTarget == null || actorRoot == null || actorParent == null)
+            return;
+
+        if (state == State.Idle)
+            state = State.Approaching;
+    }
+
+    public void ContinuePursuit()
+    {
+        impactPending = false;
+        if (attackTarget == null || actorRoot == null || actorParent == null)
+        {
+            state = State.Idle;
+            return;
+        }
+
+        state = State.Approaching;
+        UpdateApproach();
     }
 
     public void HoldPosition()
@@ -71,6 +98,7 @@ public sealed class BattleMeleeMovementController : MonoBehaviour
         if (actorRoot == null)
             return;
 
+        impactPending = false;
         state = State.Idle;
     }
 
@@ -85,6 +113,18 @@ public sealed class BattleMeleeMovementController : MonoBehaviour
             return;
 
         actorRoot.localPosition = homeLocalPosition;
+        impactPending = false;
+        state = State.Idle;
+    }
+
+    public void SetHomePoint(RectTransform homePoint)
+    {
+        if (actorRoot == null || homePoint == null)
+            return;
+
+        actorRoot.position = homePoint.position;
+        homeLocalPosition = actorRoot.localPosition;
+        impactPending = false;
         state = State.Idle;
     }
 
@@ -98,10 +138,15 @@ public sealed class BattleMeleeMovementController : MonoBehaviour
         if (distance <= attackRange)
         {
             state = State.WaitingForImpact;
-            onImpact?.Invoke();
+            if (impactPending)
+            {
+                impactPending = false;
+                onImpact?.Invoke();
+            }
             return;
         }
 
+        state = State.Approaching;
         float moveDistance = Mathf.Max(0f, distance - attackRange);
         float step = Mathf.Min(
             approachSpeed * BattleTempo.ScaleDeltaTime(Time.deltaTime),

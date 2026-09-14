@@ -22,7 +22,6 @@ public static class GameBalanceConfig
         1
     };
 
-    public const int EnemiesPerStage = 1;
     public const int BossStageInterval = 10;
     public const int MaxOfflineHours = 8;
     public const float BossTimeLimit = 40f;

@@ -6,8 +6,8 @@ using UnityEngine.UI;
 
 public sealed class EquipmentInventoryModalUI
 {
-    private const int MinimumSlotCount = 24;
-    private const int SlotsPerRow = 6;
+    private const int MinimumSlotCount = 45;
+    private const int SlotsPerRow = 5;
 
     private RectTransform overlay;
     private RectTransform cardArea;
@@ -15,6 +15,7 @@ public sealed class EquipmentInventoryModalUI
     private TMP_Text titleText;
     private TMP_Text countText;
     private TMP_Text emptyText;
+    private ScrollRect scrollRect;
     private readonly Action<EquipmentInstance> selectAction;
 
     public EquipmentInventoryModalUI(
@@ -35,6 +36,9 @@ public sealed class EquipmentInventoryModalUI
         cardArea = RuntimeUiBinder.FindRect(
             overlay,
             "EquipmentInventoryCardArea");
+        scrollRect = cardArea != null
+            ? cardArea.GetComponent<ScrollRect>()
+            : null;
         cardContent = RuntimeUiBinder.FindRect(
             overlay,
             "EquipmentInventoryContent");
@@ -55,10 +59,15 @@ public sealed class EquipmentInventoryModalUI
 
     public void Show()
     {
-        titleText.text = "\uC7A5\uBE44 \uC778\uBCA4\uD1A0\uB9AC";
-        RebuildCards();
         overlay.gameObject.SetActive(true);
         overlay.SetAsLastSibling();
+        titleText.text = "\uBE44\uD589\uB2E8 \uC7A5\uBE44";
+        RebuildCards();
+        Canvas.ForceUpdateCanvases();
+        if (cardContent != null)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(cardContent);
+        if (scrollRect != null)
+            scrollRect.verticalNormalizedPosition = 1f;
     }
 
     public void Refresh()
@@ -150,7 +159,7 @@ public sealed class EquipmentInventoryModalUI
         {
             card.interactable = false;
             if (cardArt != null)
-                cardArt.color = new Color32(42, 55, 75, 255);
+                cardArt.color = new Color32(96, 82, 58, 150);
             if (icon != null)
                 icon.color = Color.clear;
             SetText(starsText, "");
@@ -165,9 +174,10 @@ public sealed class EquipmentInventoryModalUI
         RuntimeUiBinder.ReplaceButtonAction(card, () => Select(instance));
         if (cardArt != null)
         {
+            Color tierColor = GetSlotColor(definition?.tier ?? 0);
             cardArt.color = equipped
-                ? new Color32(211, 157, 62, 255)
-                : GetSlotColor(definition?.tier ?? 0);
+                ? Color.Lerp(tierColor, Color.white, 0.14f)
+                : tierColor;
         }
 
         if (icon != null)
@@ -175,9 +185,17 @@ public sealed class EquipmentInventoryModalUI
             icon.sprite = EquipmentManager.GetEquipmentIcon(instance.definitionId);
             icon.color = icon.sprite == null ? Color.clear : Color.white;
         }
-        SetText(starsText, GetStarText(instance.enhancementLevel));
+        SetText(
+            starsText,
+            GetSlotHeader(
+                definition?.tier ?? 0,
+                instance.enhancementLevel,
+                equipped));
         if (equippedText != null)
-            equippedText.gameObject.SetActive(equipped);
+        {
+            equippedText.text = definition?.DisplayName ?? instance.definitionId;
+            equippedText.gameObject.SetActive(true);
+        }
     }
 
     private void Select(EquipmentInstance instance)
@@ -192,15 +210,27 @@ public sealed class EquipmentInventoryModalUI
              data?.equippedArmorInstanceId == instanceId);
     }
 
-    private static string GetStarText(int level)
+    private static string GetSlotHeader(
+        int tier,
+        int level,
+        bool equipped)
     {
         int starCount = Mathf.Clamp(
             level,
             0,
             GameBalanceConfig.EquipmentStarForceMaxLevel);
-        return starCount <= 0
-            ? "\u2606"
-            : new string('\u2605', starCount);
+        string stars = starCount > 0 ? "  \u2605" + starCount : "";
+        string equippedLabel = equipped ? "  \uCC29\uC6A9" : "";
+        return GetTierLabel(tier) + stars + equippedLabel;
+    }
+
+    private static string GetTierLabel(int tier)
+    {
+        string[] labels =
+        {
+            "D", "G", "B", "A", "S", "SS", "SSS", "X", "XX", "XXX"
+        };
+        return labels[Mathf.Clamp(tier, 0, labels.Length - 1)];
     }
 
     private static Color GetSlotColor(int tier)
@@ -208,13 +238,25 @@ public sealed class EquipmentInventoryModalUI
         switch (Mathf.Max(0, tier))
         {
             case 1:
-                return new Color32(62, 133, 107, 255);
+                return new Color32(238, 166, 56, 255);
             case 2:
-                return new Color32(117, 86, 153, 255);
+                return new Color32(58, 168, 190, 255);
             case 3:
-                return new Color32(191, 127, 51, 255);
+                return new Color32(75, 146, 65, 255);
+            case 4:
+                return new Color32(133, 125, 45, 255);
+            case 5:
+                return new Color32(126, 52, 47, 255);
+            case 6:
+                return new Color32(94, 54, 121, 255);
+            case 7:
+                return new Color32(28, 111, 111, 255);
+            case 8:
+                return new Color32(119, 35, 100, 255);
+            case 9:
+                return new Color32(108, 81, 18, 255);
             default:
-                return new Color32(75, 103, 140, 255);
+                return new Color32(202, 139, 77, 255);
         }
     }
 
@@ -239,7 +281,7 @@ public sealed class EquipmentInventoryModalUI
             return;
 
         grid.padding = new RectOffset(14, 14, 14, 14);
-        grid.cellSize = new Vector2(130f, 92f);
+        grid.cellSize = new Vector2(170f, 126f);
         grid.spacing = new Vector2(12f, 12f);
         grid.childAlignment = TextAnchor.UpperCenter;
         grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;

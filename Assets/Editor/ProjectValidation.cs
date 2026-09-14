@@ -17,6 +17,7 @@ public static class ProjectValidation
         ValidateLegacyMailCompatibility();
         ValidateCoreProgression();
         ValidateBalanceConfiguration();
+        ValidateStageWaveConfiguration();
         ValidateBattleLayout();
         ValidateGachaEconomy();
         ValidateStoryIntro();
@@ -59,6 +60,87 @@ public static class ProjectValidation
             GameBalanceConfig.EventGachaPoints >=
             GameBalanceConfig.EventRewardPointTarget,
             "Event missions cannot reach the reward target.");
+    }
+
+    private static void ValidateStageWaveConfiguration()
+    {
+        StageWaveDatabase database =
+            AssetDatabase.LoadAssetAtPath<StageWaveDatabase>(
+                "Assets/Resources/StageWaveDatabase.asset");
+        Require(database != null,
+            "StageWaveDatabase asset is missing.");
+        Require(database.enemies != null && database.enemies.Count >= 3,
+            "StageWaveDatabase requires the three normal enemy types.");
+
+        HashSet<string> enemyIds = new HashSet<string>();
+        HashSet<EnemyAttackType> attackTypes =
+            new HashSet<EnemyAttackType>();
+        foreach (EnemyDefinition enemy in database.enemies)
+        {
+            Require(enemy != null && enemy.IsValid,
+                "StageWaveDatabase contains an invalid enemy definition.");
+            Require(enemyIds.Add(enemy.enemyId),
+                "StageWaveDatabase contains a duplicate enemyId: " +
+                enemy.enemyId);
+            attackTypes.Add(enemy.attackType);
+        }
+
+        Require(
+            attackTypes.Contains(EnemyAttackType.Melee) &&
+            attackTypes.Contains(EnemyAttackType.Ranged) &&
+            attackTypes.Contains(EnemyAttackType.Dash),
+            "StageWaveDatabase must include Melee, Ranged, and Dash.");
+
+        for (int stage = 1; stage <= 9; stage++)
+        {
+            List<EnemyDefinition> wave = StageWaveResolver.BuildWave(
+                stage,
+                20260723,
+                out float healthBudgetMultiplier);
+            int expectedCount = stage <= 3 ? 2 : stage <= 6 ? 3 : 4;
+            Require(wave.Count == expectedCount,
+                "Stage wave enemy count is invalid at stage " + stage + ".");
+            Require(healthBudgetMultiplier > 0f,
+                "Stage wave health budget must be positive.");
+
+            int consecutive = 0;
+            EnemyAttackType previous = EnemyAttackType.Boss;
+            HashSet<EnemyAttackType> spawnedTypes =
+                new HashSet<EnemyAttackType>();
+            foreach (EnemyDefinition enemy in wave)
+            {
+                spawnedTypes.Add(enemy.attackType);
+                consecutive = enemy.attackType == previous
+                    ? consecutive + 1
+                    : 1;
+                previous = enemy.attackType;
+                Require(consecutive <= 2,
+                    "Stage wave repeated one attack type more than twice.");
+            }
+
+            if (stage >= 7)
+            {
+                Require(
+                    spawnedTypes.Contains(EnemyAttackType.Melee) &&
+                    spawnedTypes.Contains(EnemyAttackType.Ranged) &&
+                    spawnedTypes.Contains(EnemyAttackType.Dash),
+                    "Stages 7-9 must include every normal attack type.");
+            }
+
+            int distributedGold = 0;
+            for (int index = 0; index < wave.Count; index++)
+            {
+                distributedGold += GameBalance.GetWaveEnemyGold(
+                    stage,
+                    false,
+                    index,
+                    wave.Count);
+            }
+
+            Require(
+                distributedGold == GameBalance.GetEnemyGold(stage, false),
+                "Wave rewards changed the stage gold budget.");
+        }
     }
 
     private static void ValidateBattleLayout()
@@ -473,10 +555,33 @@ public static class ProjectValidation
         string[] battleNodes =
         {
             "EnemyCard",
+            "BattleAnnouncementPanel",
+            "BattleAnnouncementText",
             "BattlefieldLayer",
             "BattlefieldGuideLayer",
             "BattlefieldActorLayer",
             "BattlefieldEffectLayer",
+            "GamePlayLine",
+            "BattleInputArea",
+            "GameplayEffectLayer",
+            "BossPatternEffectLayer",
+            "BossPatternWarning1",
+            "BossPatternWarning2",
+            "BossPatternWarning3",
+            "BossPatternProjectile1",
+            "BossPatternProjectile2",
+            "BossPatternProjectile3",
+            "HitSparkle1",
+            "HitSparkle2",
+            "HitSparkle3",
+            "HitSparkle4",
+            "HitSparkle5",
+            "HitSparkle6",
+            "HitSparkle7",
+            "HitSparkle8",
+            "EnemySpawnPoint1",
+            "EnemySpawnPoint2",
+            "EnemySpawnPoint3",
             "EnemyActorRoot",
             "SupportActorRoot",
             "CompanionActorRoot1",
@@ -507,6 +612,94 @@ public static class ProjectValidation
         {
             Require(FindDescendant(battleHud.transform, nodeName) != null,
                 "BattleHud prefab is missing " + nodeName + ".");
+        }
+
+        Transform gameplayLine = FindDescendant(
+            battleHud.transform,
+            "GamePlayLine");
+        Transform battleInputArea = FindDescendant(
+            gameplayLine,
+            "BattleInputArea");
+        Transform gameplayEffectLayer = FindDescendant(
+            gameplayLine,
+            "GameplayEffectLayer");
+        Transform bossPatternEffectLayer = FindDescendant(
+            gameplayLine,
+            "BossPatternEffectLayer");
+        Require(gameplayLine.parent == battleHud.transform,
+            "GamePlayLine must be a direct BattleHud child.");
+        Require(
+            battleInputArea != null && battleInputArea.parent == gameplayLine,
+            "BattleInputArea must be a direct GamePlayLine child.");
+        Require(
+            gameplayEffectLayer != null &&
+            gameplayEffectLayer.parent == gameplayLine,
+            "GameplayEffectLayer must be a direct GamePlayLine child.");
+        Require(
+            bossPatternEffectLayer != null &&
+            bossPatternEffectLayer.parent == gameplayLine,
+            "BossPatternEffectLayer must be a direct GamePlayLine child.");
+        for (int index = 1; index <= 3; index++)
+        {
+            Transform spawnPoint = FindDescendant(
+                gameplayLine,
+                "EnemySpawnPoint" + index);
+            Require(
+                spawnPoint != null && spawnPoint.parent == gameplayLine,
+                "EnemySpawnPoint" + index +
+                " must be a direct GamePlayLine child.");
+        }
+        Require(
+            battleInputArea.GetComponent<BattleTouchMovementController>() !=
+            null,
+            "BattleInputArea requires BattleTouchMovementController.");
+        Require(gameplayEffectLayer.GetComponent<RectMask2D>() != null,
+            "GameplayEffectLayer requires RectMask2D.");
+        Require(bossPatternEffectLayer.GetComponent<RectMask2D>() != null,
+            "BossPatternEffectLayer requires RectMask2D.");
+        Transform enemyProjectile = FindDescendant(
+            gameplayEffectLayer,
+            "EnemyProjectile");
+        Transform heroHitEffect = FindDescendant(
+            gameplayEffectLayer,
+            "HeroHitEffect");
+        Require(
+            enemyProjectile != null &&
+            enemyProjectile.parent == gameplayEffectLayer,
+            "EnemyProjectile must be a GameplayEffectLayer child.");
+        Require(
+            heroHitEffect != null &&
+            heroHitEffect.parent == gameplayEffectLayer,
+            "HeroHitEffect must be a GameplayEffectLayer child.");
+        for (int index = 1; index <= 8; index++)
+        {
+            Transform sparkle = FindDescendant(
+                gameplayEffectLayer,
+                "HitSparkle" + index);
+            Require(
+                sparkle != null &&
+                sparkle.parent == gameplayEffectLayer,
+                "HitSparkle" + index +
+                " must be a GameplayEffectLayer child.");
+        }
+        for (int index = 1; index <= 3; index++)
+        {
+            Transform warning = FindDescendant(
+                bossPatternEffectLayer,
+                "BossPatternWarning" + index);
+            Transform projectile = FindDescendant(
+                bossPatternEffectLayer,
+                "BossPatternProjectile" + index);
+            Require(
+                warning != null &&
+                warning.parent == bossPatternEffectLayer,
+                "BossPatternWarning" + index +
+                " must be a BossPatternEffectLayer child.");
+            Require(
+                projectile != null &&
+                projectile.parent == bossPatternEffectLayer,
+                "BossPatternProjectile" + index +
+                " must be a BossPatternEffectLayer child.");
         }
 
         ValidateBattlePrefabActorRoot(battleHud, "SupportActorRoot");
@@ -1061,9 +1254,7 @@ public static class ProjectValidation
             playerObject.AddComponent<PlayerDataManager>();
         PlayerDataManager.Instance = playerManager;
         playerManager.playerData = new PlayerData();
-        playerManager.playerData.inventory.items["Pip"] = 1;
-        playerManager.playerData.inventory.items["Astra"] = 1;
-        playerManager.playerData.currentStage = 100;
+        playerManager.playerData.currentStage = 7;
         playerManager.playerData.highestStage = 100;
         playerManager.playerData.stageEnemyIndex = 0;
 
@@ -1094,6 +1285,27 @@ public static class ProjectValidation
             CharacterDatabase characterDatabase =
                 AssetDatabase.LoadAssetAtPath<CharacterDatabase>(
                     "Assets/Resources/CharacterDatabase.asset");
+            Require(characterDatabase != null,
+                "Character database asset is missing.");
+            CharacterData rCompanion = null;
+            CharacterData ssrCompanion = null;
+            foreach (CharacterData character in characterDatabase.characters)
+            {
+                if (character == null)
+                    continue;
+
+                if (rCompanion == null && character.rarity == "R")
+                    rCompanion = character;
+                if (ssrCompanion == null && character.rarity == "SSR")
+                    ssrCompanion = character;
+            }
+
+            Require(rCompanion != null && ssrCompanion != null,
+                "Character database requires R and SSR validation entries.");
+            playerManager.playerData.inventory.items[
+                rCompanion.characterName] = 1;
+            playerManager.playerData.inventory.items[
+                ssrCompanion.characterName] = 1;
             Require(gacha.Initialize(characterDatabase),
                 "Gacha database was not initialized.");
 
@@ -1102,7 +1314,8 @@ public static class ProjectValidation
             Require(companion.Initialize(),
                 "Best owned companion was not equipped.");
             Require(
-                playerManager.playerData.equippedCompanion == "Astra",
+                playerManager.playerData.equippedCompanion ==
+                ssrCompanion.characterName,
                 "SSR companion should be equipped before R companion.");
             Require(
                 GameBalance.GetPlayerAttack(playerManager.playerData) >
@@ -1124,6 +1337,12 @@ public static class ProjectValidation
                 "Battle must start at full health.");
             Require(battle.HeroHealth > 1,
                 "Battle started with invalid health.");
+            Require(
+                battle.CurrentWaveEnemyCount == 4 &&
+                battle.CurrentWaveEnemyNumber == 1,
+                "Stage 7 must start a four-enemy wave.");
+            Require(battle.CurrentEnemyDefinition != null,
+                "Normal stage enemy definition was not resolved.");
 
             GameObject canvas = GameObject.Find("MainGameCanvas");
             Require(canvas != null,

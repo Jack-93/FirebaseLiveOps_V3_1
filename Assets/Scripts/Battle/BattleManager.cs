@@ -38,6 +38,7 @@ public class BattleManager : MonoBehaviour
     public bool IsInitialized { get; private set; }
     public bool IsRunning { get; private set; }
     public bool IsRecovering => isRecovering;
+    public bool IsEnemySpawning => enemySpawnProtectionTimer > 0f;
     public bool IsHeroDefeatPlaying => isHeroDefeatPlaying;
     public bool IsBoss { get; private set; }
     public int HeroHealth { get; private set; }
@@ -50,6 +51,39 @@ public class BattleManager : MonoBehaviour
     public int LastEnemyDamage { get; private set; }
     public bool LastDefeatedEnemyWasBoss { get; private set; }
     public EnemyCombatProfile CurrentEnemyCombatProfile { get; private set; }
+    public EnemyDefinition CurrentEnemyDefinition { get; private set; }
+    public int EnemySpawnSequence => enemySpawnSequence;
+    public int CurrentEnemySpawnKey
+    {
+        get
+        {
+            PlayerData data = Data;
+            int enemyIndex = data == null ? 0 : data.stageEnemyIndex;
+            unchecked
+            {
+                return currentWaveSeed ^
+                    (enemyIndex + 1) * 83492791;
+            }
+        }
+    }
+    public int CurrentWaveEnemyNumber
+    {
+        get
+        {
+            if (IsBoss)
+                return 1;
+
+            PlayerData data = Data;
+            return data == null
+                ? 1
+                : Mathf.Clamp(
+                    data.stageEnemyIndex + 1,
+                    1,
+                    CurrentWaveEnemyCount);
+        }
+    }
+    public int CurrentWaveEnemyCount =>
+        IsBoss ? 1 : Mathf.Max(1, currentStageWave.Count);
     public float PowerCharge { get; private set; }
     public float PowerChargeMax => PowerChargeLimit;
     public float PowerChargeRatio =>
@@ -68,9 +102,18 @@ public class BattleManager : MonoBehaviour
         get
         {
             PlayerData data = Data;
-            return data == null
-                ? ""
-                : GameBalance.GetEnemyName(data.currentStage, IsBoss);
+            if (data == null)
+                return "";
+
+            if (!IsBoss &&
+                CurrentEnemyDefinition != null &&
+                !string.IsNullOrWhiteSpace(
+                    CurrentEnemyDefinition.displayName))
+            {
+                return CurrentEnemyDefinition.displayName;
+            }
+
+            return GameBalance.GetEnemyName(data.currentStage, IsBoss);
         }
     }
 
@@ -80,6 +123,7 @@ public class BattleManager : MonoBehaviour
     private float enemyMeleeAttackTimeout;
     private float heroDefeatTimer;
     private float recoveryTimer;
+    private float enemySpawnProtectionTimer;
     private bool isHeroDefeatPlaying;
     private bool isRecovering;
     private bool isEnemyMeleeAttackPending;
@@ -92,7 +136,12 @@ public class BattleManager : MonoBehaviour
     private BossPatternRuntime pendingBossPattern;
     private Vector2 heroBattlePosition = new Vector2(0.25f, 0.5f);
     private int enemySpawnSequence;
+    private int currentWaveStage;
+    private int currentWaveSeed;
+    private float currentWaveHealthBudgetMultiplier = 1f;
     private List<BossPatternDefinition> bossPatterns;
+    private readonly List<EnemyDefinition> currentStageWave =
+        new List<EnemyDefinition>();
     private readonly float[] skillCooldowns =
         new float[CompanionManager.PartySize];
     private readonly float[] companionAttackTimers =
@@ -107,6 +156,10 @@ public class BattleManager : MonoBehaviour
     private const float HeroDefeatAnimationSeconds = 1.55f;
     private const float HeroRecoverySeconds = 2f;
     private const float EnemyMeleeAttackTimeoutSeconds = 2.5f;
+    private const float EnemyWaveTransitionSeconds = 0.82f;
+    private const float StageClearTransitionSeconds = 1.55f;
+    private const float BossEntranceTransitionSeconds = 1.55f;
+    private const float StageClearBossTransitionSeconds = 2.75f;
 
     public void Initialize()
     {
@@ -121,7 +174,10 @@ public class BattleManager : MonoBehaviour
         partyDamageBuffTimer = 0f;
         partyDamageBuffMultiplier = 1f;
         IsInitialized = true;
-        SpawnEnemy();
+        SpawnEnemy(
+            GameBalance.IsBossStage(data.currentStage)
+                ? BossEntranceTransitionSeconds
+                : 0f);
         NotifyChanged();
     }
 
@@ -143,7 +199,11 @@ public class BattleManager : MonoBehaviour
 
         data.currentStage = selected;
         data.stageEnemyIndex = 0;
-        SpawnEnemy();
+        PrepareStageWave(selected, true);
+        SpawnEnemy(
+            GameBalance.IsBossStage(selected)
+                ? BossEntranceTransitionSeconds
+                : 0f);
         PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
         NotifyChanged();
         return true;
@@ -219,6 +279,14 @@ public class BattleManager : MonoBehaviour
 
         if (!IsRunning)
             return;
+
+        if (enemySpawnProtectionTimer > 0f)
+        {
+            enemySpawnProtectionTimer = Mathf.Max(
+                0f,
+                enemySpawnProtectionTimer - deltaTime);
+            return;
+        }
 
         if (IsBoss)
         {
@@ -469,7 +537,10 @@ public class BattleManager : MonoBehaviour
         switch (pattern.patternType)
         {
             case BossPatternType.TargetedThunder:
-                targets = new[] { target };
+                targets = new[]
+                {
+                    ClampBattlePosition(target, pattern)
+                };
                 break;
             case BossPatternType.TripleFireBreath:
                 safeLane = sequence % 3;
@@ -478,9 +549,15 @@ public class BattleManager : MonoBehaviour
             case BossPatternType.SpiritVolley:
                 targets = new[]
                 {
-                    ClampBattlePosition(target + new Vector2(-0.16f, 0.08f)),
-                    ClampBattlePosition(target + new Vector2(0.16f, 0.08f)),
-                    ClampBattlePosition(target + new Vector2(0f, -0.12f))
+                    ClampBattlePosition(
+                        target + new Vector2(-0.16f, 0.08f),
+                        pattern),
+                    ClampBattlePosition(
+                        target + new Vector2(0.16f, 0.08f),
+                        pattern),
+                    ClampBattlePosition(
+                        target + new Vector2(0f, -0.12f),
+                        pattern)
                 };
                 break;
             default:
@@ -539,11 +616,21 @@ public class BattleManager : MonoBehaviour
         return x * x + y * y <= 1f;
     }
 
-    private static Vector2 ClampBattlePosition(Vector2 position)
+    private static Vector2 ClampBattlePosition(
+        Vector2 position,
+        BossPatternDefinition pattern)
     {
+        float radiusX = Mathf.Clamp(
+            pattern == null ? 0.08f : pattern.targetRadiusX,
+            0.01f,
+            0.5f);
+        float radiusY = Mathf.Clamp(
+            pattern == null ? 0.08f : pattern.targetRadiusY,
+            0.01f,
+            0.5f);
         return new Vector2(
-            Mathf.Clamp(position.x, 0.08f, 0.92f),
-            Mathf.Clamp(position.y, 0.08f, 0.92f));
+            Mathf.Clamp(position.x, radiusX, 1f - radiusX),
+            Mathf.Clamp(position.y, radiusY, 1f - radiusY));
     }
 
     private int ApplyDamageToHero(int incomingDamage)
@@ -654,7 +741,7 @@ public class BattleManager : MonoBehaviour
             return CompanionSkillUseResult.Recovering;
         if (!IsRunning)
             return CompanionSkillUseResult.BattleNotRunning;
-        if (EnemyHealth <= 0)
+        if (EnemyHealth <= 0 || IsEnemySpawning)
             return CompanionSkillUseResult.NoEnemy;
         if (slot < 0 || slot >= skillCooldowns.Length)
             return CompanionSkillUseResult.InvalidSlot;
@@ -892,14 +979,42 @@ public class BattleManager : MonoBehaviour
     {
         PlayerData data = Data;
         int clearedStage = data.currentStage;
+        int defeatedEnemyIndex = IsBoss ? 0 : data.stageEnemyIndex;
+        int waveEnemyCount = CurrentWaveEnemyCount;
         int reward =
-            GameBalance.GetEnemyGold(data.currentStage, IsBoss);
+            GameBalance.GetWaveEnemyGold(
+                data.currentStage,
+                IsBoss,
+                defeatedEnemyIndex,
+                waveEnemyCount);
 
         data.gold += reward;
         data.totalMonstersDefeated++;
 
         bool defeatedBoss = IsBoss;
         LastDefeatedEnemyWasBoss = defeatedBoss;
+        bool clearedWave =
+            defeatedBoss || defeatedEnemyIndex >= waveEnemyCount - 1;
+
+        SafeEvent.Invoke(
+            OnEnemyDefeatedVisual,
+            reward,
+            "Battle",
+            nameof(OnEnemyDefeatedVisual));
+
+        if (!clearedWave)
+        {
+            data.stageEnemyIndex++;
+            SpawnEnemy(EnemyWaveTransitionSeconds);
+            SafeEvent.Invoke(
+                OnEnemyDefeated,
+                reward,
+                "Battle",
+                nameof(OnEnemyDefeated));
+            PlayerDataManager.Instance.NotifyPlayerDataChanged(true);
+            return;
+        }
+
         bool firstClear = clearedStage >= data.highestStage;
         if (firstClear)
         {
@@ -911,14 +1026,11 @@ public class BattleManager : MonoBehaviour
             ? Math.Min(clearedStage + 1, data.highestStage)
             : clearedStage;
         data.stageEnemyIndex = 0;
-
-        SafeEvent.Invoke(
-            OnEnemyDefeatedVisual,
-            reward,
-            "Battle",
-            nameof(OnEnemyDefeatedVisual));
-
-        SpawnEnemy();
+        PrepareStageWave(data.currentStage, true);
+        SpawnEnemy(
+            GameBalance.IsBossStage(data.currentStage)
+                ? StageClearBossTransitionSeconds
+                : StageClearTransitionSeconds);
         TryGrantEquipmentDrop(clearedStage, defeatedBoss);
 
         SafeEvent.Invoke(
@@ -957,16 +1069,40 @@ public class BattleManager : MonoBehaviour
         }
     }
 
-    private void SpawnEnemy()
+    private void SpawnEnemy(float spawnProtectionSeconds = 0f)
     {
         PlayerData data = Data;
         enemySpawnSequence++;
         IsBoss = GameBalance.IsBossStage(data.currentStage);
-        CurrentEnemyCombatProfile =
-            EnemyCombatProfileResolver.Resolve(data.currentStage, IsBoss);
+        if (IsBoss)
+        {
+            CurrentEnemyDefinition = null;
+            CurrentEnemyCombatProfile =
+                EnemyCombatProfileResolver.Resolve(data.currentStage, true);
+        }
+        else
+        {
+            PrepareStageWave(data.currentStage, false);
+            data.stageEnemyIndex = Mathf.Clamp(
+                data.stageEnemyIndex,
+                0,
+                currentStageWave.Count - 1);
+            CurrentEnemyDefinition =
+                currentStageWave[data.stageEnemyIndex];
+            CurrentEnemyCombatProfile =
+                CurrentEnemyDefinition.CreateCombatProfile();
+        }
+
         EnemyMaxHealth =
-            GameBalance.GetEnemyMaxHealth(data.currentStage, IsBoss);
+            GameBalance.GetWaveEnemyMaxHealth(
+                data.currentStage,
+                IsBoss,
+                CurrentWaveEnemyCount,
+                currentWaveHealthBudgetMultiplier);
         EnemyHealth = EnemyMaxHealth;
+        enemySpawnProtectionTimer = Mathf.Max(
+            0f,
+            spawnProtectionSeconds);
         BossTimeRemaining =
             IsBoss ? GameBalance.BossTimeLimit : 0f;
         bossPatterns = IsBoss
@@ -983,6 +1119,52 @@ public class BattleManager : MonoBehaviour
         isEnemyMeleeAttackPending = false;
         enemyMeleeAttackTimeout = 0f;
         enemyAttackTimer = CurrentEnemyCombatProfile.AttackInterval;
+    }
+
+    private void PrepareStageWave(int stage, bool forceNew)
+    {
+        if (GameBalance.IsBossStage(stage))
+        {
+            currentStageWave.Clear();
+            currentWaveStage = stage;
+            currentWaveSeed = 0;
+            currentWaveHealthBudgetMultiplier = 1f;
+            return;
+        }
+
+        if (!forceNew &&
+            currentWaveStage == stage &&
+            currentStageWave.Count > 0)
+        {
+            return;
+        }
+
+        PlayerData data = Data;
+        int seed = forceNew
+            ? Guid.NewGuid().GetHashCode()
+            : CreateStableWaveSeed(stage, data);
+        currentWaveSeed = seed;
+        List<EnemyDefinition> generated =
+            StageWaveResolver.BuildWave(
+                stage,
+                seed,
+                out currentWaveHealthBudgetMultiplier);
+        currentStageWave.Clear();
+        currentStageWave.AddRange(generated);
+        currentWaveStage = stage;
+    }
+
+    private static int CreateStableWaveSeed(int stage, PlayerData data)
+    {
+        int completedBeforeWave = data == null
+            ? 0
+            : Mathf.Max(
+                0,
+                data.totalMonstersDefeated - data.stageEnemyIndex);
+        unchecked
+        {
+            return stage * 73856093 ^ completedBeforeWave * 19349663;
+        }
     }
 
     private void ResetBossChallenge()

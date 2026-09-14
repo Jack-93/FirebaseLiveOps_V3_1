@@ -49,24 +49,6 @@ public static class EnemyCombatProfileResolver
             0.25f,
             1f);
 
-    private static readonly EnemyCombatProfile Ranged =
-        new EnemyCombatProfile(
-            EnemyAttackType.Ranged,
-            225f,
-            420f,
-            2.5f,
-            0.62f,
-            0.9f);
-
-    private static readonly EnemyCombatProfile Dash =
-        new EnemyCombatProfile(
-            EnemyAttackType.Dash,
-            96f,
-            900f,
-            2.6f,
-            0.2f,
-            1.1f);
-
     private static readonly EnemyCombatProfile Boss =
         new EnemyCombatProfile(
             EnemyAttackType.Boss,
@@ -78,17 +60,6 @@ public static class EnemyCombatProfileResolver
 
     public static EnemyCombatProfile Resolve(int stage, bool isBoss)
     {
-        if (isBoss)
-            return Boss;
-
-        switch (Random.Range(0, 3))
-        {
-            case 0:
-                return Melee;
-            case 1:
-                return Ranged;
-            default:
-                return Dash;
-        }
+        return isBoss ? Boss : Melee;
     }
 }
