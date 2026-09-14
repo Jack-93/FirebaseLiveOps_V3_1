@@ -471,7 +471,7 @@ public sealed class BattleHudUI
         EnemyCombatProfile profile)
     {
         nyangStyle?.OnThreatStarted(
-            profile != null && profile.RequiresApproach
+            profile.RequiresApproach
                 ? "위기 · 접근"
                 : "위기 · 공격 예고");
         if (profile.UsesProjectile)
