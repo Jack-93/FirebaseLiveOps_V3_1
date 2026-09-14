@@ -140,3 +140,10 @@
 - [ ] Android 실기기에서 로그인·화면 비율·성능·저장·푸시·크래시 수집을 확인합니다.
 - [ ] Firebase 운영 설정과 보안 규칙을 확인하고 실제 결제·광고 provider 및 보상 검증을 완료합니다.
 - [ ] 서명·Release AAB·내부 테스트·스토어 자료·개인정보 및 데이터 삭제 안내 등 출시 준비를 진행합니다.
+
+## 저장소 연결
+
+- [GitHub 진행 현황 문서](https://github.com/Jack-93/FirebaseLiveOps_V3_1/blob/main/Docs/ProgressStatus-2026-09-15.md)
+- 전투 스타일 슬라이스 1차를 `main`에 저장했습니다.
+- 저장 커밋: [e99160c — feat: add nyang battle style slice](https://github.com/Jack-93/FirebaseLiveOps_V3_1/commit/e99160c)
+- 현재 로컬 작업 트리는 깨끗하며 로컬·원격 앞섬/뒤처짐은 0입니다.
