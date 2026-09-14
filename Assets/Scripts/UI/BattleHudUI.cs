@@ -77,6 +77,10 @@ public sealed class BattleHudUI
     private BattleActorView playerActorView;
     private readonly BattleActorView[] companionActorViews =
         new BattleActorView[CompanionManager.PartySize];
+    private BattleNyangCharacterStyle enemyCharacterStyle;
+    private BattleNyangCharacterStyle playerCharacterStyle;
+    private readonly BattleNyangCharacterStyle[] companionCharacterStyles =
+        new BattleNyangCharacterStyle[CompanionManager.PartySize];
     private readonly RectTransform[] companionActorRoots =
         new RectTransform[CompanionManager.PartySize];
     private readonly RectTransform[] companionVisualRects =
@@ -352,6 +356,8 @@ public sealed class BattleHudUI
         ApplyActorVisual(
             playerActorView,
             BattleVisualResolver.GetHero());
+        playerCharacterStyle?.SetRole(
+            BattleNyangCharacterRole.Hero);
 
         if (enemyRespawnTimer <= 0f)
         {
@@ -369,6 +375,11 @@ public sealed class BattleHudUI
             ApplyActorVisual(
                 companionActorViews[slot],
                 character?.ResolveBattleVisual());
+            companionCharacterStyles[slot]?.SetRole(
+                BattleNyangCharacterStyle.FromCompanion(
+                    character == null
+                        ? CompanionRole.None
+                        : character.role));
         }
     }
 
@@ -398,6 +409,10 @@ public sealed class BattleHudUI
             battleManager.IsBoss,
             battleManager.CurrentEnemyCombatProfile.AttackType,
             battleManager.CurrentEnemyDefinition);
+        enemyCharacterStyle?.SetRole(
+            BattleNyangCharacterStyle.FromEnemy(
+                battleManager.CurrentEnemyCombatProfile.AttackType,
+                battleManager.IsBoss));
         ApplyActorVisual(enemyActorView, currentEnemyVisual);
     }
 
@@ -890,6 +905,7 @@ public sealed class BattleHudUI
         statusHud?.UpdateAnimations(deltaTime);
         nyangStyle?.UpdatePresentation(deltaTime);
         UpdateActorPulses();
+        ApplyCharacterStyleFrames();
     }
 
     private void BindBossWarning(RectTransform enemyCard)
@@ -1134,6 +1150,10 @@ public sealed class BattleHudUI
             enemyActorView =
                 enemyVisual.gameObject.AddComponent<BattleActorView>();
         enemyActorView?.Initialize(enemyGlyph, Danger);
+        enemyCharacterStyle = BattleNyangCharacterStyle.Attach(
+            enemyActorRoot,
+            enemyVisual,
+            BattleNyangCharacterRole.Melee);
         enemyMeleeMovement = enemyActorRoot == null
             ? null
             : enemyActorRoot.GetComponent<BattleMeleeMovementController>();
@@ -1291,6 +1311,10 @@ public sealed class BattleHudUI
             playerActorView =
                 playerVisual.gameObject.AddComponent<BattleActorView>();
         playerActorView?.Initialize(playerGlyph, Accent);
+        playerCharacterStyle = BattleNyangCharacterStyle.Attach(
+            playerActorRoot,
+            playerVisual,
+            BattleNyangCharacterRole.Hero);
 
         powerChargePopup =
             RuntimeUiBinder.FindRect(effectLayer, "PowerChargePopup");
@@ -1331,6 +1355,10 @@ public sealed class BattleHudUI
             actorView?.Initialize(companionGlyph, PanelLight);
             companionActorViews[slot] = actorView;
             companionVisualRects[slot] = companionVisual;
+            companionCharacterStyles[slot] = BattleNyangCharacterStyle.Attach(
+                companionActorRoots[slot],
+                companionVisual,
+                BattleNyangCharacterRole.Companion);
         }
     }
 
@@ -2473,6 +2501,14 @@ public sealed class BattleHudUI
             Accent.g,
             Accent.b,
             Mathf.Lerp(0f, 0.55f, ratio));
+    }
+
+    private void ApplyCharacterStyleFrames()
+    {
+        enemyCharacterStyle?.ApplyFrame();
+        playerCharacterStyle?.ApplyFrame();
+        foreach (BattleNyangCharacterStyle style in companionCharacterStyles)
+            style?.ApplyFrame();
     }
 
     private void UpdateActorPulses()
