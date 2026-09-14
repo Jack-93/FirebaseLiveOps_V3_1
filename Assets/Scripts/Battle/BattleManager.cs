@@ -49,6 +49,7 @@ public class BattleManager : MonoBehaviour
     public int EnemyMaxHealth { get; private set; }
     public int LastPlayerDamage { get; private set; }
     public int LastEnemyDamage { get; private set; }
+    public bool LastEnemyAttackWasDodged { get; private set; }
     public bool LastDefeatedEnemyWasBoss { get; private set; }
     public EnemyCombatProfile CurrentEnemyCombatProfile { get; private set; }
     public EnemyDefinition CurrentEnemyDefinition { get; private set; }
@@ -120,6 +121,7 @@ public class BattleManager : MonoBehaviour
     private PlayerData Data => PlayerDataManager.Instance?.playerData;
 
     private float enemyAttackTimer;
+    private float enemyAttackWindupTimer;
     private float enemyMeleeAttackTimeout;
     private float heroDefeatTimer;
     private float recoveryTimer;
@@ -127,6 +129,9 @@ public class BattleManager : MonoBehaviour
     private bool isHeroDefeatPlaying;
     private bool isRecovering;
     private bool isEnemyMeleeAttackPending;
+    private bool enemyAttackImpactQueued;
+    private Vector2 enemyAttackTargetPosition;
+    private bool hasEnemyAttackTarget;
     private bool isBossPatternWarning;
     private bool isBossPatternCasting;
     private float bossPatternTimer;
@@ -156,6 +161,9 @@ public class BattleManager : MonoBehaviour
     private const float HeroDefeatAnimationSeconds = 1.55f;
     private const float HeroRecoverySeconds = 2f;
     private const float EnemyMeleeAttackTimeoutSeconds = 2.5f;
+    private const float EnemyAttackWindupSeconds = 0.58f;
+    private const float EnemyAttackHitRadiusX = 0.11f;
+    private const float EnemyAttackHitRadiusY = 0.14f;
     private const float EnemyWaveTransitionSeconds = 0.82f;
     private const float StageClearTransitionSeconds = 1.55f;
     private const float BossEntranceTransitionSeconds = 1.55f;
@@ -328,11 +336,16 @@ public class BattleManager : MonoBehaviour
             return;
 
         enemyAttackTimer -= deltaTime;
+        enemyAttackWindupTimer = Mathf.Max(
+            0f,
+            enemyAttackWindupTimer - deltaTime);
 
         if (isEnemyMeleeAttackPending)
         {
             enemyMeleeAttackTimeout -= deltaTime;
-            if (enemyMeleeAttackTimeout <= 0f)
+            if (enemyAttackWindupTimer <= 0f &&
+                (enemyAttackImpactQueued ||
+                 enemyMeleeAttackTimeout <= 0f))
                 ResolveEnemyAttack();
         }
         else if (!isRecovering && EnemyHealth > 0 && enemyAttackTimer <= 0f)
@@ -404,12 +417,35 @@ public class BattleManager : MonoBehaviour
         if (!isEnemyMeleeAttackPending)
             return;
 
+        if (enemyAttackWindupTimer > 0f)
+        {
+            enemyAttackImpactQueued = true;
+            return;
+        }
+
         isEnemyMeleeAttackPending = false;
         enemyMeleeAttackTimeout = 0f;
+        enemyAttackImpactQueued = false;
+        bool hit = IsEnemyAttackHit();
+        hasEnemyAttackTarget = false;
         if (isRecovering || isHeroDefeatPlaying || EnemyHealth <= 0)
             return;
 
-        EnemyAttack();
+        if (hit)
+        {
+            LastEnemyAttackWasDodged = false;
+            EnemyAttack();
+            return;
+        }
+
+        LastEnemyAttackWasDodged = true;
+        LastEnemyDamage = 0;
+        SafeEvent.Invoke(
+            OnEnemyAttackPerformed,
+            0,
+            "Battle",
+            nameof(OnEnemyAttackPerformed));
+        NotifyChanged();
     }
 
     private void BeginEnemyAttack()
@@ -418,12 +454,33 @@ public class BattleManager : MonoBehaviour
             return;
 
         isEnemyMeleeAttackPending = true;
+        enemyAttackTargetPosition = heroBattlePosition;
+        hasEnemyAttackTarget = true;
+        enemyAttackImpactQueued = false;
+        enemyAttackWindupTimer =
+            CurrentEnemyCombatProfile.UsesProjectile
+                ? 0f
+                : EnemyAttackWindupSeconds;
+        LastEnemyAttackWasDodged = false;
         enemyMeleeAttackTimeout = EnemyMeleeAttackTimeoutSeconds;
         SafeEvent.Invoke(
             OnEnemyAttackStarted,
             CurrentEnemyCombatProfile,
             "Battle",
             nameof(OnEnemyAttackStarted));
+    }
+
+    private bool IsEnemyAttackHit()
+    {
+        if (!hasEnemyAttackTarget)
+            return true;
+
+        Vector2 delta = heroBattlePosition - enemyAttackTargetPosition;
+        float normalizedX = delta.x / EnemyAttackHitRadiusX;
+        float normalizedY = delta.y / EnemyAttackHitRadiusY;
+        return normalizedX * normalizedX +
+            normalizedY * normalizedY <=
+            1f;
     }
 
     private void EnemyAttack()
@@ -1117,6 +1174,9 @@ public class BattleManager : MonoBehaviour
         bossPatternImpactTimer = 0f;
         ResetCompanionAttackTimers();
         isEnemyMeleeAttackPending = false;
+        enemyAttackWindupTimer = 0f;
+        enemyAttackImpactQueued = false;
+        hasEnemyAttackTarget = false;
         enemyMeleeAttackTimeout = 0f;
         enemyAttackTimer = CurrentEnemyCombatProfile.AttackInterval;
     }
@@ -1173,6 +1233,9 @@ public class BattleManager : MonoBehaviour
         BossTimeRemaining = GameBalance.BossTimeLimit;
         ResetCompanionAttackTimers();
         isEnemyMeleeAttackPending = false;
+        enemyAttackWindupTimer = 0f;
+        enemyAttackImpactQueued = false;
+        hasEnemyAttackTarget = false;
         enemyMeleeAttackTimeout = 0f;
         enemyAttackTimer = CurrentEnemyCombatProfile.AttackInterval;
         bossPatternIndex = 0;

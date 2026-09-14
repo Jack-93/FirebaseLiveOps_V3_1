@@ -106,6 +106,17 @@
 
 근거: [전투 스타일 슬라이스](BattleStyleSlice-2026-09-15.md), [BattleNyangStylePresentation](../Assets/Scripts/UI/BattleNyangStylePresentation.cs), [BattleHudUI](../Assets/Scripts/UI/BattleHudUI.cs).
 
+## 이번 작업: 일반 적 공격 회피 루프 1차
+
+- 일반 적 공격 시작 시 참새의 현재 위치를 공격 목표로 저장합니다.
+- 근접·돌진 공격은 0.58초 준비 시간을 거치며, 공격 중에는 저장한 위치를 향해 접근합니다.
+- 준비 시간 동안 참새가 이동해 공격 범위를 벗어나면 피해 없이 `회피 성공`으로 처리합니다.
+- 원거리 투사체도 발사 시점의 목표와 현재 위치를 비교해 회피할 수 있습니다.
+- 적중 시 기존 피격 효과를 유지하고, 회피 시 민트 스파클·콜아웃·토스트를 표시합니다.
+- 상세 문서: [CombatSystemSlice-2026-09-15.md](CombatSystemSlice-2026-09-15.md).
+
+근거: [BattleManager](../Assets/Scripts/Battle/BattleManager.cs), [BattleMeleeMovementController](../Assets/Scripts/Battle/BattleMeleeMovementController.cs), [BattleHudUI](../Assets/Scripts/UI/BattleHudUI.cs).
+
 ## 검수 대기·미구현 항목
 
 - 공통 UI 프리펩 12종은 생성되어 있으나 검수 대기 상태이며 기존 화면에는 아직 적용하지 않았습니다.
@@ -123,7 +134,8 @@
 - 변경·신규 `Assets` 파일 51개에서 충돌 표식, meta 누락·고아 meta·상위 폴더 meta 누락은 발견되지 않았습니다.
 - 프리펩 16개와 씬 1개에서 중복 fileID 및 GUID 없는 단순 로컬 참조 누락은 발견되지 않았습니다. 외부 GUID 참조 유효성은 검증하지 않았습니다.
 - C# 변경의 `git diff --check`는 통과했습니다. `BattleHud.prefab`에는 빈 YAML 필드 뒤 후행 공백 경고 17개가 있으며, 그 자체가 기능 오류의 증거는 아닙니다.
-- 이번 미실행: Unity 컴파일, Play Mode, Android 실기기, 릴리스 빌드, Firebase 운영 환경 테스트.
+- 이번 확인: 전투 변경 범위 targeted C# compile 경고 0개·오류 0개, 기존 UI 통합 compile 경고 0개·오류 0개.
+- 이번 미실행: Unity Play Mode, Android 실기기, 릴리스 빌드, Firebase 운영 환경 테스트.
 - 기존 문서와 코드가 다르면 현재 코드를 우선했습니다.
 - `PrototypeMinimumGold`와 `PrototypeMinimumGems`는 이미 `0`입니다. 이를 0으로 변경하는 작업은 남은 작업에서 제외합니다.
 - 정리 시작 시점의 README는 일반 적 순차 웨이브를 설명하지 않았고, 외부 작업 목록은 이미 0인 프로토타입 재화를 변경할 항목으로 남겨 두고 있었습니다. 이번 정리에서는 현재 코드 기준으로 바로잡습니다.
@@ -135,6 +147,7 @@
 - [ ] Unity에서 장비창 5열·45칸·세로 스크롤과 상세 팝업을 검수합니다.
 - [ ] UI·주인공·동료·일반 적·보스의 공통 크기 설정을 구현하고 실제 화면 비율을 조정합니다.
 - [ ] 일반 구간 2→3→4마리 순차 전투, 적 교체, 체력·골드 배분, 패배 후 재시작을 확인합니다.
+- [ ] 일반 적 근접·돌진·원거리 공격의 예고·이동 회피·적중 판정을 Unity에서 확인합니다.
 - [ ] 캣베로스 경고 영역·안전 영역·피격 판정·제한 시간과 전투 난이도를 확인합니다.
 - [ ] 장비 드랍·장착·해체·강화·옵션 선택 후 저장 및 재접속 복원을 확인합니다.
 - [ ] 공통 UI 12종을 검수하고 적용 범위와 교체 순서를 확정합니다.

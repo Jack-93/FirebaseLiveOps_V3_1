@@ -487,8 +487,8 @@ public sealed class BattleHudUI
     {
         nyangStyle?.OnThreatStarted(
             profile.RequiresApproach
-                ? "위기 · 접근"
-                : "위기 · 공격 예고");
+                ? "위기 · 이동해서 회피"
+                : "위기 · 공격 예고 · 이동해서 회피");
         if (profile.UsesProjectile)
         {
             if (profile.RequiresApproach && enemyMeleeMovement != null)
@@ -530,6 +530,20 @@ public sealed class BattleHudUI
         enemyAttackAnimationTimer = 0.45f;
         enemyWasMoving = false;
         enemyMeleeMovement?.ContinuePursuit();
+
+        if (damage <= 0)
+        {
+            StartSparkles(
+                GetSupportImpactAnchor(),
+                Success,
+                0.24f,
+                0.06f);
+            ShowBattleAnnouncement("회피 성공", Success, 0.72f);
+            showToast?.Invoke("공격 회피");
+            enemyActorView?.Play(BattleAnimationCue.Attack);
+            return;
+        }
+
         playerHitShakeTimer = 0.24f;
         StartHeroHitEffect();
         StartSparkles(

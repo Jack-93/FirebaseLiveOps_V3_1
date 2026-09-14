@@ -12,8 +12,10 @@ public sealed class BattleMeleeMovementController : MonoBehaviour
     private RectTransform actorRoot;
     private RectTransform actorParent;
     private Vector3 homeLocalPosition;
+    private Vector3 lockedAttackTargetPosition;
     private Action onImpact;
     private bool impactPending;
+    private bool hasLockedAttackTarget;
     private State state;
 
     public bool IsMoving => state == State.Approaching;
@@ -66,6 +68,8 @@ public sealed class BattleMeleeMovementController : MonoBehaviour
             return;
         }
 
+        lockedAttackTargetPosition = attackTarget.position;
+        hasLockedAttackTarget = true;
         impactPending = true;
         state = State.Approaching;
         UpdateApproach();
@@ -83,6 +87,7 @@ public sealed class BattleMeleeMovementController : MonoBehaviour
     public void ContinuePursuit()
     {
         impactPending = false;
+        hasLockedAttackTarget = false;
         if (attackTarget == null || actorRoot == null || actorParent == null)
         {
             state = State.Idle;
@@ -99,6 +104,7 @@ public sealed class BattleMeleeMovementController : MonoBehaviour
             return;
 
         impactPending = false;
+        hasLockedAttackTarget = false;
         state = State.Idle;
     }
 
@@ -114,6 +120,7 @@ public sealed class BattleMeleeMovementController : MonoBehaviour
 
         actorRoot.localPosition = homeLocalPosition;
         impactPending = false;
+        hasLockedAttackTarget = false;
         state = State.Idle;
     }
 
@@ -125,13 +132,17 @@ public sealed class BattleMeleeMovementController : MonoBehaviour
         actorRoot.position = homePoint.position;
         homeLocalPosition = actorRoot.localPosition;
         impactPending = false;
+        hasLockedAttackTarget = false;
         state = State.Idle;
     }
 
     private void UpdateApproach()
     {
+        Vector3 targetWorldPosition = hasLockedAttackTarget
+            ? lockedAttackTargetPosition
+            : attackTarget.position;
         Vector3 targetLocalPosition = actorParent.InverseTransformPoint(
-            attackTarget.position);
+            targetWorldPosition);
         Vector3 current = actorRoot.localPosition;
         Vector3 offset = targetLocalPosition - current;
         float distance = offset.magnitude;
