@@ -100,6 +100,7 @@ public sealed class BattleHudUI
     private BattleQuickButtonsUI quickButtons;
     private BossPatternPresentation bossPatternPresentation;
     private BattleNyangStylePresentation nyangStyle;
+    private BattleNyangBattleLayout battleLayout;
 
     private float playerDefeatTimer;
     private float enemyHitShakeTimer;
@@ -311,6 +312,7 @@ public sealed class BattleHudUI
         SortActorRoots();
         BindSkillControls();
         BindQuickButtons();
+        battleLayout = BattleNyangBattleLayout.Attach(panel);
     }
 
     public void Refresh()
@@ -414,6 +416,7 @@ public sealed class BattleHudUI
                 battleManager.CurrentEnemyCombatProfile.AttackType,
                 battleManager.IsBoss));
         ApplyActorVisual(enemyActorView, currentEnemyVisual);
+        battleLayout?.SetEnemyBoss(battleManager.IsBoss);
     }
 
     public void RefreshSkillStatus()
@@ -815,6 +818,7 @@ public sealed class BattleHudUI
 
     public void UpdateAnimations(float deltaTime)
     {
+        battleLayout?.Refresh();
         battleManager?.SetHeroBattlePosition(GetSupportGameplayAnchor());
         bossPatternPresentation?.Update(deltaTime);
         playerDefeatTimer = Mathf.Max(0f, playerDefeatTimer - deltaTime);
@@ -887,7 +891,7 @@ public sealed class BattleHudUI
             enemyDamageText,
             enemyDamagePopupTimer,
             0.72f,
-            new Vector2(0f, 72f));
+            new Vector2(0f, 40f));
         UpdateTextAlpha(
             enemyDamageNumberText,
             enemyDamagePopupTimer,
@@ -897,7 +901,7 @@ public sealed class BattleHudUI
             playerDamageText,
             playerDamagePopupTimer,
             0.55f,
-            new Vector2(0f, 46f));
+            new Vector2(0f, 30f));
         UpdateTextAlpha(
             playerDamageNumberText,
             playerDamagePopupTimer,
@@ -1247,7 +1251,7 @@ public sealed class BattleHudUI
         rewardNumberText = new SpriteNumberText(
             RuntimeUiBinder.FindRect(enemyCard, "RewardNumber"),
             NumberResourceRoot,
-            58f);
+            42f);
     }
 
     private void BindCombatEffects(
@@ -1454,7 +1458,7 @@ public sealed class BattleHudUI
         SetPopupRect(
             enemyDamagePopup,
             GetEnemyImpactAnchor() + new Vector2(0f, 0.05f),
-            new Vector2(0.56f, 0.22f));
+            new Vector2(0.38f, 0.15f));
         enemyDamageText.text = string.IsNullOrWhiteSpace(label)
             ? string.Empty
             : label;
@@ -1478,7 +1482,7 @@ public sealed class BattleHudUI
         SetPopupRect(
             playerDamagePopup,
             GetSupportImpactAnchor() + new Vector2(0f, 0.03f),
-            new Vector2(0.44f, 0.18f));
+            new Vector2(0.28f, 0.13f));
         playerDamageText.text = string.Empty;
         playerDamageText.color = Danger;
         playerDamageNumberText.text = FormatCompactNumber(damage, "-");
@@ -1503,7 +1507,7 @@ public sealed class BattleHudUI
         SetPopupRect(
             playerDamagePopup,
             GetSupportImpactAnchor() + new Vector2(0f, 0.08f),
-            new Vector2(0.5f, 0.2f));
+            new Vector2(0.30f, 0.14f));
         playerDamageText.text = string.IsNullOrWhiteSpace(label)
             ? string.Empty
             : label;
@@ -1595,7 +1599,7 @@ public sealed class BattleHudUI
         SetPopupRect(
             rewardPopup,
             GetEnemyFootAnchor() + new Vector2(0f, 0.03f),
-            new Vector2(0.48f, 0.2f));
+            new Vector2(0.30f, 0.14f));
         rewardPopupText.text = bossClear
             ? LocalizationManager.Translate("BOSS")
             : string.Empty;
@@ -2178,6 +2182,10 @@ public sealed class BattleHudUI
             return;
 
         Vector2 halfSize = size * 0.5f;
+        // Leave room for the popup entrance scale and upward drift.
+        Vector2 margin = halfSize * 1.18f;
+        center.x = Mathf.Clamp(center.x, margin.x, 1f - margin.x);
+        center.y = Mathf.Clamp(center.y, margin.y, 0.94f - margin.y);
         popup.anchorMin = center - halfSize;
         popup.anchorMax = center + halfSize;
         popup.offsetMin = Vector2.zero;
