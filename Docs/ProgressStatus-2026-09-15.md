@@ -92,6 +92,18 @@
 
 근거: [PlayerDataConverter](../Assets/Scripts/Data/PlayerDataConverter.cs), [PlayerDataLocalCache](../Assets/Scripts/Data/PlayerDataLocalCache.cs), [Firebase 코드](../Assets/Scripts/Firebase), [LiveOps 코드](../Assets/Scripts/LiveOps), [MonetizationManager](../Assets/Scripts/LiveOps/MonetizationManager.cs).
 
+## 이번 작업: 전투 스타일 슬라이스 1차
+
+- 기존 전투 로직과 `BattleHud` 프리펩을 유지하면서 밝고 둥근 캐주얼 전투 발표 레이어를 추가했습니다.
+- 상단에 `AUTO FLOW`, `보스 · 위기 때 직접 조작`, 현재 스테이지 또는 `BOSS WAVE`를 표시합니다.
+- 자동 공격·동료 공격·전력 충전·적 접근·공격 예고·보스 패턴·피격·회복·웨이브 클리어를 카드와 콜아웃으로 연결했습니다.
+- 전장에 따뜻한 색 틴트를 적용하고 위기·보스 상태에서 위험 색과 펄스를 사용합니다.
+- 평소 자동 전투, 보스·위기 순간 직접 이동이라는 조작 방향을 화면에서 확인할 수 있습니다.
+- 새 원화 없이 기존 로컬 아트와 런타임 UI를 사용했습니다. 이미지 생성 도구는 사용량 제한으로 실행할 수 없어 후속 아트 교체 지점만 열어 두었습니다.
+- 실제 카드 위치·한글 폰트·기기 화면 비율은 Unity `Preview_00_Battle` Play Mode 검수가 남아 있습니다.
+
+근거: [전투 스타일 슬라이스](BattleStyleSlice-2026-09-15.md), [BattleNyangStylePresentation](../Assets/Scripts/UI/BattleNyangStylePresentation.cs), [BattleHudUI](../Assets/Scripts/UI/BattleHudUI.cs).
+
 ## 검수 대기·미구현 항목
 
 - 공통 UI 프리펩 12종은 생성되어 있으나 검수 대기 상태이며 기존 화면에는 아직 적용하지 않았습니다.

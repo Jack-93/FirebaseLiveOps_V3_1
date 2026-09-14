@@ -95,6 +95,7 @@ public sealed class BattleHudUI
     private BattleSkillControlsUI skillControls;
     private BattleQuickButtonsUI quickButtons;
     private BossPatternPresentation bossPatternPresentation;
+    private BattleNyangStylePresentation nyangStyle;
 
     private float playerDefeatTimer;
     private float enemyHitShakeTimer;
@@ -300,6 +301,9 @@ public sealed class BattleHudUI
             enemyActorRoot,
             enemyActorView);
         BindCompanionActors(battlefieldActorLayer);
+        nyangStyle = panel.gameObject.GetComponent<BattleNyangStylePresentation>() ??
+            panel.gameObject.AddComponent<BattleNyangStylePresentation>();
+        nyangStyle.Bind(panel, battlefieldLayer, gameplayArea);
         SortActorRoots();
         BindSkillControls();
         BindQuickButtons();
@@ -319,6 +323,7 @@ public sealed class BattleHudUI
         RefreshAutoAdvance(data);
         RefreshSkillStatus();
         RefreshVisuals();
+        nyangStyle?.SetStage(data.currentStage, battleManager.IsBoss);
         lastObservedPowerCharge = battleManager.PowerCharge;
     }
 
@@ -330,6 +335,7 @@ public sealed class BattleHudUI
         autoAdvanceText.text = data.autoAdvance
             ? LocalizationManager.Translate("AUTO ON")
             : LocalizationManager.Translate("REPEAT");
+        nyangStyle?.SetAutoAdvance(data.autoAdvance);
     }
 
     public void RefreshVisuals()
@@ -337,6 +343,8 @@ public sealed class BattleHudUI
         PlayerData data = PlayerDataManager.Instance?.playerData;
         if (data == null)
             return;
+
+        nyangStyle?.SetStage(data.currentStage, battleManager.IsBoss);
 
         if (enemyRespawnTimer <= 0f)
             RefreshBattlefieldTheme(data.currentStage);
@@ -400,6 +408,7 @@ public sealed class BattleHudUI
 
     public void HandlePlayerAttackVisual(int damage)
     {
+        nyangStyle?.OnAutoAttack(damage);
         enemyHitShakeTimer = 0.22f;
         attackTrailTimer = 0.18f;
         StartSparkles(
@@ -421,6 +430,7 @@ public sealed class BattleHudUI
         CharacterData character,
         int damage)
     {
+        nyangStyle?.OnCompanionAttack(character?.characterName, damage);
         enemyHitShakeTimer = 0.2f;
         attackTrailTimer = 0.14f;
         StartSparkles(
@@ -449,6 +459,7 @@ public sealed class BattleHudUI
 
     public void HandlePowerChargedVisual(float current, float max)
     {
+        nyangStyle?.OnPowerCharged(current, max);
         StartBattleFlash(Success, 0.05f);
         ShowPowerChargePopup(current, max);
         playerActorView?.Play(BattleAnimationCue.Skill);
@@ -459,6 +470,10 @@ public sealed class BattleHudUI
     public void HandleEnemyAttackStartedVisual(
         EnemyCombatProfile profile)
     {
+        nyangStyle?.OnThreatStarted(
+            profile != null && profile.RequiresApproach
+                ? "위기 · 접근"
+                : "위기 · 공격 예고");
         if (profile.UsesProjectile)
         {
             if (profile.RequiresApproach && enemyMeleeMovement != null)
@@ -496,6 +511,7 @@ public sealed class BattleHudUI
 
     public void HandleEnemyAttackVisual(int damage)
     {
+        nyangStyle?.OnThreatResolved(damage > 0);
         enemyAttackAnimationTimer = 0.45f;
         enemyWasMoving = false;
         enemyMeleeMovement?.ContinuePursuit();
@@ -521,6 +537,8 @@ public sealed class BattleHudUI
             battleManager != null &&
             battleManager.LastDefeatedEnemyWasBoss;
 
+        nyangStyle?.OnEnemyDefeated(defeatedBoss, reward);
+
         QueueWaveTransitionAnnouncement(defeatedBoss);
 
         enemyDefeatPopTimer = 0.52f;
@@ -537,6 +555,7 @@ public sealed class BattleHudUI
 
     public void HandleHeroDefeatedVisual()
     {
+        nyangStyle?.OnHeroDefeated();
         ClearBattleAnnouncements();
         enemyMeleeMovement?.ResetToStartPosition();
         StopEnemyProjectile();
@@ -552,6 +571,7 @@ public sealed class BattleHudUI
 
     public void HandleHeroRecoveredVisual()
     {
+        nyangStyle?.OnHeroRecovered();
         playerDefeatTimer = 0f;
         playerActorView?.Play(BattleAnimationCue.Idle);
         foreach (BattleActorView companionActorView in companionActorViews)
@@ -700,6 +720,8 @@ public sealed class BattleHudUI
         if (pattern == null)
             return;
 
+        nyangStyle?.OnBossWarning(
+            $"BOSS · {pattern.patternName}");
         float warningSeconds = Mathf.Max(0.1f, pattern.warningSeconds);
         bossPatternPresentation?.ShowWarning(runtime);
         enemyHitShakeTimer = Mathf.Max(enemyHitShakeTimer, 0.18f);
@@ -723,6 +745,8 @@ public sealed class BattleHudUI
         if (pattern == null)
             return;
 
+        nyangStyle?.OnBossCast(
+            $"직접 조작 · {pattern.patternName}");
         bossPatternPresentation?.ShowCast(runtime);
         ShowBossWarning(
             $"{LocalizationManager.Translate("BOSS SKILL")}  " +
@@ -737,6 +761,7 @@ public sealed class BattleHudUI
         if (pattern == null)
             return;
 
+        nyangStyle?.OnBossImpact(damage > 0);
         bossPatternPresentation?.ShowImpact(runtime);
         if (damage > 0)
         {
@@ -863,6 +888,7 @@ public sealed class BattleHudUI
         UpdateRewardPopupVisuals();
         skillControls?.Refresh();
         statusHud?.UpdateAnimations(deltaTime);
+        nyangStyle?.UpdatePresentation(deltaTime);
         UpdateActorPulses();
     }
 
